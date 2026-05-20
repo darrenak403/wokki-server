@@ -22,8 +22,7 @@ docker compose -f docker-compose.dev.yml --env-file .env.local up -d --build
 
 - http://localhost:8386 — API  
 - http://localhost:8386/scalar — docs  
-- http://localhost:8081 — pgAdmin (DB UI)  
-  - login: `admin@wokki.local` / `Admin123!`
+- http://localhost:8888 — pgweb (DB UI, auto-connect)
 
 ## Prod
 

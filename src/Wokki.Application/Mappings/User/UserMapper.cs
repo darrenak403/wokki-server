@@ -13,7 +13,7 @@ public static class UserMapper
         {
             Id = Guid.NewGuid(),
             Email = request.Email.Trim().ToLowerInvariant(),
-            PasswordHash = request.Password, // Phase 1 stub — hash in production
+            PasswordHash = string.Empty,
             Role = request.Role,
             CreatedAt = DateTime.UtcNow
         };

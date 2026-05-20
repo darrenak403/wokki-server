@@ -47,18 +47,16 @@ services:
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES}
 
   db-ui:
-    image: dpage/pgadmin4:9.3
-    container_name: wokki-pgadmin-dev
+    image: sosedoff/pgweb:0.16.2
+    container_name: wokki-pgweb-dev
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "${DB_UI_PORT}:80"
+      - "${DB_UI_PORT}:8081"
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${DB_UI_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${DB_UI_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
 
 volumes:
   wokki_pg_data_dev:

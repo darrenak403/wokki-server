@@ -1,3 +1,4 @@
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.User;
 using Wokki.Application.Mappings.Users;
 using Wokki.Application.Services.User.Interfaces;
@@ -6,7 +7,7 @@ using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.User.Implementations;
 
-public sealed class UserService(IUnitOfWork unitOfWork) : IUserService
+public sealed class UserService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher) : IUserService
 {
     public async Task<ApiResponse<UserResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -38,6 +39,7 @@ public sealed class UserService(IUnitOfWork unitOfWork) : IUserService
             return ApiResponse<Guid>.FailureResponse(AppMessages.User.Exists);
 
         var entity = request.ToEntity();
+        entity.PasswordHash = passwordHasher.HashPassword(request.Password);
         await unitOfWork.Users.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

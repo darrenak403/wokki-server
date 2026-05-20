@@ -6,12 +6,17 @@ using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Auth.Implementations;
 
-public sealed class AuthService(IUnitOfWork unitOfWork, IJwtTokenService jwtTokenService) : IAuthService
+public sealed class AuthService(
+    IUnitOfWork unitOfWork,
+    IJwtTokenService jwtTokenService,
+    IPasswordHasher passwordHasher) : IAuthService
 {
+    private readonly IPasswordHasher _passwordHasher = passwordHasher;
+
     public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var user = await unitOfWork.Users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
-        if (user is null || user.PasswordHash != request.Password)
+        if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             return ApiResponse<LoginResponse>.FailureResponse(AppMessages.Auth.InvalidCredentials);
 
         var accessToken = jwtTokenService.GenerateAccessToken(user);
@@ -41,7 +46,7 @@ public sealed class AuthService(IUnitOfWork unitOfWork, IJwtTokenService jwtToke
         var user = new Domain.Entities.User
         {
             Email = normalizedEmail,
-            PasswordHash = request.Password,
+            PasswordHash = _passwordHasher.HashPassword(request.Password),
             Role = request.Role.Trim()
         };
 
@@ -59,10 +64,10 @@ public sealed class AuthService(IUnitOfWork unitOfWork, IJwtTokenService jwtToke
         if (user is null)
             return ApiResponse<UserSimpleResponse>.FailureResponse(AppMessages.Auth.Unauthorized);
 
-        if (user.PasswordHash != request.CurrentPassword)
+        if (!_passwordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
             return ApiResponse<UserSimpleResponse>.FailureResponse(AppMessages.Auth.InvalidCredentials);
 
-        user.PasswordHash = request.NewPassword;
+        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
         unitOfWork.Users.Update(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -83,7 +88,7 @@ public sealed class AuthService(IUnitOfWork unitOfWork, IJwtTokenService jwtToke
         if (user is null)
             return ApiResponse<bool>.FailureResponse(AppMessages.Auth.Unauthorized);
 
-        user.PasswordHash = request.NewPassword;
+        user.PasswordHash = _passwordHasher.HashPassword(request.NewPassword);
         unitOfWork.Users.Update(user);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IPasswordHasher, MicrosoftPasswordHasher>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<TenantContext>();
