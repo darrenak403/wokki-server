@@ -1,14 +1,26 @@
 ## .NET
 bin/
 obj/
+**/bin/
+**/obj/
 *.user
 *.suo
+.userosscache
+.sln.docstates
 .vs/
 .idea/
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
 
 ## Secrets
 appsettings.*.local.json
 **/secrets.json
+.env
+.env.local
+.env.*.local
 
 ## Docker env (chỉ commit .env.example)
 docker/.env
@@ -16,3 +28,5 @@ docker/.env.local
 
 ## OS
 .DS_Store
+
+plans/
