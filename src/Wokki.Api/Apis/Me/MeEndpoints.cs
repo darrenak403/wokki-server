@@ -1,0 +1,70 @@
+using Microsoft.AspNetCore.Mvc;
+using Wokki.Api.Bootstrapping;
+using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Dtos.SwapRequest;
+using Wokki.Application.Services.Schedule.Interfaces;
+using Wokki.Application.Services.SwapRequest.Interfaces;
+using Wokki.Common.Extensions;
+using Wokki.Common.Utils;
+
+namespace Wokki.Api.Apis.Me;
+
+public static class MeEndpoints
+{
+    public static IEndpointRouteBuilder MapMeApi(this IEndpointRouteBuilder builder)
+    {
+        builder.MapGroup("/api/v1/me")
+            .MapMeRoutes()
+            .WithTags("Me")
+            .RequireRateLimiting(RateLimitPolicies.Fixed);
+
+        return builder;
+    }
+
+    public static RouteGroupBuilder MapMeRoutes(this RouteGroupBuilder group)
+    {
+        group.MapGet("/swap-requests", GetMySwapRequestsAsync)
+            .WithName("GetMySwapRequests")
+            .WithDescription("Yêu cầu đổi ca gửi/nhận của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<SwapRequestResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/schedule", GetMyScheduleAsync)
+            .WithName("GetMySchedule")
+            .WithDescription("Lịch ca của nhân viên đang đăng nhập (4 tuần tới).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        return group;
+    }
+
+    private static async Task<IResult> GetMySwapRequestsAsync(
+        [FromServices] ISwapRequestService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<SwapRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.ListMineAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyScheduleAsync(
+        [FromServices] IScheduleService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetMyScheduleAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+}

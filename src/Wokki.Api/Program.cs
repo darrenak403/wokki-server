@@ -36,7 +36,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddApiServices();
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
@@ -55,8 +55,11 @@ if (enableDocs)
 
 app.MapEndpoints();
 
-await app.ApplyMigrationsAsync();
-await SeedData.InitializeAsync(app.Services);
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await app.ApplyMigrationsAsync();
+    await SeedData.InitializeAsync(app.Services);
+}
 
 app.Run();
 

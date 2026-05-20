@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Auth;
 using Wokki.Infrastructure.Caching;
+using Wokki.Infrastructure.Notifications;
 using Wokki.Infrastructure.Persistence;
 using Wokki.Infrastructure.Repositories;
 using Wokki.Infrastructure.Tenancy;
@@ -17,12 +19,18 @@ namespace Wokki.Infrastructure.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
 
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        if (!environment.IsEnvironment("Testing"))
+        {
+            services.AddDbContext<AppDbContext>(options =>
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+        }
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IUserRepository, UserRepository>();
@@ -32,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
+        services.AddScoped<INotificationService, NoOpNotificationService>();
         services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddMemoryCache();
         services.AddHttpContextAccessor();

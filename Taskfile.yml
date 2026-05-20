@@ -26,11 +26,6 @@ tasks:
     cmds:
       - dotnet build
 
-  test:
-    desc: Run tests
-    cmds:
-      - dotnet test
-
   migrate-add:
     desc: 'Add EF Core migration (usage: task migrate-add NAME=Init)'
     vars:

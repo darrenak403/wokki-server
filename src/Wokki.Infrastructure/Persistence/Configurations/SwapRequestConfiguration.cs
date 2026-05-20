@@ -14,6 +14,16 @@ public sealed class SwapRequestConfiguration : IEntityTypeConfiguration<SwapRequ
         builder.HasIndex(x => x.RequesterAssignmentId);
         builder.HasIndex(x => x.TargetAssignmentId);
 
+        builder.HasIndex(x => x.RequesterAssignmentId)
+            .HasFilter("\"Status\" = 1")
+            .IsUnique()
+            .HasDatabaseName("IX_swap_requests_requester_assignment_peer_accepted");
+
+        builder.HasIndex(x => x.TargetAssignmentId)
+            .HasFilter("\"Status\" = 1")
+            .IsUnique()
+            .HasDatabaseName("IX_swap_requests_target_assignment_peer_accepted");
+
         builder.HasOne<ShiftAssignment>()
             .WithMany()
             .HasForeignKey(x => x.RequesterAssignmentId)

@@ -7,9 +7,23 @@ namespace Wokki.Infrastructure.Repositories;
 public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
 {
     private IUserRepository? _users;
+    private IEmployeeRepository? _employees;
+    private ILocationRepository? _locations;
+    private IDepartmentRepository? _departments;
+    private IShiftDefinitionRepository? _shiftDefinitions;
+    private IScheduleRepository? _schedules;
+    private IShiftAssignmentRepository? _shiftAssignments;
+    private ISwapRequestRepository? _swapRequests;
     private IDbContextTransaction? _transaction;
 
     public IUserRepository Users => _users ??= new UserRepository(context);
+    public IEmployeeRepository Employees => _employees ??= new EmployeeRepository(context);
+    public ILocationRepository Locations => _locations ??= new LocationRepository(context);
+    public IDepartmentRepository Departments => _departments ??= new DepartmentRepository(context);
+    public IShiftDefinitionRepository ShiftDefinitions => _shiftDefinitions ??= new ShiftDefinitionRepository(context);
+    public IScheduleRepository Schedules => _schedules ??= new ScheduleRepository(context);
+    public IShiftAssignmentRepository ShiftAssignments => _shiftAssignments ??= new ShiftAssignmentRepository(context);
+    public ISwapRequestRepository SwapRequests => _swapRequests ??= new SwapRequestRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
