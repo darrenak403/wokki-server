@@ -1,4 +1,4 @@
-namespace Wokki.Application.Features.Auth.Dtos;
+namespace Wokki.Application.Dtos.Auth;
 
 public sealed record LoginResponse(
     string AccessToken,

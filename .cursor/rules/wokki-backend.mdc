@@ -25,8 +25,19 @@ Read [AGENTS.md](../../AGENTS.md), [docs/architecture.md](../../docs/architectur
 
 Domain (entities, repos, `RoleConstants`) → Application (services, DTOs, validators) → Infrastructure (EF, JWT) → Api (HTTP only).
 
+## Application structure (mandatory)
+
+- `src/Wokki.Application/Dtos/{Auth|User|...}`
+- `src/Wokki.Application/Services/{Feature}/Interfaces`
+- `src/Wokki.Application/Services/{Feature}/Implementations`
+- `src/Wokki.Application/Validators/{Feature}`
+- `src/Wokki.Application/Mappings/{Feature}`
+- Do not create or reintroduce `src/Wokki.Application/Features/*`
+- Namespace must follow folder path (`Wokki.Application.Dtos.Auth`, `Wokki.Application.Services.User.Interfaces`, etc.)
+
 ## Guardrails
 
 - Never add business logic, EF queries, or token generation inside `Wokki.Api`
 - Never inject `DbContext` into `Wokki.Application`
 - Never return raw entities from API; always map DTOs and `ApiResponse<T>`
+- Before finishing any task: run build gate and ensure no namespace drift from the structure above

@@ -1,7 +1,7 @@
-using Wokki.Application.Features.Users.Dtos;
+using Wokki.Application.Dtos.User;
 using Wokki.Common.Utils;
 
-namespace Wokki.Application.Features.Users;
+namespace Wokki.Application.Services.User.Interfaces;
 
 public interface IUserService
 {

@@ -17,6 +17,15 @@ Backend: **.NET 10**, Clean Architecture, Minimal API, EF Core + PostgreSQL, Sca
 - **Paths** → `/api/v1/{resource}` (health stays `/health`)
 - **Roles** → `Wokki.Domain.Constants.RoleConstants`
 - **Data access** → inject `IUnitOfWork` in services, not `DbContext` in Application
+- **Application structure is fixed**:
+  - `Dtos/{Feature}`
+  - `Services/{Feature}/Interfaces`
+  - `Services/{Feature}/Implementations`
+  - `Validators/{Feature}`
+  - `Mappings/{Feature}`
+- **Do not use/recreate `Wokki.Application/Features/*`**
+- **Namespace must match folder path** (example: `Wokki.Application.Services.Auth.Interfaces`)
+- **Definition of done**: build passes and project still respects the structure above
 
 ## Run locally
 

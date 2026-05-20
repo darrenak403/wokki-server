@@ -1,7 +1,7 @@
 using FluentValidation;
-using Wokki.Application.Features.Auth.Dtos;
+using Wokki.Application.Dtos.Auth;
 
-namespace Wokki.Application.Features.Auth;
+namespace Wokki.Application.Validators.Auth;
 
 public sealed class LoginRequestValidator : AbstractValidator<LoginRequest>
 {

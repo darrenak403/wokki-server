@@ -1,8 +1,10 @@
-using Wokki.Application.Features.Users.Dtos;
+using Wokki.Application.Dtos.User;
+using Wokki.Application.Mappings.Users;
+using Wokki.Application.Services.User.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Repositories;
 
-namespace Wokki.Application.Features.Users;
+namespace Wokki.Application.Services.User.Implementations;
 
 public sealed class UserService(IUnitOfWork unitOfWork) : IUserService
 {

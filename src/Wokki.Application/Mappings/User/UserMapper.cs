@@ -1,7 +1,7 @@
-using Wokki.Application.Features.Users.Dtos;
+using Wokki.Application.Dtos.User;
 using Wokki.Domain.Entities;
 
-namespace Wokki.Application.Features.Users;
+namespace Wokki.Application.Mappings.Users;
 
 public static class UserMapper
 {

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Moq;
-using Wokki.Application.Features.Users;
-using Wokki.Application.Features.Users.Dtos;
+using Wokki.Application.Services.User.Implementations;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Constants;

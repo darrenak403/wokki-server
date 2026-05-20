@@ -1,7 +1,10 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using Wokki.Application.Features.Auth;
-using Wokki.Application.Features.Users;
+using Wokki.Application.Services.Auth.Implementations;
+using Wokki.Application.Services.Auth.Interfaces;
+using Wokki.Application.Services.User.Implementations;
+using Wokki.Application.Services.User.Interfaces;
+using Wokki.Application.Validators.User;
 
 namespace Wokki.Application.DependencyInjection;
 

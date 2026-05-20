@@ -1,7 +1,7 @@
 using FluentValidation;
-using Wokki.Application.Features.Users.Dtos;
+using Wokki.Application.Dtos.User;
 
-namespace Wokki.Application.Features.Users;
+namespace Wokki.Application.Validators.User;
 
 public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
