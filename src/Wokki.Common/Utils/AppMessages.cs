@@ -115,6 +115,35 @@ public static class AppMessages
         public static readonly AppMessage NoEmployeeProfile = new("SWAP_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
     }
 
+    public static class Attendance
+    {
+        public static readonly AppMessage Found = new("ATTENDANCE_FOUND", "Attendance record found.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("ATTENDANCE_LISTED", "Attendance records listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage ClockedIn = new("ATTENDANCE_CLOCKED_IN", "Clock-in recorded.", StatusCodes.Status201Created);
+        public static readonly AppMessage ClockedOut = new("ATTENDANCE_CLOCKED_OUT", "Clock-out recorded.", StatusCodes.Status200OK);
+        public static readonly AppMessage Adjusted = new("ATTENDANCE_ADJUSTED", "Attendance record adjusted.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("ATTENDANCE_NOT_FOUND", "Attendance record not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage OpenRecordExists = new("ATTENDANCE_OPEN_EXISTS", "Employee already has an open attendance record.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage NoOpenRecord = new("ATTENDANCE_NO_OPEN", "No open attendance record to clock out.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage NoAssignmentToday = new("ATTENDANCE_NO_ASSIGNMENT", "No scheduled assignment found for today.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage NoEmployeeProfile = new("ATTENDANCE_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PeriodLocked = new("ATTENDANCE_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AdjustmentNoteRequired = new("ATTENDANCE_NOTE_REQUIRED", "Adjustment note is required.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class Payroll
+    {
+        public static readonly AppMessage Summary = new("PAYROLL_SUMMARY", "Payroll summary computed.", StatusCodes.Status200OK);
+        public static readonly AppMessage EmployeeSummary = new("PAYROLL_EMPLOYEE_SUMMARY", "Employee payroll breakdown.", StatusCodes.Status200OK);
+        public static readonly AppMessage Exported = new("PAYROLL_EXPORTED", "Payroll CSV exported.", StatusCodes.Status200OK);
+        public static readonly AppMessage PeriodLocked = new("PAYROLL_PERIOD_LOCKED", "Pay period locked.", StatusCodes.Status200OK);
+        public static readonly AppMessage DepartmentNotFound = new("PAYROLL_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage EmployeeNotFound = new("PAYROLL_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PeriodOverlap = new("PAYROLL_PERIOD_OVERLAP", "Pay period dates overlap an existing period.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ExportTooLarge = new("PAYROLL_EXPORT_TOO_LARGE", "Payroll export exceeds maximum row limit.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidDateRange = new("PAYROLL_INVALID_RANGE", "Invalid pay period date range.", StatusCodes.Status400BadRequest);
+    }
+
     public static class Auth
     {
         public static readonly AppMessage LoginSuccess = new("AUTH_LOGIN_SUCCESS", "Login successful.", StatusCodes.Status200OK);

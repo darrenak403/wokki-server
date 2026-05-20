@@ -2,8 +2,10 @@ using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Dtos.SwapRequest;
+using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Application.Services.SwapRequest.Interfaces;
 using Wokki.Common.Extensions;
@@ -41,6 +43,14 @@ public static class MeEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/attendance", GetMyAttendanceAsync)
+            .WithName("GetMyAttendance")
+            .WithDescription("Lịch sử chấm công của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<AttendanceResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         return group;
     }
 
@@ -65,6 +75,20 @@ public static class MeEndpoints
             return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.GetMyScheduleAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyAttendanceAsync(
+        [FromQuery] DateOnly? fromDate,
+        [FromQuery] DateOnly? toDate,
+        [FromServices] IAttendanceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<AttendanceResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.ListMineAsync(currentUser.UserId.Value, fromDate, toDate, cancellationToken);
         return response.ToHttpResult();
     }
 }

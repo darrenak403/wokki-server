@@ -10,6 +10,9 @@ public interface IUnitOfWork : IAsyncDisposable
     IScheduleRepository Schedules { get; }
     IShiftAssignmentRepository ShiftAssignments { get; }
     ISwapRequestRepository SwapRequests { get; }
+    IAttendanceRepository Attendance { get; }
+    IPayPeriodRepository PayPeriods { get; }
+    IPayrollLineRepository PayrollLines { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

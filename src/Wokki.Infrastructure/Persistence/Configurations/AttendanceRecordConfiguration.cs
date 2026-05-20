@@ -12,6 +12,11 @@ public sealed class AttendanceRecordConfiguration : IEntityTypeConfiguration<Att
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => new { x.EmployeeId, x.ClockIn });
 
+        builder.HasIndex(x => x.EmployeeId)
+            .HasFilter("\"ClockOut\" IS NULL")
+            .IsUnique()
+            .HasDatabaseName("IX_attendance_records_employee_open");
+
         builder.HasOne<Employee>()
             .WithMany()
             .HasForeignKey(x => x.EmployeeId)

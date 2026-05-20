@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Wokki.Application.Services.Attendance.Implementations;
+using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.Auth.Implementations;
 using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Application.Services.Department.Implementations;
@@ -8,6 +10,8 @@ using Wokki.Application.Services.Employee.Implementations;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.Location.Implementations;
 using Wokki.Application.Services.Location.Interfaces;
+using Wokki.Application.Services.Payroll.Implementations;
+using Wokki.Application.Services.Payroll.Interfaces;
 using Wokki.Application.Services.Schedule.Implementations;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Application.Services.SwapRequest.Implementations;
@@ -34,6 +38,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<ISwapRequestService, SwapRequestService>();
+        services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<IPayrollService, PayrollService>();
 
         return services;
     }

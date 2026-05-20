@@ -1,11 +1,13 @@
 using Serilog;
 using Scalar.AspNetCore;
+using Wokki.Api.Apis.Attendance;
 using Wokki.Api.Apis.Auth;
 using Wokki.Api.Apis.Departments;
 using Wokki.Api.Apis.Employees;
 using Wokki.Api.Apis.Health;
 using Wokki.Api.Apis.Locations;
 using Wokki.Api.Apis.Me;
+using Wokki.Api.Apis.Payroll;
 using Wokki.Api.Apis.Schedules;
 using Wokki.Api.Apis.Shifts;
 using Wokki.Api.Apis.SwapRequests;
@@ -58,6 +60,8 @@ public static class PipelineExtensions
         app.MapScheduleApi();
         app.MapMeApi();
         app.MapSwapRequestApi();
+        app.MapAttendanceApi();
+        app.MapPayrollApi();
 
         return app;
     }

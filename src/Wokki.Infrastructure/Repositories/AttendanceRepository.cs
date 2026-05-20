@@ -1,0 +1,105 @@
+using Microsoft.EntityFrameworkCore;
+using Wokki.Domain.Entities;
+using Wokki.Domain.Repositories;
+using Wokki.Infrastructure.Persistence;
+
+namespace Wokki.Infrastructure.Repositories;
+
+public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepository
+{
+    public async Task<AttendanceRecord?> GetByIdAsync(Guid id, bool track = false, CancellationToken cancellationToken = default)
+    {
+        var query = track ? context.AttendanceRecords : context.AttendanceRecords.AsNoTracking();
+        return await query.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
+
+    public async Task<AttendanceRecord?> GetOpenByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default) =>
+        await context.AttendanceRecords
+            .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.ClockOut == null, cancellationToken);
+
+    public async Task<(IReadOnlyList<AttendanceRecord> Items, int TotalCount)> ListAsync(
+        int page,
+        int pageSize,
+        Guid? employeeId = null,
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.AttendanceRecords.AsNoTracking().AsQueryable();
+
+        if (employeeId.HasValue)
+            query = query.Where(a => a.EmployeeId == employeeId.Value);
+
+        if (fromDate.HasValue)
+        {
+            var from = new DateTimeOffset(fromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            query = query.Where(a => a.ClockIn >= from);
+        }
+
+        if (toDate.HasValue)
+        {
+            var to = new DateTimeOffset(toDate.Value.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
+            query = query.Where(a => a.ClockIn <= to);
+        }
+
+        query = query.OrderByDescending(a => a.ClockIn);
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
+    public async Task<IReadOnlyList<AttendanceRecord>> ListByEmployeeAsync(
+        Guid employeeId,
+        DateOnly? fromDate = null,
+        DateOnly? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.AttendanceRecords.AsNoTracking().Where(a => a.EmployeeId == employeeId);
+
+        if (fromDate.HasValue)
+        {
+            var from = new DateTimeOffset(fromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            query = query.Where(a => a.ClockIn >= from);
+        }
+
+        if (toDate.HasValue)
+        {
+            var to = new DateTimeOffset(toDate.Value.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
+            query = query.Where(a => a.ClockIn <= to);
+        }
+
+        return await query.OrderByDescending(a => a.ClockIn).ToListAsync(cancellationToken);
+    }
+
+    public async Task<Dictionary<Guid, int>> SumWorkedMinutesByEmployeeAsync(
+        IEnumerable<Guid> employeeIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = employeeIds.ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, int>();
+
+        var from = new DateTimeOffset(startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        var to = new DateTimeOffset(endDate.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
+
+        var rows = await context.AttendanceRecords.AsNoTracking()
+            .Where(a => ids.Contains(a.EmployeeId)
+                        && a.ClockOut != null
+                        && a.AssignmentId != null
+                        && a.ClockIn >= from
+                        && a.ClockIn <= to)
+            .GroupBy(a => a.EmployeeId)
+            .Select(g => new { g.Key, Total = g.Sum(x => x.WorkedMinutes) })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.Key, x => x.Total);
+    }
+
+    public async Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default) =>
+        await context.AttendanceRecords.AddAsync(record, cancellationToken);
+
+    public void Update(AttendanceRecord record) => context.AttendanceRecords.Update(record);
+}

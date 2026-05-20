@@ -16,6 +16,12 @@ public static class ServiceCollectionExtensions
                 limiter.Window = TimeSpan.FromMinutes(1);
                 limiter.QueueLimit = 0;
             });
+            options.AddFixedWindowLimiter(RateLimitPolicies.Clock, limiter =>
+            {
+                limiter.PermitLimit = 300;
+                limiter.Window = TimeSpan.FromMinutes(1);
+                limiter.QueueLimit = 0;
+            });
         });
 
         return services;

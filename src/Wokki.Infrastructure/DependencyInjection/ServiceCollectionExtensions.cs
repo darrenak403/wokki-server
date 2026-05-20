@@ -40,7 +40,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
-        services.AddScoped<INotificationService, NoOpNotificationService>();
+        services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        var smtp = configuration.GetSection(SmtpSettings.SectionName).Get<SmtpSettings>();
+        if (smtp?.IsConfigured == true)
+            services.AddScoped<INotificationService, EmailNotificationService>();
+        else
+            services.AddScoped<INotificationService, NoOpNotificationService>();
         services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddMemoryCache();
         services.AddHttpContextAccessor();

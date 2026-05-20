@@ -1,0 +1,102 @@
+using FluentValidation;
+using Microsoft.AspNetCore.Mvc;
+using Wokki.Api.Bootstrapping;
+using Wokki.Api.Extensions;
+using Wokki.Application.Dtos.Payroll;
+using Wokki.Application.Services.Payroll.Interfaces;
+using Wokki.Common.Extensions;
+using Wokki.Common.Utils;
+using Wokki.Domain.Constants;
+
+namespace Wokki.Api.Apis.Payroll;
+
+public static class PayrollEndpoints
+{
+    public static IEndpointRouteBuilder MapPayrollApi(this IEndpointRouteBuilder builder)
+    {
+        builder.MapGroup("/api/v1/payroll")
+            .MapPayrollRoutes()
+            .WithTags("Payroll")
+            .RequireRateLimiting(RateLimitPolicies.Fixed);
+
+        return builder;
+    }
+
+    public static RouteGroupBuilder MapPayrollRoutes(this RouteGroupBuilder group)
+    {
+        group.MapGet("/summary", GetSummaryAsync)
+            .WithName("GetPayrollSummary")
+            .WithDescription("Tổng hợp lương theo phòng ban và kỳ lương.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<PayrollSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
+        group.MapGet("/summary/{employeeId:guid}", GetEmployeeSummaryAsync)
+            .WithName("GetPayrollEmployeeSummary")
+            .WithDescription("Chi tiết lương từng nhân viên trong kỳ.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<PayrollEmployeeDetailResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/summary/export", ExportSummaryAsync)
+            .WithName("ExportPayrollSummary")
+            .WithDescription("Xuất CSV tổng hợp lương.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .Produces(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        return group;
+    }
+
+    private static async Task<IResult> GetSummaryAsync(
+        [AsParameters] PayrollPeriodRequest request,
+        [FromServices] IPayrollService service,
+        [FromServices] IValidator<PayrollPeriodRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.GetSummaryAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetEmployeeSummaryAsync(
+        [FromRoute] Guid employeeId,
+        [AsParameters] PayrollPeriodRequest request,
+        [FromServices] IPayrollService service,
+        [FromServices] IValidator<PayrollPeriodRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.GetEmployeeDetailAsync(employeeId, request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ExportSummaryAsync(
+        [FromBody] PayrollPeriodRequest request,
+        [FromServices] IPayrollService service,
+        [FromServices] IValidator<PayrollPeriodRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.ExportCsvAsync(request, cancellationToken);
+        if (!response.Success || response.Data is null)
+            return response.ToHttpResult();
+
+        return Results.File(response.Data.Content, response.Data.ContentType, response.Data.FileName);
+    }
+}

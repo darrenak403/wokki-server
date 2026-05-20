@@ -1,0 +1,19 @@
+namespace Wokki.Application.Dtos.Payroll;
+
+public sealed record PayrollEmployeeDetailResponse(
+    Guid EmployeeId,
+    string FirstName,
+    string LastName,
+    Guid PayPeriodId,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    int TotalWorkedMinutes,
+    decimal HourlyRate,
+    decimal GrossPay,
+    IReadOnlyList<PayrollAttendanceItemResponse> AttendanceItems);
+
+public sealed record PayrollAttendanceItemResponse(
+    Guid AttendanceId,
+    DateTimeOffset ClockIn,
+    DateTimeOffset? ClockOut,
+    int WorkedMinutes);

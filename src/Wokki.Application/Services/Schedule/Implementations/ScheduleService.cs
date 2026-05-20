@@ -1,4 +1,5 @@
 using Wokki.Application.Common;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Mappings.Schedules;
 using Wokki.Application.Services.Schedule.Interfaces;
@@ -10,7 +11,7 @@ using ShiftAssignmentEntity = Wokki.Domain.Entities.ShiftAssignment;
 
 namespace Wokki.Application.Services.Schedule.Implementations;
 
-public sealed class ScheduleService(IUnitOfWork unitOfWork) : IScheduleService
+public sealed class ScheduleService(IUnitOfWork unitOfWork, INotificationService notifications) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
@@ -132,6 +133,16 @@ public sealed class ScheduleService(IUnitOfWork unitOfWork) : IScheduleService
         schedule.PublishedAt = DateTime.UtcNow;
         unitOfWork.Schedules.Update(schedule);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var assignments = await unitOfWork.ShiftAssignments.ListByScheduleAsync(id, cancellationToken);
+        foreach (var employeeId in assignments.Select(a => a.EmployeeId).Distinct())
+        {
+            await NotifyEmployeeSafeAsync(
+                employeeId,
+                "schedule.published",
+                new { scheduleId = schedule.Id, schedule.WeekStartDate },
+                cancellationToken);
+        }
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(schedule.ToResponse(), AppMessages.Schedule.Published);
     }
@@ -385,4 +396,24 @@ public sealed class ScheduleService(IUnitOfWork unitOfWork) : IScheduleService
             assignment.Date,
             assignment.Note,
             assignment.CreatedAt));
+
+    private async Task NotifyEmployeeSafeAsync(
+        Guid employeeId,
+        string eventName,
+        object payload,
+        CancellationToken cancellationToken)
+    {
+        var employee = await unitOfWork.Employees.GetByIdAsync(employeeId, cancellationToken: cancellationToken);
+        if (employee is null)
+            return;
+
+        try
+        {
+            await notifications.SendAsync(employee.UserId, eventName, payload, cancellationToken);
+        }
+        catch
+        {
+            // Notifications must not roll back core workflow.
+        }
+    }
 }
