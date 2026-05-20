@@ -23,7 +23,7 @@ public sealed class AuthService(
         var refreshToken = jwtTokenService.GenerateRefreshToken(user);
 
         return ApiResponse<LoginResponse>.SuccessResponse(
-            new LoginResponse(accessToken, refreshToken, user.Id, user.Email, user.Role),
+            new LoginResponse(accessToken, refreshToken),
             AppMessages.Auth.LoginSuccess);
     }
 
@@ -105,7 +105,7 @@ public sealed class AuthService(
         var refreshToken = jwtTokenService.GenerateRefreshToken(user);
 
         return ApiResponse<LoginResponse>.SuccessResponse(
-            new LoginResponse(accessToken, refreshToken, user.Id, user.Email, user.Role),
+            new LoginResponse(accessToken, refreshToken),
             AppMessages.Auth.RefreshSuccess);
     }
 
