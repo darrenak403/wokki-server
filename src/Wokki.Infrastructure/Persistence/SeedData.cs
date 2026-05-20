@@ -23,15 +23,22 @@ public static class SeedData
             new User
             {
                 Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                Email = "admin@wokki.local",
-                PasswordHash = "admin123",
+                Email = "admin@gmail.com",
+                PasswordHash = "12345@Abc",
                 Role = RoleConstants.Admin
             },
             new User
             {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                Email = "manager@gmail.com",
+                PasswordHash = "12345@Abc",
+                Role = RoleConstants.Manager
+            },
+            new User
+            {
                 Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                Email = "user@wokki.local",
-                PasswordHash = "user123",
+                Email = "user@gmail.com",
+                PasswordHash = "12345@Abc",
                 Role = RoleConstants.User
             });
 

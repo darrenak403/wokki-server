@@ -23,9 +23,6 @@ public sealed class JwtTokenService(IOptions<JwtSettings> options) : IJwtTokenSe
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        if (user.TenantId.HasValue)
-            claims.Add(new Claim("tenant_id", user.TenantId.Value.ToString()));
-
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

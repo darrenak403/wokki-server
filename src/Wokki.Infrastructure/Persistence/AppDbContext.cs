@@ -6,12 +6,24 @@ namespace Wokki.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<ShiftDefinition> ShiftDefinitions => Set<ShiftDefinition>();
+    public DbSet<Schedule> Schedules => Set<Schedule>();
+    public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
+    public DbSet<SwapRequest> SwapRequests => Set<SwapRequest>();
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public DbSet<PayPeriod> PayPeriods => Set<PayPeriod>();
+    public DbSet<PayrollLine> PayrollLines => Set<PayrollLine>();
+    public DbSet<Channel> Channels => Set<Channel>();
+    public DbSet<ChannelMember> ChannelMembers => Set<ChannelMember>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<EmployeeAvailability> EmployeeAvailabilities => Set<EmployeeAvailability>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
-
-        // TODO: multi-tenant global filter when ITenantContext is enabled
-        // modelBuilder.Entity<User>().HasQueryFilter(u => u.TenantId == _tenantContext.TenantId);
     }
 }
