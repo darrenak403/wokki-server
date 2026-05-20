@@ -1,0 +1,39 @@
+version: '3'
+
+tasks:
+  docker:build:
+    desc: Build new image and start all containers
+    cmds:
+      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local up -d --build
+
+  docker:up:
+    desc: Start existing local containers (no rebuild)
+    cmds:
+      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local up -d
+
+  docker:down:
+    desc: Stop local containers
+    cmds:
+      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local down
+
+  run:
+    desc: Run API locally (.NET)
+    cmds:
+      - dotnet run --project src/Wokki.Api
+
+  build:
+    desc: Build solution
+    cmds:
+      - dotnet build
+
+  test:
+    desc: Run tests
+    cmds:
+      - dotnet test
+
+  migrate-add:
+    desc: 'Add EF Core migration (usage: task migrate-add NAME=Init)'
+    vars:
+      NAME: '{{.NAME | default "Init"}}'
+    cmds:
+      - dotnet ef migrations add {{.NAME}} --project src/Wokki.Infrastructure --startup-project src/Wokki.Api --output-dir Persistence/Migrations

@@ -1,0 +1,18 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+
+## Secrets
+appsettings.*.local.json
+**/secrets.json
+
+## Docker env (chỉ commit .env.example)
+docker/.env
+docker/.env.local
+
+## OS
+.DS_Store

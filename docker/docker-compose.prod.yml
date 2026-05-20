@@ -1,0 +1,66 @@
+name: wokki-prod
+
+# Env: docker/.env (copy từ .env.example, chỉ prod)
+# Chạy: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wokki-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - wokki_pg_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    # Không expose Postgres ra host trong prod (bỏ comment nếu cần debug)
+    # ports:
+    #   - "127.0.0.1:5432:5432"
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: wokki-api-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT}:8386"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8386
+      ConnectionStrings__DefaultConnection: >-
+        Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Database__AutoMigrate: ${DATABASE_AUTOMIGRATE:-false}
+      ApiDocs__Enabled: ${APIDOCS_ENABLED:-false}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+
+  db-ui:
+    image: dpage/pgadmin4:9.3
+    container_name: wokki-pgadmin-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Chỉ mở local host để quản trị khi cần
+    ports:
+      - "127.0.0.1:${DB_UI_PORT}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${DB_UI_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${DB_UI_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+
+volumes:
+  wokki_pg_data_prod:

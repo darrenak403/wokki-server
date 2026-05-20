@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Wokki.Api/Wokki.Api.csproj" />
+    <Project Path="src/Wokki.Application/Wokki.Application.csproj" />
+    <Project Path="src/Wokki.Common/Wokki.Common.csproj" />
+    <Project Path="src/Wokki.Domain/Wokki.Domain.csproj" />
+    <Project Path="src/Wokki.Infrastructure/Wokki.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Wokki.Api.IntegrationTests/Wokki.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Wokki.Application.UnitTests/Wokki.Application.UnitTests.csproj" />
+  </Folder>
+</Solution>
