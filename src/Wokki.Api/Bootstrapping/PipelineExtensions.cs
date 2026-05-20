@@ -30,7 +30,6 @@ public static class PipelineExtensions
 
         if (enableDocs)
         {
-            app.MapOpenApi();
             app.MapScalarApiReference(options =>
             {
                 options.WithTitle("Wokki API");

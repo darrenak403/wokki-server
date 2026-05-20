@@ -1,4 +1,5 @@
 using Serilog;
+using Microsoft.OpenApi;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.DependencyInjection;
@@ -13,14 +14,45 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .Enrich.FromLogContext()
         .WriteTo.Console());
 
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Wokki API",
+        Version = "v1"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Nhập JWT token.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+});
 builder.Services.AddApiServices();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+var enableDocs = app.Configuration.GetValue<bool?>("ApiDocs:Enabled")
+                 ?? app.Environment.IsDevelopment();
+
 app.UseApplicationPipeline();
+
+if (enableDocs)
+{
+    app.UseSwagger(options =>
+    {
+        options.RouteTemplate = "openapi/{documentName}.json";
+    });
+}
+
 app.MapEndpoints();
 
 await app.ApplyMigrationsAsync();
