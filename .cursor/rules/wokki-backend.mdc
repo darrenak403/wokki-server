@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Wokki backend
 
-Read [AGENTS.md](../../AGENTS.md), [docs/architecture.md](../../docs/architecture.md), [docs/minimal-api.md](../../docs/minimal-api.md).
+Read [AGENTS.md](../../AGENTS.md), [docs/README.md](../../docs/README.md), [docs/brd.md](../../docs/brd.md), [docs/business-rules.md](../../docs/business-rules.md), [docs/architecture.md](../../docs/architecture.md), [docs/minimal-api.md](../../docs/minimal-api.md). BRD tiếng Việt: [docs/vi/README.md](../../docs/vi/README.md). Enforce locked rules (`BR-xxx`); do not contradict [docs/process-flows.md](../../docs/process-flows.md) (or [docs/vi/process-flows.md](../../docs/vi/process-flows.md)).
 
 ## API modules
 

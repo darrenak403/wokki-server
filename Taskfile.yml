@@ -1,34 +1,93 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
 version: '3'
 
+vars:
+  SLN: Wokki.slnx
+  API_PROJECT: src/Wokki.Api
+  COMPOSE_DEV: docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local
+  MIGRATION_PROJECT: src/Wokki.Infrastructure
+  STARTUP_PROJECT: src/Wokki.Api
+  MIGRATIONS_DIR: Persistence/Migrations
+
 tasks:
-  docker:build:
-    desc: Build new image and start all containers
+  ls:
+    desc: List all available tasks
     cmds:
-      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local up -d --build
-
-  docker:up:
-    desc: Start existing local containers (no rebuild)
-    cmds:
-      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local up -d
-
-  docker:down:
-    desc: Stop local containers
-    cmds:
-      - docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local down
+      - task --list
+    silent: true
 
   run:
-    desc: Run API locally (.NET)
+    desc: Run the API locally (.NET)
     cmds:
-      - dotnet run --project src/Wokki.Api
+      - dotnet run --project {{.API_PROJECT}}
 
   build:
-    desc: Build solution
+    desc: Build the solution (Only runs if code changes)
+    sources:
+      - 'src/**/*.cs'
+      - 'src/**/*.csproj'
+      - '{{.SLN}}'
     cmds:
-      - dotnet build
+      - dotnet build {{.SLN}}
 
-  migrate-add:
-    desc: 'Add EF Core migration (usage: task migrate-add NAME=Init)'
-    vars:
-      NAME: '{{.NAME | default "Init"}}'
+  clean:
+    desc: Clean all build artifacts
     cmds:
-      - dotnet ef migrations add {{.NAME}} --project src/Wokki.Infrastructure --startup-project src/Wokki.Api --output-dir Persistence/Migrations
+      - dotnet clean {{.SLN}}
+
+  'migration:add':
+    desc: 'Add an EF Core migration (usage: task migration:add -- <MigrationName>)'
+    requires:
+      vars: [CLI_ARGS]
+    preconditions:
+      - sh: 'if [ -z "{{.CLI_ARGS}}" ]; then exit 1; fi'
+        msg: '❌ Bạn phải truyền tên Migration. Ví dụ: task migration:add -- AddUserTable'
+    cmds:
+      - dotnet ef migrations add {{.CLI_ARGS}} --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}} --output-dir {{.MIGRATIONS_DIR}}
+
+  'migration:remove':
+    desc: Remove the last EF Core migration
+    cmds:
+      - dotnet ef migrations remove --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}}
+
+  'migration:update':
+    desc: Apply pending migrations to the database
+    cmds:
+      - dotnet ef database update --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}}
+
+  'docker:up':
+    desc: Start dev infrastructure (postgres + api)
+    cmds:
+      - '{{.COMPOSE_DEV}} up -d'
+
+  'docker:postgres':
+    desc: Start PostgreSQL only (for task run + local API)
+    cmds:
+      - '{{.COMPOSE_DEV}} up -d postgres'
+
+  'docker:build':
+    desc: Build images and start dev containers
+    cmds:
+      - '{{.COMPOSE_DEV}} up -d --build'
+
+  'docker:down':
+    desc: Stop dev infrastructure (containers only, volumes preserved)
+    cmds:
+      - '{{.COMPOSE_DEV}} down'
+
+  'docker:clear':
+    desc: Stop dev containers and remove all volumes
+    cmds:
+      - '{{.COMPOSE_DEV}} down -v'
+
+  pull:
+    desc: 'Pull latest changes (usage: task pull hoặc task pull br=<branch>)'
+    vars:
+      BRANCH: '{{default "" .br}}'
+    cmds:
+      - defer: git pull # Luôn chạy lệnh pull cuối cùng
+      - |
+        {{if ne .BRANCH ""}}
+        git checkout {{.BRANCH}}
+        {{end}}

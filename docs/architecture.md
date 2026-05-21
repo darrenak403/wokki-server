@@ -1,5 +1,7 @@
 # Architecture
 
+Business context: [brd.md](./brd.md) · Rules: [business-rules.md](./business-rules.md) · Flows: [process-flows.md](./process-flows.md)
+
 ## Layers
 
 | Project                | Responsibility                                                            |

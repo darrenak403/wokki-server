@@ -4,9 +4,11 @@ Backend: **.NET 10**, Clean Architecture, Minimal API, EF Core + PostgreSQL, Sca
 
 ## Before you code
 
-1. Read [docs/architecture.md](docs/architecture.md)
-2. Read [docs/minimal-api.md](docs/minimal-api.md)
-3. Follow [.cursor/rules/wokki-backend.mdc](.cursor/rules/wokki-backend.mdc)
+1. Read [docs/README.md](docs/README.md) — documentation index (EN); Vietnamese: [docs/vi/README.md](docs/vi/README.md)
+2. Read [docs/brd.md](docs/brd.md) and [docs/business-rules.md](docs/business-rules.md) — business intent and locked rules (`BR-xxx`); VI: [docs/vi/brd.md](docs/vi/brd.md), [docs/vi/business-rules.md](docs/vi/business-rules.md)
+3. Read [docs/process-flows.md](docs/process-flows.md) when changing workflows or state machines
+4. Read [docs/architecture.md](docs/architecture.md) and [docs/minimal-api.md](docs/minimal-api.md)
+5. Follow [.cursor/rules/wokki-backend.mdc](.cursor/rules/wokki-backend.mdc)
 
 ## Hard rules
 
