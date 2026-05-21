@@ -11,6 +11,8 @@ public static class SeedData
 {
     public static readonly Guid DefaultLocationId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     public static readonly Guid DefaultDepartmentId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+    /// <summary>Transient holder for atomic swap of two assignments (never scheduled on a shift).</summary>
+    public static readonly Guid SwapHoldEmployeeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
 
     public static async Task InitializeAsync(IServiceProvider services)
     {
@@ -18,6 +20,8 @@ public static class SeedData
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+
+        await EnsureSwapHoldEmployeeAsync(context, logger);
 
         if (await context.Users.AnyAsync())
         {
@@ -92,5 +96,49 @@ public static class SeedData
             });
 
         await context.SaveChangesAsync();
+    }
+
+    private static async Task EnsureSwapHoldEmployeeAsync(
+        AppDbContext context,
+        ILogger logger)
+    {
+        if (await context.Employees.AnyAsync(e => e.Id == SwapHoldEmployeeId))
+            return;
+
+        var departmentId = await context.Departments
+            .Select(d => d.Id)
+            .FirstOrDefaultAsync();
+
+        if (departmentId == Guid.Empty)
+        {
+            logger.LogWarning("Swap hold employee not created: no department in database.");
+            return;
+        }
+
+        var adminUserId = await context.Users
+            .Where(u => u.Role == RoleConstants.Admin)
+            .Select(u => u.Id)
+            .FirstOrDefaultAsync();
+
+        if (adminUserId == Guid.Empty)
+        {
+            logger.LogWarning("Swap hold employee not created: no admin user.");
+            return;
+        }
+
+        context.Employees.Add(new Employee
+        {
+            Id = SwapHoldEmployeeId,
+            UserId = adminUserId,
+            FirstName = "Swap",
+            LastName = "Hold",
+            Phone = "",
+            Position = "System",
+            HourlyRate = 0m,
+            DepartmentId = departmentId
+        });
+
+        await context.SaveChangesAsync();
+        logger.LogInformation("Ensured swap hold employee {EmployeeId}.", SwapHoldEmployeeId);
     }
 }

@@ -3,6 +3,7 @@ using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
+using SeedData = Wokki.Infrastructure.Persistence.SeedData;
 
 namespace Wokki.Infrastructure.Repositories;
 
@@ -95,6 +96,33 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
         await context.ShiftAssignments.AddAsync(assignment, cancellationToken);
 
     public void Remove(ShiftAssignment assignment) => context.ShiftAssignments.Remove(assignment);
+
+    public async Task SwapEmployeeIdsAsync(
+        Guid assignmentId1,
+        Guid assignmentId2,
+        CancellationToken cancellationToken = default)
+    {
+        var emp1 = await context.ShiftAssignments.AsNoTracking()
+            .Where(a => a.Id == assignmentId1)
+            .Select(a => a.EmployeeId)
+            .FirstAsync(cancellationToken);
+        var emp2 = await context.ShiftAssignments.AsNoTracking()
+            .Where(a => a.Id == assignmentId2)
+            .Select(a => a.EmployeeId)
+            .FirstAsync(cancellationToken);
+
+        var holdId = SeedData.SwapHoldEmployeeId;
+
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE shift_assignments SET "EmployeeId" = {holdId} WHERE "Id" = {assignmentId1}""",
+            cancellationToken);
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE shift_assignments SET "EmployeeId" = {emp1} WHERE "Id" = {assignmentId2}""",
+            cancellationToken);
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""UPDATE shift_assignments SET "EmployeeId" = {emp2} WHERE "Id" = {assignmentId1}""",
+            cancellationToken);
+    }
 
     private static bool TimeRangesOverlap(TimeOnly start1, TimeOnly end1, TimeOnly start2, TimeOnly end2) =>
         start1 < end2 && end1 > start2;

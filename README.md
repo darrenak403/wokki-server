@@ -33,10 +33,15 @@ dotnet run --project src/Wokki.Api
 
 ## Default seed users
 
+Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs)).
+
 | Email | Password | Role |
 |-------|----------|------|
-| admin@wokki.local | admin123 | Admin |
-| user@wokki.local | user123 | User |
+| admin@gmail.com | 12345@Abc | Admin |
+| manager@gmail.com | 12345@Abc | Manager |
+| user@gmail.com | 12345@Abc | User |
+
+Seed also creates **Main Office** location, **Operations** department, and Employee profiles linked to `user@gmail.com` and `manager@gmail.com`.
 
 ## Auth flow
 
@@ -44,7 +49,7 @@ dotnet run --project src/Wokki.Api
 # Login
 curl -s -X POST http://localhost:8386/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@wokki.local","password":"admin123"}'
+  -d '{"email":"admin@gmail.com","password":"12345@Abc"}'
 
 # Use accessToken on protected routes
 curl -s http://localhost:8386/api/v1/auth/me -H "Authorization: Bearer <accessToken>"

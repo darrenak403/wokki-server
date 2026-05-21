@@ -362,13 +362,10 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
             || targetAssignment.EmployeeId != swap.TargetEmployeeId)
             return (false, ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.InvalidTransition));
 
-        var requesterEmployeeId = requesterAssignment.EmployeeId;
-        requesterAssignment.EmployeeId = targetAssignment.EmployeeId;
-        targetAssignment.EmployeeId = requesterEmployeeId;
-
-        unitOfWork.ShiftAssignments.Update(requesterAssignment);
-        unitOfWork.ShiftAssignments.Update(targetAssignment);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.ShiftAssignments.SwapEmployeeIdsAsync(
+            requesterAssignment.Id,
+            targetAssignment.Id,
+            cancellationToken);
 
         return (true, null);
     }

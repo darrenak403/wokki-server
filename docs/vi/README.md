@@ -11,8 +11,9 @@
 | 3 | [process-flows.md](./process-flows.md) | Luồng xử lý và máy trạng thái |
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket theo vai trò |
 | 5 | [glossary.md](./glossary.md) | Thuật ngữ và enum |
-| 6 | [../architecture.md](../architecture.md) | Kiến trúc Clean Architecture (EN) |
-| 7 | [../minimal-api.md](../minimal-api.md) | Mẫu Minimal API (EN) |
+| 6 | **[fe-integration-guide.md](./fe-integration-guide.md)** | **Bàn giao FE — 7 main flow, auth, SignalR** |
+| 7 | [../architecture.md](../architecture.md) | Kiến trúc Clean Architecture (EN) |
+| 8 | [../minimal-api.md](../minimal-api.md) | Mẫu Minimal API (EN) |
 
 **Bản tiếng Anh (đồng bộ với code):** [../README.md](../README.md)
 
@@ -33,6 +34,7 @@
 
 ## Đường dẫn liên quan
 
+- Kiểm tra luồng & smoke: `plans/fe-handoff-flow-verification/`
 - Kế hoạch triển khai: `plans/shift-ops-mvp/`
 - Quy tắc agent: `AGENTS.md`, `.cursor/rules/wokki-backend.mdc`
 - Tài liệu API: `/scalar` khi bật `ApiDocs:Enabled` hoặc môi trường Development
