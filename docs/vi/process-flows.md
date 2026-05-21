@@ -24,7 +24,7 @@ stateDiagram-v2
     [*] --> Draft: Tạo / Copy tuần
     Draft --> Published: Publish
     Published --> Draft: Unpublish
-    note right of Published: Nhân viên xem /me/schedule\nCho phép đổi ca
+    note right of Published: Nhân viên xem /self/schedule\nCho phép đổi ca
 ```
 
 `ScheduleStatus.Locked` có trong code nhưng **chưa có API** gán trạng thái này.

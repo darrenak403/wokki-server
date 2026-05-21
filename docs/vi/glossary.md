@@ -4,7 +4,7 @@
 |-----------|------------|
 | **Admin** | Quản trị hệ thống: dữ liệu gốc, user, xuất payroll, quyền ghi đè. |
 | **Manager** | Quản lý vận hành: lịch, phân ca, duyệt đổi ca, điều chỉnh chấm công, tạo kênh chat. |
-| **User** | Nhân viên: self-service (`/me/*`), chấm công, thao tác đổi ca với đồng nghiệp. |
+| **User** | Nhân viên: self-service (`/self/*`), chấm công, thao tác đổi ca với đồng nghiệp. |
 | **Location** | Địa điểm vật lý, có múi giờ (`TimeZone` IANA). |
 | **Department** | Đơn vị thuộc location; lịch tuần và kỳ lương theo department. |
 | **Employee** | Hồ sơ nhân sự gắn 1:1 với `User`; có `Position`, `HourlyRate`, `DepartmentId`. |

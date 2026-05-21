@@ -11,7 +11,7 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | ID | Quy tắc | Thực thi |
 |----|---------|---------|
 | BR-001 | Vai trò cố định: `Admin`, `Manager`, `User`. Không ma trận quyền động trong MVP. | JWT + `RequireRole` |
-| BR-002 | `User` không truy cập API lịch quản lý (`/api/v1/schedules/*`). Chỉ xem lịch của mình qua `/api/v1/me/schedule`. | Authorization route |
+| BR-002 | `User` không truy cập API lịch quản lý (`/api/v1/schedules/*`). Chỉ xem lịch của mình qua `/api/v1/self/schedule`. | Authorization route |
 | BR-003 | `Admin` quản lý user, xuất payroll, xóa mềm mọi tin nhắn chat. | `ChannelService`, `PayrollEndpoints` |
 | BR-004 | `Manager` quản lý lịch, phân ca, ghi đè đổi ca, điều chỉnh chấm công, tạo kênh chat. | Authorization route |
 | BR-005 | Thao tác nhân viên cần bản ghi `Employee` gắn với `User` đăng nhập. | Service trả `*_NO_EMPLOYEE` / 404 |
@@ -40,7 +40,7 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-024 | Một nhân viên không được trùng **khung giờ** trên cùng ngày trong một lịch. | `HasTimeOverlapAsync` |
 | BR-025 | Từ chối trùng `(schedule, shiftDefinition, employee, date)`. | `ExistsAsync` |
 | BR-026 | Khi publish, gửi thông báo `schedule.published` cho nhân viên được phân ca (không rollback nếu gửi lỗi). | `PublishAsync` |
-| BR-027 | `GET /api/v1/me/schedule` chỉ trả phân ca của user trong **28 ngày** tới trên lịch **Published**. | `GetMyScheduleAsync` |
+| BR-027 | `GET /api/v1/self/schedule` chỉ trả phân ca của user trong **28 ngày** tới trên lịch **Published**. | `GetMyScheduleAsync` |
 
 ---
 

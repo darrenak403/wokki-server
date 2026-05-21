@@ -11,21 +11,25 @@ using Wokki.Application.Services.SwapRequest.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 
-namespace Wokki.Api.Apis.Me;
+namespace Wokki.Api.Apis.EmployeeSelf;
 
-public static class MeEndpoints
+/// <summary>
+/// Self-service APIs for the logged-in employee (requires linked Employee profile).
+/// </summary>
+public static class EmployeeSelfEndpoints
 {
-    public static IEndpointRouteBuilder MapMeApi(this IEndpointRouteBuilder builder)
+    public static IEndpointRouteBuilder MapEmployeeSelfApi(this IEndpointRouteBuilder builder)
     {
-        builder.MapGroup("/api/v1/me")
-            .MapMeRoutes()
-            .WithTags("Me")
+        builder.MapGroup("/api/v1/self")
+            .MapEmployeeSelfRoutes()
+            .WithTags("EmployeeSelf")
+            .WithDescription("Nghiệp vụ self-service của nhân viên đang đăng nhập (lịch ca, đổi ca, chấm công).")
             .RequireRateLimiting(RateLimitPolicies.Fixed);
 
         return builder;
     }
 
-    public static RouteGroupBuilder MapMeRoutes(this RouteGroupBuilder group)
+    public static RouteGroupBuilder MapEmployeeSelfRoutes(this RouteGroupBuilder group)
     {
         group.MapGet("/swap-requests", GetMySwapRequestsAsync)
             .WithName("GetMySwapRequests")

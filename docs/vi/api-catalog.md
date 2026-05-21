@@ -48,13 +48,15 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | POST | `/schedules/{id}/apply-suggestions` | Admin, Manager | Áp dụng gợi ý (chỉ Draft) |
 | GET/POST/PUT/DELETE | `/shifts` | Admin, Manager | Mẫu ca (shift definition) |
 
-## Self-service (`/api/v1/me`) — User (cần Employee)
+## Self-service nhân viên (`/api/v1/self`) — User (cần Employee)
+
+Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần hồ sơ Employee liên kết.
 
 | Method | Path | Mô tả |
 |--------|------|-------|
-| GET | `/me/schedule` | Lịch ca của mình (28 ngày, published) |
-| GET | `/me/swap-requests` | Yêu cầu đổi ca gửi/nhận |
-| GET | `/me/attendance` | Lịch sử chấm công |
+| GET | `/self/schedule` | Lịch ca của mình (28 ngày, published) |
+| GET | `/self/swap-requests` | Yêu cầu đổi ca gửi/nhận |
+| GET | `/self/attendance` | Lịch sử chấm công |
 
 ## Đổi ca (`/api/v1/swap-requests`)
 

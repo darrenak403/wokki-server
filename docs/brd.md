@@ -51,7 +51,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 |-------------|------|----------|------------------------|
 | **System Admin** | IT / HR systems | Users, org data, payroll export, compliance | Admin APIs, user management, payroll CSV |
 | **Operations Manager** | Department lead | Build/publish schedules, approve swaps, review attendance | Schedules, assignments, swaps override, payroll view |
-| **Employee (User)** | Frontline staff | See own shifts, swap shifts, clock in/out | `/me/*`, swap peer actions, attendance clock |
+| **Employee (User)** | Frontline staff | See own shifts, swap shifts, clock in/out | `/self/*`, swap peer actions, attendance clock |
 | **Payroll clerk** | Finance (may share Admin account) | Period totals, export | Payroll summary + export |
 | **Product owner** | Business sponsor | MVP scope, phased delivery | `plans/shift-ops-mvp/` |
 | **Engineering / AI agents** | Build & maintain API | Correct rules, stable contracts | This BRD + `docs/business-rules.md` |
@@ -65,7 +65,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | Phase | Capability |
 |-------|------------|
 | 1 | Manager role, employees, locations, departments |
-| 2 | Shift definitions, weekly schedules, publish/unpublish, copy week, `/me/schedule` |
+| 2 | Shift definitions, weekly schedules, publish/unpublish, copy week, `/self/schedule` |
 | 3 | Swap requests, peer accept/decline, manager override, notifications |
 | 4 | Clock-in/out, attendance list/adjust, payroll summary & CSV export |
 | 5 | Internal chat (REST + SignalR), heuristic schedule suggest/apply |
@@ -120,7 +120,7 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 | FR-202 | P1 | Manager shall assign employees to shift definitions on specific dates (Draft only). |
 | FR-203 | P1 | Manager shall publish/unpublish schedules. |
 | FR-204 | P1 | Manager shall copy a published/draft week to a new Draft week. |
-| FR-205 | P1 | Employee shall view own upcoming assignments via `/me/schedule`. |
+| FR-205 | P1 | Employee shall view own upcoming assignments via `/self/schedule`. |
 | FR-206 | P1 | System shall prevent overlapping assignments same employee/day. |
 
 ### 5.3 Swap workflow (Phase 3)
@@ -197,11 +197,11 @@ Summary by domain:
 
 1. Create Draft schedule for department + Monday date.
 2. Add assignments (or suggest → apply).
-3. Publish → employees notified → visible on `/me/schedule`.
+3. Publish → employees notified → visible on `/self/schedule`.
 
 ### 8.2 Employee — swap shift
 
-1. View `/me/schedule`.
+1. View `/self/schedule`.
 2. Create swap targeting colleague's assignment.
 3. Colleague accepts → assignments exchanged automatically.
 

@@ -11,7 +11,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | ID | Rule | Enforcement |
 |----|------|-------------|
 | BR-001 | Roles are fixed: `Admin`, `Manager`, `User` only. No dynamic permission matrix in MVP. | JWT claims + endpoint `RequireRole` |
-| BR-002 | `User` may not access manager schedule APIs (`/api/v1/schedules/*` except via published data indirectly). Own schedule only via `/api/v1/me/schedule`. | Route authorization |
+| BR-002 | `User` may not access manager schedule APIs (`/api/v1/schedules/*` except via published data indirectly). Own schedule only via `/api/v1/self/schedule`. | Route authorization |
 | BR-003 | `Admin` may manage users, payroll export, and soft-delete any chat message. | `ChannelService`, `PayrollEndpoints` |
 | BR-004 | `Manager` may manage schedules, assignments, swap overrides, attendance adjust, and create chat channels. | Route authorization |
 | BR-005 | Every employee-facing action requires an `Employee` row linked to the authenticated `User`. | Services return `*_NO_EMPLOYEE` / 404 |
@@ -40,7 +40,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-024 | One employee cannot have **overlapping** shift times on the same date within one schedule. | `HasTimeOverlapAsync` |
 | BR-025 | Duplicate tuple `(schedule, shiftDefinition, employee, date)` is rejected. | `ExistsAsync` |
 | BR-026 | On publish, assigned employees receive notification `schedule.published` (non-blocking). | `ScheduleService.PublishAsync` |
-| BR-027 | `GET /api/v1/me/schedule` returns only the caller's assignments for the next **28 days** on **published** schedules. | `GetMyScheduleAsync` |
+| BR-027 | `GET /api/v1/self/schedule` returns only the caller's assignments for the next **28 days** on **published** schedules. | `GetMyScheduleAsync` |
 
 ---
 

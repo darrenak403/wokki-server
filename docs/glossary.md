@@ -4,7 +4,7 @@
 |------|------------|
 | **Admin** | System administrator: master data, users, payroll export, override capabilities. |
 | **Manager** | Operations lead: schedules, assignments, swap overrides, attendance adjust, channel creation. |
-| **User** | Frontline employee: self-service (`/me/*`), clock in/out, swap peer actions. |
+| **User** | Frontline employee: self-service (`/self/*`), clock in/out, swap peer actions. |
 | **Location** | Physical site with timezone (`TimeZone` IANA id). Parent of departments. |
 | **Department** | Org unit under a location; schedules and pay periods are department-scoped. |
 | **Employee** | Workforce profile linked 1:1 to a `User`; has `Position`, `HourlyRate`, `DepartmentId`. |

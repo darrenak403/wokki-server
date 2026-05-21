@@ -8,7 +8,7 @@ using Wokki.Api.Apis.Departments;
 using Wokki.Api.Apis.Employees;
 using Wokki.Api.Apis.Health;
 using Wokki.Api.Apis.Locations;
-using Wokki.Api.Apis.Me;
+using Wokki.Api.Apis.EmployeeSelf;
 using Wokki.Api.Apis.Payroll;
 using Wokki.Api.Apis.Schedules;
 using Wokki.Api.Apis.Shifts;
@@ -72,7 +72,7 @@ public static class PipelineExtensions
         app.MapDepartmentApi();
         app.MapShiftApi();
         app.MapScheduleApi();
-        app.MapMeApi();
+        app.MapEmployeeSelfApi();
         app.MapSwapRequestApi();
         app.MapAttendanceApi();
         app.MapPayrollApi();

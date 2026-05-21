@@ -24,7 +24,7 @@ stateDiagram-v2
     [*] --> Draft: Create / Copy week
     Draft --> Published: Publish
     Published --> Draft: Unpublish
-    note right of Published: Employees see /me/schedule\nSwaps allowed
+    note right of Published: Employees see /self/schedule\nSwaps allowed
 ```
 
 `ScheduleStatus.Locked` exists in code but **no API sets it yet** (future: lock after payroll close).

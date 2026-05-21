@@ -48,13 +48,15 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | POST | `/schedules/{id}/apply-suggestions` | Admin, Manager | Apply suggestions (Draft only) |
 | GET/POST/PUT/DELETE | `/shifts` | Admin, Manager | Shift definitions |
 
-## Self-service (`/api/v1/me`) — User (+ employee profile)
+## Employee self-service (`/api/v1/self`) — User (+ employee profile)
+
+Not the same as `GET /api/v1/auth/me` (login account). These routes require a linked Employee profile.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/me/schedule` | Own upcoming published assignments (28 days) |
-| GET | `/me/swap-requests` | Swap requests sent/received |
-| GET | `/me/attendance` | Own attendance history |
+| GET | `/self/schedule` | Own upcoming published assignments (28 days) |
+| GET | `/self/swap-requests` | Swap requests sent/received |
+| GET | `/self/attendance` | Own attendance history |
 
 ## Swap requests (`/api/v1/swap-requests`)
 
