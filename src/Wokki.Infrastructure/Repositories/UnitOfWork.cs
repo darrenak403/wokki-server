@@ -17,6 +17,9 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IAttendanceRepository? _attendance;
     private IPayPeriodRepository? _payPeriods;
     private IPayrollLineRepository? _payrollLines;
+    private IChannelRepository? _channels;
+    private IMessageRepository? _messages;
+    private IEmployeeAvailabilityRepository? _employeeAvailabilities;
     private IDbContextTransaction? _transaction;
 
     public IUserRepository Users => _users ??= new UserRepository(context);
@@ -30,6 +33,10 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IAttendanceRepository Attendance => _attendance ??= new AttendanceRepository(context);
     public IPayPeriodRepository PayPeriods => _payPeriods ??= new PayPeriodRepository(context);
     public IPayrollLineRepository PayrollLines => _payrollLines ??= new PayrollLineRepository(context);
+    public IChannelRepository Channels => _channels ??= new ChannelRepository(context);
+    public IMessageRepository Messages => _messages ??= new MessageRepository(context);
+    public IEmployeeAvailabilityRepository EmployeeAvailabilities =>
+        _employeeAvailabilities ??= new EmployeeAvailabilityRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);

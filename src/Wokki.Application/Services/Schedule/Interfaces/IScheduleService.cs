@@ -39,4 +39,11 @@ public interface IScheduleService
     Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyScheduleAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+    Task<ApiResponse<ScheduleSuggestionsResponse>> SuggestAsync(
+        Guid scheduleId,
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> ApplySuggestionsAsync(
+        Guid scheduleId,
+        ApplyScheduleSuggestionsRequest request,
+        CancellationToken cancellationToken = default);
 }

@@ -13,6 +13,9 @@ public interface IUnitOfWork : IAsyncDisposable
     IAttendanceRepository Attendance { get; }
     IPayPeriodRepository PayPeriods { get; }
     IPayrollLineRepository PayrollLines { get; }
+    IChannelRepository Channels { get; }
+    IMessageRepository Messages { get; }
+    IEmployeeAvailabilityRepository EmployeeAvailabilities { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

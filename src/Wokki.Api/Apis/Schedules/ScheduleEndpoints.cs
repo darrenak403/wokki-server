@@ -133,6 +133,27 @@ public static class ScheduleEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapPost("/{id:guid}/suggest", SuggestAsync)
+            .WithName("SuggestScheduleAssignments")
+            .WithDescription("Gợi ý phân công bằng heuristic (không ghi DB).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<ScheduleSuggestionsResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/apply-suggestions", ApplySuggestionsAsync)
+            .WithName("ApplyScheduleSuggestions")
+            .WithDescription("Áp dụng gợi ý vào lịch Draft.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
         return group;
     }
 
@@ -260,6 +281,29 @@ public static class ScheduleEndpoints
         CancellationToken cancellationToken = default)
     {
         var response = await service.DeleteAssignmentAsync(id, assignmentId, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> SuggestAsync(
+        [FromRoute] Guid id,
+        [FromServices] IScheduleService service,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await service.SuggestAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ApplySuggestionsAsync(
+        [FromRoute] Guid id,
+        [FromBody] ApplyScheduleSuggestionsRequest request,
+        [FromServices] IScheduleService service,
+        [FromServices] IValidator<ApplyScheduleSuggestionsRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.ApplySuggestionsAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 }

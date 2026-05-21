@@ -25,6 +25,21 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
             .ThenBy(a => a.CreatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ShiftAssignment>> ListPublishedByDepartmentInDateRangeAsync(
+        Guid departmentId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default) =>
+        await (
+            from a in context.ShiftAssignments.AsNoTracking()
+            join s in context.Schedules.AsNoTracking() on a.ScheduleId equals s.Id
+            where s.DepartmentId == departmentId
+                  && s.Status == ScheduleStatus.Published
+                  && a.Date >= fromDate
+                  && a.Date <= toDate
+            select a
+        ).ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<ShiftAssignment>> ListByEmployeeInDateRangeAsync(
         Guid employeeId,
         DateOnly fromDate,

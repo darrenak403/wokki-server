@@ -1,7 +1,9 @@
 using Serilog;
 using Scalar.AspNetCore;
 using Wokki.Api.Apis.Attendance;
+using Wokki.Api.Apis.Chat;
 using Wokki.Api.Apis.Auth;
+using Wokki.Api.Hubs;
 using Wokki.Api.Apis.Departments;
 using Wokki.Api.Apis.Employees;
 using Wokki.Api.Apis.Health;
@@ -19,7 +21,17 @@ public static class PipelineExtensions
 {
     public static WebApplication UseApplicationPipeline(this WebApplication app)
     {
-        app.UseSerilogRequestLogging();
+        app.UseSerilogRequestLogging(options =>
+        {
+            options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+            {
+                diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
+                if (httpContext.Request.Query.ContainsKey("access_token"))
+                    diagnosticContext.Set("RequestQuery", "[redacted]");
+                else
+                    diagnosticContext.Set("RequestQuery", httpContext.Request.QueryString.Value ?? string.Empty);
+            };
+        });
         app.UseMiddleware<Middleware.CorrelationIdMiddleware>();
         app.UseMiddleware<Middleware.ExceptionHandlingMiddleware>();
 
@@ -27,6 +39,8 @@ public static class PipelineExtensions
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
+
+        app.MapHub<ChatHub>("/ws/chat");
 
         return app;
     }
@@ -62,6 +76,7 @@ public static class PipelineExtensions
         app.MapSwapRequestApi();
         app.MapAttendanceApi();
         app.MapPayrollApi();
+        app.MapChannelApi();
 
         return app;
     }

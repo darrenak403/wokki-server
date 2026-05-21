@@ -2,6 +2,8 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Wokki.Application.Services.Attendance.Implementations;
 using Wokki.Application.Services.Attendance.Interfaces;
+using Wokki.Application.Services.Chat.Implementations;
+using Wokki.Application.Services.Chat.Interfaces;
 using Wokki.Application.Services.Auth.Implementations;
 using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Application.Services.Department.Implementations;
@@ -40,6 +42,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISwapRequestService, SwapRequestService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<IChannelService, ChannelService>();
 
         return services;
     }

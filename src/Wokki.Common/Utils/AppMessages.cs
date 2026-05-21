@@ -88,8 +88,32 @@ public static class AppMessages
         public static readonly AppMessage AssignmentDuplicate = new("SCHEDULE_ASSIGNMENT_DUPLICATE", "Employee is already assigned to this shift on this date.", StatusCodes.Status409Conflict);
         public static readonly AppMessage ShiftInactive = new("SCHEDULE_SHIFT_INACTIVE", "Shift definition is inactive.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage EmployeeNotFound = new("SCHEDULE_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage EmployeeWrongDepartment = new("SCHEDULE_EMPLOYEE_WRONG_DEPT", "Employee does not belong to this schedule department.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ShiftWrongScope = new("SCHEDULE_SHIFT_WRONG_SCOPE", "Shift definition does not apply to this schedule.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MyScheduleListed = new("ME_SCHEDULE_LISTED", "Your schedule listed.", StatusCodes.Status200OK);
         public static readonly AppMessage NoEmployeeProfile = new("ME_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage SuggestionsGenerated = new("SCHEDULE_SUGGESTIONS_GENERATED", "Schedule suggestions generated.", StatusCodes.Status200OK);
+        public static readonly AppMessage SuggestionsApplied = new("SCHEDULE_SUGGESTIONS_APPLIED", "Schedule suggestions applied.", StatusCodes.Status200OK);
+        public static readonly AppMessage SuggestionsEmpty = new("SCHEDULE_SUGGESTIONS_EMPTY", "No suggestions to apply.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class Chat
+    {
+        public static readonly AppMessage Listed = new("CHAT_CHANNELS_LISTED", "Channels listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Found = new("CHAT_CHANNEL_FOUND", "Channel found.", StatusCodes.Status200OK);
+        public static readonly AppMessage Created = new("CHAT_CHANNEL_CREATED", "Channel created.", StatusCodes.Status201Created);
+        public static readonly AppMessage ChannelNotFound = new("CHAT_CHANNEL_NOT_FOUND", "Channel not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage MessagesListed = new("CHAT_MESSAGES_LISTED", "Messages listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage MessageSent = new("CHAT_MESSAGE_SENT", "Message sent.", StatusCodes.Status201Created);
+        public static readonly AppMessage MessageDeleted = new("CHAT_MESSAGE_DELETED", "Message deleted.", StatusCodes.Status200OK);
+        public static readonly AppMessage MessageNotFound = new("CHAT_MESSAGE_NOT_FOUND", "Message not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("CHAT_FORBIDDEN", "You are not a member of this channel.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage NoEmployeeProfile = new("CHAT_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage MembersRequired = new("CHAT_MEMBERS_REQUIRED", "At least one member is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage MemberNotFound = new("CHAT_MEMBER_NOT_FOUND", "One or more members were not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DirectRequiresTwoMembers = new("CHAT_DIRECT_TWO_MEMBERS", "Direct channels require exactly two members.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage GroupNameRequired = new("CHAT_GROUP_NAME_REQUIRED", "Group channels require a name.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage BodyRequired = new("CHAT_BODY_REQUIRED", "Message body is required.", StatusCodes.Status400BadRequest);
     }
 
     public static class Swap

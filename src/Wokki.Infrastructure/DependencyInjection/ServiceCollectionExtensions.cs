@@ -13,6 +13,7 @@ using Wokki.Infrastructure.Caching;
 using Wokki.Infrastructure.Notifications;
 using Wokki.Infrastructure.Persistence;
 using Wokki.Infrastructure.Repositories;
+using Wokki.Infrastructure.Scheduling;
 using Wokki.Infrastructure.Tenancy;
 
 namespace Wokki.Infrastructure.DependencyInjection;
@@ -33,6 +34,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IScheduleSuggestionService, HeuristicScheduleSuggestionService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher, MicrosoftPasswordHasher>();
@@ -65,6 +67,22 @@ public static class ServiceCollectionExtensions
                     ValidIssuer = jwt.Issuer,
                     ValidAudience = jwt.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret))
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken)
+                            && path.StartsWithSegments("/ws/chat", StringComparison.OrdinalIgnoreCase))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
