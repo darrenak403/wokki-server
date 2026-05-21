@@ -6,6 +6,8 @@ Tài liệu bàn giao cho team FE tích hợp **Wokki Shift Ops MVP**. Chi tiế
 
 **Smoke BE (không unit test):** `plans/fe-handoff-flow-verification/run-smoke.sh`
 
+**Handoff theo wave (contract từng file):** [docs/fe/README.md](../fe/README.md)
+
 ---
 
 ## 1. Xác thực
@@ -53,70 +55,188 @@ Tài liệu bàn giao cho team FE tích hợp **Wokki Shift Ops MVP**. Chi tiế
 
 ---
 
-## 4. Bảy luồng chính (main flows)
+## 4. Thứ tự triển khai FE (tránh conflict)
+
+FE nên làm **theo đúng thứ tự dưới đây**. Luồng sau phụ thuộc dữ liệu/id từ luồng trước; gọi sớm sẽ gặp 400/404/409 hoặc màn hình trống.
 
 ```mermaid
-flowchart LR
-    Auth[Auth] --> Master[MasterData]
-    Master --> Schedule[Schedule_Publish]
-    Schedule --> Self[Self_View]
-    Schedule --> Swap[Swap]
-    Swap --> Self
-    Schedule --> Attendance[Clock]
-    Attendance --> Payroll[Payroll]
-    Auth --> Chat[Chat_REST]
-    Chat --> WS[SignalR]
+flowchart TB
+    W1[Wave1_Auth] --> W2[Wave2_Foundation]
+    W2 --> W3[Wave3_Schedule]
+    W3 --> W4[Wave4_Employee]
+    W3 --> W5[Wave5_ManagerOps]
+    W4 --> W5
+    W1 --> W6[Wave6_Chat]
 ```
 
-### F0 — Auth & phiên
+| Wave | Ai build trước | Phụ thuộc |
+|------|----------------|-----------|
+| **1** | Mọi màn hình | Token JWT |
+| **2** | Admin / setup | Location → Department → Employee → Shift |
+| **3** | Manager lịch | Có `departmentId`, `shiftDefinitionId` |
+| **4** | App nhân viên | Lịch **Published** + phân ca |
+| **5** | Manager vận hành | Có attendance / swap |
+| **6** | Chat (song song được sau Wave 1) | User có Employee |
 
-Login → lưu token → `auth/me` → refresh khi 401 (tuỳ FE policy).
+**Quy tắc tránh conflict**
 
-### F0b — Dữ liệu gốc (Admin/Manager)
+- **User** không gọi `/api/v1/schedules/*` (chỉ Manager/Admin).
+- **`GET /auth/me`** ≠ **`GET /self/*`** (tài khoản vs nghiệp vụ nhân viên).
+- **Đổi ca / chấm công** chỉ sau khi có lịch **Published** và phân ca.
+- **Payroll** chỉ meaningful sau **clock-out** (có `workedMinutes`).
+- Sau **swap accept**, gọi lại `GET /self/schedule` để UI khớp DB.
 
-`/employees`, `/locations`, `/departments`, `/shifts` — thiết lập trước khi tạo lịch.
+---
 
-### F1 — Lịch (Manager/Admin)
+### Wave 1 — Auth (làm trước tiên)
 
-1. `POST /schedules` (Draft, `weekStartDate` = thứ Hai)
-2. `POST /schedules/{id}/assignments`
-3. `POST /schedules/{id}/publish`
-4. (Tùy chọn) `POST .../suggest` → `POST .../apply-suggestions`
+| Bước | API | Method | Body / query | Lưu `id` |
+|------|-----|--------|--------------|----------|
+| 1 | `/api/v1/auth/login` | POST | `{ email, password }` | `accessToken`, `refreshToken` |
+| 2 | `/api/v1/auth/me` | GET | Bearer | `userId`, `role` → route guard |
+| 3 | `/api/v1/auth/refresh-token` | POST | `{ refreshToken }` | token mới khi 401 |
+| 4 | `/api/v1/auth/logout` | POST | Bearer | (tuỳ chọn) |
+| 5 | `/health` | GET | — | kiểm tra API sống |
 
-**User không gọi** `/schedules/*` (BR-002).
+**Không** dùng `/self/*` ở wave này.
 
-### F2 — Nhân viên xem ca
+---
 
-`GET /api/v1/self/schedule` — 28 ngày tới, lịch Published.
+### Wave 2 — Dữ liệu gốc (Admin / Manager setup)
 
-### F3 — Đổi ca
+Thứ tự **trong wave** (tránh FK sai):
 
-1. User `POST /swap-requests`
-2. Đối tác `POST /swap-requests/{id}/accept` | `decline`
-3. Manager `override-approve` | `override-reject` khi cần
-4. `GET /self/swap-requests` — danh sách gửi/nhận
+| Bước | API | Method | Ghi chú |
+|------|-----|--------|---------|
+| 1 | `/api/v1/locations` | GET | Danh sách (seed đã có Main Office) |
+| 2 | `/api/v1/locations` | POST | Tạo mới nếu cần → lưu `locationId` |
+| 3 | `/api/v1/departments` | GET | Theo location |
+| 4 | `/api/v1/departments` | POST | `{ locationId, name }` → `departmentId` |
+| 5 | `/api/v1/employees` | GET | |
+| 6 | `/api/v1/employees` | POST | Gắn `departmentId`, `userId` → `employeeId` |
+| 7 | `/api/v1/shifts` | GET | |
+| 8 | `/api/v1/shifts` | POST | `{ locationId, departmentId?, name, startTime, endTime, requiredRole }` → `shiftDefinitionId` |
 
-### F4 — Chấm công
+**Admin thêm (song song wave 2):**
 
-- User: `POST /attendance/clock-in`, `clock-out` (rate limit **Clock**)
-- `GET /self/attendance`
-- Manager: `GET /attendance`, `PUT /attendance/{id}/adjust` (bắt buộc ghi chú)
+| API | Method |
+|-----|--------|
+| `/api/v1/users` | GET, POST |
+| `/api/v1/users/{id}` | GET |
 
-**Điều kiện clock-in:** Có phân ca Published **hôm nay**.
+---
 
-### F5 — Lương
+### Wave 3 — Lịch tuần (Manager / Admin) — bắt buộc trước nhân viên
 
-- Manager: `GET /payroll/summary?departmentId&startDate&endDate`
-- Admin: `POST /payroll/summary/export` → CSV
+| Bước | API | Method | Body / query | Điều kiện |
+|------|-----|--------|--------------|-----------|
+| 1 | `/api/v1/schedules` | GET | `?departmentId=&weekStartDate=&page=` | Xem lịch tuần |
+| 2 | `/api/v1/schedules` | POST | `{ departmentId, weekStartDate }` (thứ Hai) | Tạo Draft → `scheduleId` |
+| 3 | `/api/v1/schedules/{scheduleId}` | GET | — | Chi tiết + `assignments[]` |
+| 4 | `/api/v1/schedules/{scheduleId}/assignments` | POST | `{ shiftDefinitionId, employeeId, date, note? }` | **Chỉ Draft**; lặp cho từng ca → `assignmentId` |
+| 5 | `/api/v1/schedules/{scheduleId}/assignments/{assignmentId}` | DELETE | — | Xóa phân ca (Draft) |
+| 6 | `/api/v1/schedules/{scheduleId}/suggest` | POST | body gợi ý (tuỳ chọn) | Không ghi DB |
+| 7 | `/api/v1/schedules/{scheduleId}/apply-suggestions` | POST | danh sách gợi ý | **Chỉ Draft** |
+| 8 | `/api/v1/schedules/{scheduleId}/publish` | POST | `{}` | Draft → **Published** — mở wave 4 |
+| 9 | `/api/v1/schedules/{scheduleId}/unpublish` | POST | — | Published → Draft (sửa lại) |
+| 10 | `/api/v1/schedules/{scheduleId}/copy` | POST | tuần đích | Copy sang Draft mới |
 
-### F6 — Chat
+**Sau bước 8** nhân viên mới thấy ca trên `GET /self/schedule`.
 
-- REST: `/api/v1/channels`, messages `{"body":"..."}`
-- SignalR: `ws://{host}/ws/chat?access_token={jwt}`
-  - Client: `JoinChannel(channelId)`, `LeaveChannel(channelId)`
-  - Server: `ReceiveMessage`
+---
 
-`ChannelType`: `0` = Direct, `1` = Group.
+### Wave 4 — Nhân viên (User + có Employee)
+
+Chỉ gọi sau **publish**. Dùng token User (`user@gmail.com` seed).
+
+#### F2 — Xem lịch của tôi
+
+| Bước | API | Method |
+|------|-----|--------|
+| 1 | `/api/v1/self/schedule` | GET |
+
+Refresh sau swap accept.
+
+#### F3 — Đổi ca (User)
+
+| Bước | API | Method | Ai gọi |
+|------|-----|--------|--------|
+| 1 | `/api/v1/self/swap-requests` | GET | User — danh sách gửi/nhận |
+| 2 | `/api/v1/swap-requests` | POST | User — `{ requesterAssignmentId, targetAssignmentId, requesterNote? }` → `swapId` |
+| 3 | `/api/v1/swap-requests/{swapId}` | GET | User / Manager — chi tiết |
+| 4 | `/api/v1/swap-requests/{swapId}/accept` | POST | **Đối tác** (employee nhận ca) |
+| 5 | `/api/v1/swap-requests/{swapId}/decline` | POST | Đối tác |
+| 6 | `/api/v1/swap-requests/{swapId}/cancel` | POST | Người gửi |
+| 7 | `/api/v1/self/schedule` | GET | Cả hai — xác nhận đã đổi ca |
+
+**Manager (wave 5, có thể gộp màn duyệt):**
+
+| API | Method |
+|-----|--------|
+| `/api/v1/swap-requests` | GET — lọc `?status=&departmentId=` |
+| `/api/v1/swap-requests/{swapId}/override-approve` | POST |
+| `/api/v1/swap-requests/{swapId}/override-reject` | POST |
+
+#### F4 — Chấm công (User)
+
+Cần phân ca **Published** trùng **ngày hôm nay**.
+
+| Bước | API | Method | Rate |
+|------|-----|--------|------|
+| 1 | `/api/v1/attendance/clock-in` | POST | Clock |
+| 2 | `/api/v1/attendance/clock-out` | POST | Clock |
+| 3 | `/api/v1/self/attendance` | GET | `?fromDate=&toDate=` |
+
+---
+
+### Wave 5 — Manager / Admin vận hành (sau wave 3–4)
+
+#### F4b — Duyệt / sửa chấm công
+
+| Bước | API | Method |
+|------|-----|--------|
+| 1 | `/api/v1/attendance` | GET — lọc theo ngày/nhân viên |
+| 2 | `/api/v1/attendance/{attendanceId}/adjust` | PUT — **bắt buộc** ghi chú điều chỉnh |
+
+#### F5 — Lương
+
+| Bước | API | Method | Query |
+|------|-----|--------|-------|
+| 1 | `/api/v1/payroll/summary` | GET | `departmentId`, `startDate`, `endDate` |
+| 2 | `/api/v1/payroll/summary/{employeeId}` | GET | cùng query |
+| 3 | `/api/v1/payroll/summary/export` | POST | Admin — CSV (cùng tham số kỳ) |
+
+Gọi sau khi đã có bản ghi clock-out trong kỳ.
+
+---
+
+### Wave 6 — Chat (sau Wave 1; cần Employee)
+
+| Bước | API / transport | Method | Ghi chú |
+|------|-----------------|--------|---------|
+| 1 | `/api/v1/channels` | GET | Kênh của mình |
+| 2 | `/api/v1/channels` | POST | Manager/Admin — `{ type: 0\|1, name?, memberEmployeeIds[] }` |
+| 3 | `/api/v1/channels/{channelId}/messages` | GET | `?before=&limit=` |
+| 4 | `/api/v1/channels/{channelId}/messages` | POST | `{ body }` |
+| 5 | `/api/v1/channels/{channelId}/messages/{messageId}` | DELETE | Người gửi / Admin |
+| 6 | `ws://{host}/ws/chat?access_token={jwt}` | SignalR | `JoinChannel(channelId)` → nhận `ReceiveMessage` |
+
+`type`: `0` = Direct, `1` = Group.
+
+---
+
+### Một vòng “happy path” đủ 7 flow (test tích hợp)
+
+Dùng để QA end-to-end; thứ tự API **không đổi**:
+
+1. Manager login → `POST /shifts` → `POST /schedules` → 2× `POST .../assignments` → `POST .../publish`
+2. User login → `GET /self/schedule`
+3. User `POST /swap-requests` → Manager/User đối tác `POST .../accept` → `GET /self/schedule` (cả hai)
+4. User `POST /attendance/clock-in` → `clock-out` → `GET /self/attendance`
+5. Manager `GET /attendance` → `GET /payroll/summary`
+6. Manager `POST /channels` → `POST .../messages` + SignalR
+
+Script tự động: `plans/fe-handoff-flow-verification/run-smoke.sh`
 
 ---
 
@@ -162,6 +282,7 @@ Chi tiết: [plans/fe-handoff-flow-verification/gaps.md](../../plans/fe-handoff-
 
 | File | Mục đích |
 |------|----------|
+| [docs/fe/README.md](../fe/README.md) | **6 file handoff theo wave** (dùng với `/ck-docs-fe`) |
 | [flow-matrix.md](../../plans/fe-handoff-flow-verification/flow-matrix.md) | Thứ tự API + BR |
 | [manual-smoke-runbook.md](../../plans/fe-handoff-flow-verification/manual-smoke-runbook.md) | Kiểm tra thủ công |
 | [business-rules.md](./business-rules.md) | Quy tắc BR-xxx |

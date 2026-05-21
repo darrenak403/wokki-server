@@ -30,3 +30,4 @@ docker/.env.local
 .DS_Store
 
 plans/
+docs/fe/
