@@ -36,6 +36,7 @@ public static class PipelineExtensions
         app.UseMiddleware<Middleware.ExceptionHandlingMiddleware>();
 
         app.UseHttpsRedirection();
+        app.UseCors(CorsSettings.FrontendPolicy);
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();

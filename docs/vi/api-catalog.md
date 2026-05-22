@@ -9,7 +9,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | Method | Path | Vai trò | Mô tả |
 |--------|------|---------|-------|
 | POST | `/login` | Anonymous | Đăng nhập, cấp token |
-| POST | `/register` | Anonymous | Đăng ký |
+| POST | `/register` | Anonymous | Tự đăng ký (luôn role `User`; Admin tạo user → `POST /users`) |
 | POST | `/refresh-token` | Anonymous | Làm mới JWT |
 | GET | `/me` | Đã đăng nhập | User hiện tại |
 | POST | `/logout` | Đã đăng nhập | Đăng xuất |

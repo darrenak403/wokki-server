@@ -35,10 +35,11 @@ public static class AuthEndpoints
 
         group.MapPost("/register", RegisterUserAsync)
             .WithName("Register")
-            .WithDescription("Đăng ký người dùng mới (Không cần xác thực)")
+            .WithDescription("Tự đăng ký tài khoản (Anonymous); luôn tạo role User — Admin tạo user qua POST /api/v1/users")
             .AllowAnonymous()
             .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest);
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
         group.MapPost("/refresh-token", RefreshTokenAsync)
             .WithName("RefreshToken")

@@ -9,7 +9,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | Method | Path | Roles | Description |
 |--------|------|-------|-------------|
 | POST | `/login` | Anonymous | Issue tokens |
-| POST | `/register` | Anonymous | Register user |
+| POST | `/register` | Anonymous | Self-signup (always `User` role; admin creates users via `POST /users`) |
 | POST | `/refresh-token` | Anonymous | Refresh JWT |
 | GET | `/me` | Authenticated | Current user |
 | POST | `/logout` | Authenticated | Logout |

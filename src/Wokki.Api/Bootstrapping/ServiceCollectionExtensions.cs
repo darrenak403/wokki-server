@@ -7,8 +7,24 @@ namespace Wokki.Api.Bootstrapping;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddApiServices(this IServiceCollection services)
+    public static IServiceCollection AddApiServices(this IServiceCollection services, IConfiguration configuration)
     {
+        var cors = configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>()
+                   ?? new CorsSettings();
+
+        services.AddCors(options =>
+        {
+            options.AddPolicy(CorsSettings.FrontendPolicy, policy =>
+            {
+                if (cors.AllowedOrigins.Length > 0)
+                    policy.WithOrigins(cors.AllowedOrigins);
+
+                policy.AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
+
         services.AddSignalR();
         services.AddScoped<IChatRealtimeNotifier, SignalRChatNotifier>();
 

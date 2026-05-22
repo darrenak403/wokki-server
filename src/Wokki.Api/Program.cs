@@ -34,7 +34,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 
 });
-builder.Services.AddApiServices();
+builder.Services.AddApiServices(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 

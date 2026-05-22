@@ -2,6 +2,7 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Auth;
 using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Common.Utils;
+using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Auth.Implementations;
@@ -47,7 +48,7 @@ public sealed class AuthService(
         {
             Email = normalizedEmail,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            Role = request.Role.Trim()
+            Role = RoleConstants.User
         };
 
         await unitOfWork.Users.AddAsync(user, cancellationToken);
