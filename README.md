@@ -31,17 +31,24 @@ dotnet run --project src/Wokki.Api
 
 - API: http://localhost:8386
 
-## Default seed users
+## Default seed (Wokki Coffê demo)
 
-Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs)).
+Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs) → [`CoffeeShopSeedBuilder.cs`](src/Wokki.Infrastructure/Persistence/CoffeeShopSeedBuilder.cs)). Dates use **`Asia/Ho_Chi_Minh`**.
 
-| Email | Password | Role |
-|-------|----------|------|
-| admin@gmail.com | 12345@Abc | Admin |
-| manager@gmail.com | 12345@Abc | Manager |
-| user@gmail.com | 12345@Abc | User |
+**Password (all accounts):** `12345@Abc`
 
-Seed also creates **Main Office** location, **Operations** department, and Employee profiles linked to `user@gmail.com` and `manager@gmail.com`.
+| Email | Role |
+|-------|------|
+| admin@gmail.com | Admin (chủ quán) |
+| manager@gmail.com | Manager (trưởng ca) |
+| user@gmail.com | User (barista demo) |
+| barista1@gmail.com … barista5@gmail.com | User |
+
+**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, shift definitions, **published weekly schedule**, attendance (closed), pay period, pending swap, chat channels.
+
+**Reset demo data:** `docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local down -v` then start Postgres and run the API again.
+
+Full IDs: [docs/fe/seed-credentials.md](docs/fe/seed-credentials.md).
 
 ## Auth flow
 
