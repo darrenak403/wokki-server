@@ -150,6 +150,7 @@ public static class AppMessages
         public static readonly AppMessage OpenRecordExists = new("ATTENDANCE_OPEN_EXISTS", "Employee already has an open attendance record.", StatusCodes.Status409Conflict);
         public static readonly AppMessage NoOpenRecord = new("ATTENDANCE_NO_OPEN", "No open attendance record to clock out.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage NoAssignmentToday = new("ATTENDANCE_NO_ASSIGNMENT", "No scheduled assignment found for today.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage AssignmentWindowPassed = new("ATTENDANCE_ASSIGNMENT_WINDOW_PASSED", "Shift has already ended; clock-in is no longer allowed.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage NoEmployeeProfile = new("ATTENDANCE_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
         public static readonly AppMessage PeriodLocked = new("ATTENDANCE_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AdjustmentNoteRequired = new("ATTENDANCE_NOTE_REQUIRED", "Adjustment note is required.", StatusCodes.Status400BadRequest);

@@ -1,3 +1,4 @@
+using Wokki.Application.Common;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Mappings.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
@@ -5,6 +6,11 @@ using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using AttendanceEntity = Wokki.Domain.Entities.AttendanceRecord;
+using DepartmentEntity = Wokki.Domain.Entities.Department;
+using LocationEntity = Wokki.Domain.Entities.Location;
+using ScheduleEntity = Wokki.Domain.Entities.Schedule;
+using ShiftAssignmentEntity = Wokki.Domain.Entities.ShiftAssignment;
+using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.Attendance.Implementations;
 
@@ -23,7 +29,8 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
         if (open is not null)
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.OpenRecordExists);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId, cancellationToken);
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone));
         var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeInDateRangeAsync(
             employee.Id,
             today,
@@ -45,6 +52,13 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
             assignmentId = assignments[0].Id;
         }
 
+        var clockContext = await LoadClockContextAsync(assignmentId, cancellationToken);
+        if (clockContext is null)
+            return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NoAssignmentToday);
+
+        if (IsAfterShiftEnd(clockContext.Assignment.Date, clockContext.Shift.EndTime, clockContext.TimeZone))
+            return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.AssignmentWindowPassed);
+
         var record = new AttendanceEntity
         {
             Id = Guid.NewGuid(),
@@ -57,7 +71,9 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
         await unitOfWork.Attendance.AddAsync(record, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ApiResponse<AttendanceResponse>.SuccessResponse(record.ToResponse(), AppMessages.Attendance.ClockedIn);
+        return ApiResponse<AttendanceResponse>.SuccessResponse(
+            await BuildAttendanceResponseAsync(record, cancellationToken),
+            AppMessages.Attendance.ClockedIn);
     }
 
     public async Task<ApiResponse<AttendanceResponse>> ClockOutAsync(
@@ -77,7 +93,9 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
         unitOfWork.Attendance.Update(record);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ApiResponse<AttendanceResponse>.SuccessResponse(record.ToResponse(), AppMessages.Attendance.ClockedOut);
+        return ApiResponse<AttendanceResponse>.SuccessResponse(
+            await BuildAttendanceResponseAsync(record, cancellationToken),
+            AppMessages.Attendance.ClockedOut);
     }
 
     public async Task<ApiResponse<PagedResponse<AttendanceResponse>>> ListAsync(
@@ -96,7 +114,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
             cancellationToken);
 
         return ApiResponse<PagedResponse<AttendanceResponse>>.SuccessPagedResponse(
-            items.Select(i => i.ToResponse()),
+            await BuildAttendanceResponsesAsync(items, cancellationToken),
             page,
             pageSize,
             total,
@@ -115,7 +133,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
 
         var items = await unitOfWork.Attendance.ListByEmployeeAsync(employee.Id, fromDate, toDate, cancellationToken);
         return ApiResponse<IReadOnlyList<AttendanceResponse>>.SuccessResponse(
-            items.Select(i => i.ToResponse()).ToList(),
+            await BuildAttendanceResponsesAsync(items, cancellationToken),
             AppMessages.Attendance.Listed);
     }
 
@@ -147,8 +165,191 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
         unitOfWork.Attendance.Update(record);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return ApiResponse<AttendanceResponse>.SuccessResponse(record.ToResponse(), AppMessages.Attendance.Adjusted);
+        return ApiResponse<AttendanceResponse>.SuccessResponse(
+            await BuildAttendanceResponseAsync(record, cancellationToken),
+            AppMessages.Attendance.Adjusted);
     }
+
+    private async Task<IReadOnlyList<AttendanceResponse>> BuildAttendanceResponsesAsync(
+        IReadOnlyList<AttendanceEntity> records,
+        CancellationToken cancellationToken)
+    {
+        var assignments = new Dictionary<Guid, ShiftAssignmentEntity?>();
+        var shifts = new Dictionary<Guid, ShiftDefinitionEntity?>();
+        var schedules = new Dictionary<Guid, ScheduleEntity?>();
+        var departments = new Dictionary<Guid, DepartmentEntity?>();
+        var locations = new Dictionary<Guid, LocationEntity?>();
+
+        var responses = new List<AttendanceResponse>(records.Count);
+        foreach (var record in records)
+            responses.Add(await BuildAttendanceResponseAsync(
+                record,
+                assignments,
+                shifts,
+                schedules,
+                departments,
+                locations,
+                cancellationToken));
+
+        return responses;
+    }
+
+    private async Task<AttendanceResponse> BuildAttendanceResponseAsync(
+        AttendanceEntity record,
+        CancellationToken cancellationToken)
+    {
+        return await BuildAttendanceResponseAsync(
+            record,
+            new Dictionary<Guid, ShiftAssignmentEntity?>(),
+            new Dictionary<Guid, ShiftDefinitionEntity?>(),
+            new Dictionary<Guid, ScheduleEntity?>(),
+            new Dictionary<Guid, DepartmentEntity?>(),
+            new Dictionary<Guid, LocationEntity?>(),
+            cancellationToken);
+    }
+
+    private async Task<AttendanceResponse> BuildAttendanceResponseAsync(
+        AttendanceEntity record,
+        Dictionary<Guid, ShiftAssignmentEntity?> assignments,
+        Dictionary<Guid, ShiftDefinitionEntity?> shifts,
+        Dictionary<Guid, ScheduleEntity?> schedules,
+        Dictionary<Guid, DepartmentEntity?> departments,
+        Dictionary<Guid, LocationEntity?> locations,
+        CancellationToken cancellationToken)
+    {
+        if (record.AssignmentId is not Guid assignmentId)
+            return record.ToResponse();
+
+        var assignment = await GetOrLoadAsync(
+            assignments,
+            assignmentId,
+            id => unitOfWork.ShiftAssignments.GetByIdAsync(id, cancellationToken: cancellationToken));
+        if (assignment is null)
+            return record.ToResponse();
+
+        var shift = await GetOrLoadAsync(
+            shifts,
+            assignment.ShiftDefinitionId,
+            id => unitOfWork.ShiftDefinitions.GetByIdAsync(id, cancellationToken: cancellationToken));
+
+        var schedule = await GetOrLoadAsync(
+            schedules,
+            assignment.ScheduleId,
+            id => unitOfWork.Schedules.GetByIdAsync(id, cancellationToken: cancellationToken));
+
+        DepartmentEntity? department = null;
+        LocationEntity? location = null;
+
+        if (schedule is not null)
+        {
+            department = await GetOrLoadAsync(
+                departments,
+                schedule.DepartmentId,
+                id => unitOfWork.Departments.GetByIdAsync(id, cancellationToken: cancellationToken));
+        }
+
+        if (department is not null)
+        {
+            location = await GetOrLoadAsync(
+                locations,
+                department.LocationId,
+                id => unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken));
+        }
+
+        var status = ComputeStatus(record, assignment, shift, location);
+        return record.ToResponse(assignment, shift, department, location, status);
+    }
+
+    private static async Task<T?> GetOrLoadAsync<T>(
+        Dictionary<Guid, T?> cache,
+        Guid id,
+        Func<Guid, Task<T?>> loadAsync)
+        where T : class
+    {
+        if (cache.TryGetValue(id, out var cached))
+            return cached;
+
+        var value = await loadAsync(id);
+        cache[id] = value;
+        return value;
+    }
+
+    private async Task<TimeZoneInfo> ResolveEmployeeTimeZoneAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken)
+    {
+        var department = await unitOfWork.Departments.GetByIdAsync(departmentId, cancellationToken: cancellationToken);
+        if (department is null)
+            return TimeZoneInfo.Utc;
+
+        var location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
+        return SwapCutoffRules.ResolveTimeZone(location?.TimeZone ?? "UTC");
+    }
+
+    private async Task<ClockContext?> LoadClockContextAsync(
+        Guid assignmentId,
+        CancellationToken cancellationToken)
+    {
+        var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(assignmentId, cancellationToken: cancellationToken);
+        if (assignment is null)
+            return null;
+
+        var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(
+            assignment.ShiftDefinitionId,
+            cancellationToken: cancellationToken);
+        if (shift is null)
+            return null;
+
+        var schedule = await unitOfWork.Schedules.GetByIdAsync(
+            assignment.ScheduleId,
+            cancellationToken: cancellationToken);
+        if (schedule is null)
+            return null;
+
+        var department = await unitOfWork.Departments.GetByIdAsync(schedule.DepartmentId, cancellationToken: cancellationToken);
+        if (department is null)
+            return null;
+
+        var location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
+        var timeZone = SwapCutoffRules.ResolveTimeZone(location?.TimeZone ?? "UTC");
+
+        return new ClockContext(assignment, shift, timeZone);
+    }
+
+    private static bool IsAfterShiftEnd(DateOnly date, TimeOnly endTime, TimeZoneInfo timeZone)
+    {
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone);
+        var shiftEnd = date.ToDateTime(endTime, DateTimeKind.Unspecified);
+        return now > shiftEnd;
+    }
+
+    private static AttendanceStatus ComputeStatus(
+        AttendanceEntity record,
+        ShiftAssignmentEntity? assignment,
+        ShiftDefinitionEntity? shift,
+        LocationEntity? location)
+    {
+        if (record.AdjustedBy is not null)
+            return AttendanceStatus.Adjusted;
+
+        if (assignment is not null && shift is not null)
+        {
+            var timeZone = SwapCutoffRules.ResolveTimeZone(location?.TimeZone ?? "UTC");
+            var scheduledStartUtc = TimeZoneInfo.ConvertTimeToUtc(
+                assignment.Date.ToDateTime(shift.StartTime, DateTimeKind.Unspecified),
+                timeZone);
+
+            if (record.ClockIn.UtcDateTime > scheduledStartUtc)
+                return AttendanceStatus.Late;
+        }
+
+        return record.ClockOut is null ? AttendanceStatus.Open : AttendanceStatus.OnTime;
+    }
+
+    private sealed record ClockContext(
+        ShiftAssignmentEntity Assignment,
+        ShiftDefinitionEntity Shift,
+        TimeZoneInfo TimeZone);
 
     private async Task<bool> IsPayPeriodLockedForRecordAsync(
         AttendanceEntity record,
