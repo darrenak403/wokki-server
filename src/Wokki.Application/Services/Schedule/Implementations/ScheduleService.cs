@@ -6,6 +6,8 @@ using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
+using DepartmentEntity = Wokki.Domain.Entities.Department;
+using LocationEntity = Wokki.Domain.Entities.Location;
 using ScheduleEntity = Wokki.Domain.Entities.Schedule;
 using ShiftAssignmentEntity = Wokki.Domain.Entities.ShiftAssignment;
 
@@ -477,6 +479,7 @@ public sealed class ScheduleService(
             toDate,
             cancellationToken);
 
+        var context = new AssignmentResponseContext();
         var responses = new List<ShiftAssignmentResponse>(assignments.Count);
         foreach (var assignment in assignments)
         {
@@ -484,7 +487,7 @@ public sealed class ScheduleService(
             if (shift is null)
                 continue;
 
-            responses.Add(await MapAssignmentAsync(assignment, shift, cancellationToken));
+            responses.Add(await MapAssignmentAsync(assignment, shift, context, cancellationToken));
         }
 
         return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse(responses, AppMessages.Schedule.MyScheduleListed);
@@ -495,6 +498,7 @@ public sealed class ScheduleService(
         CancellationToken cancellationToken)
     {
         var assignments = await unitOfWork.ShiftAssignments.ListByScheduleAsync(scheduleId, cancellationToken);
+        var context = new AssignmentResponseContext();
         var responses = new List<ShiftAssignmentResponse>(assignments.Count);
 
         foreach (var assignment in assignments)
@@ -503,27 +507,86 @@ public sealed class ScheduleService(
             if (shift is null)
                 continue;
 
-            responses.Add(await MapAssignmentAsync(assignment, shift, cancellationToken));
+            responses.Add(await MapAssignmentAsync(assignment, shift, context, cancellationToken));
         }
 
         return responses;
     }
 
-    private static Task<ShiftAssignmentResponse> MapAssignmentAsync(
+    private async Task<ShiftAssignmentResponse> MapAssignmentAsync(
         ShiftAssignmentEntity assignment,
         Wokki.Domain.Entities.ShiftDefinition shift,
         CancellationToken cancellationToken) =>
-        Task.FromResult(new ShiftAssignmentResponse(
+        await MapAssignmentAsync(assignment, shift, new AssignmentResponseContext(), cancellationToken);
+
+    private async Task<ShiftAssignmentResponse> MapAssignmentAsync(
+        ShiftAssignmentEntity assignment,
+        Wokki.Domain.Entities.ShiftDefinition shift,
+        AssignmentResponseContext context,
+        CancellationToken cancellationToken)
+    {
+        var schedule = await GetOrLoadAsync(
+            context.Schedules,
+            assignment.ScheduleId,
+            id => unitOfWork.Schedules.GetByIdAsync(id, cancellationToken: cancellationToken));
+
+        DepartmentEntity? department = null;
+        LocationEntity? location = null;
+
+        if (schedule is not null)
+        {
+            department = await GetOrLoadAsync(
+                context.Departments,
+                schedule.DepartmentId,
+                id => unitOfWork.Departments.GetByIdAsync(id, cancellationToken: cancellationToken));
+        }
+
+        if (department is not null)
+        {
+            location = await GetOrLoadAsync(
+                context.Locations,
+                department.LocationId,
+                id => unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken));
+        }
+
+        return new ShiftAssignmentResponse(
             assignment.Id,
             assignment.ScheduleId,
             assignment.ShiftDefinitionId,
             shift.Name,
+            shift.Color,
             shift.StartTime,
             shift.EndTime,
             assignment.EmployeeId,
             assignment.Date,
+            department?.Id,
+            department?.Name,
+            location?.Id,
+            location?.Name,
             assignment.Note,
-            assignment.CreatedAt));
+            assignment.CreatedAt);
+    }
+
+    private static async Task<T?> GetOrLoadAsync<T>(
+        Dictionary<Guid, T?> cache,
+        Guid id,
+        Func<Guid, Task<T?>> loadAsync)
+        where T : class
+    {
+        if (cache.TryGetValue(id, out var cached))
+            return cached;
+
+        var value = await loadAsync(id);
+        cache[id] = value;
+        return value;
+    }
+
+    private sealed class AssignmentResponseContext
+    {
+        public Dictionary<Guid, ScheduleEntity?> Schedules { get; } = new();
+        public Dictionary<Guid, DepartmentEntity?> Departments { get; } = new();
+        public Dictionary<Guid, LocationEntity?> Locations { get; } = new();
+    }
 
     private async Task NotifyEmployeeSafeAsync(
         Guid employeeId,
