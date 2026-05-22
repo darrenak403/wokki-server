@@ -13,6 +13,7 @@ using SwapRequestEntity = Wokki.Domain.Entities.SwapRequest;
 using ScheduleEntity = Wokki.Domain.Entities.Schedule;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
+using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.SwapRequest.Implementations;
 
@@ -381,16 +382,30 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
             swap.TargetAssignmentId,
             cancellationToken: cancellationToken);
         Guid? departmentId = null;
+        ShiftDefinitionEntity? requesterShift = null;
+        ShiftDefinitionEntity? targetShift = null;
 
         if (requesterAssignment is not null)
         {
+            requesterShift = await unitOfWork.ShiftDefinitions.GetByIdAsync(
+                requesterAssignment.ShiftDefinitionId,
+                cancellationToken: cancellationToken);
             var schedule = await unitOfWork.Schedules.GetByIdAsync(requesterAssignment.ScheduleId, cancellationToken: cancellationToken);
             departmentId = schedule?.DepartmentId;
         }
 
+        if (targetAssignment is not null)
+        {
+            targetShift = await unitOfWork.ShiftDefinitions.GetByIdAsync(
+                targetAssignment.ShiftDefinitionId,
+                cancellationToken: cancellationToken);
+        }
+
         return swap.ToResponse(
             requesterAssignment?.Date,
+            requesterShift,
             targetAssignment?.Date,
+            targetShift,
             departmentId);
     }
 

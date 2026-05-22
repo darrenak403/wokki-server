@@ -14,7 +14,13 @@ public sealed record SwapRequestResponse(
     string? ManagerNote,
     Guid? ReviewedBy,
     DateOnly? RequesterShiftDate,
+    string? RequesterShiftName,
+    TimeOnly? RequesterStartTime,
+    TimeOnly? RequesterEndTime,
     DateOnly? TargetShiftDate,
+    string? TargetShiftName,
+    TimeOnly? TargetStartTime,
+    TimeOnly? TargetEndTime,
     Guid? DepartmentId,
     DateTime CreatedAt,
     DateTime UpdatedAt);

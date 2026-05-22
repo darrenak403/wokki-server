@@ -8,7 +8,9 @@ public static class SwapRequestMapper
     public static SwapRequestResponse ToResponse(
         this Wokki.Domain.Entities.SwapRequest swap,
         DateOnly? requesterShiftDate = null,
+        ShiftDefinition? requesterShift = null,
         DateOnly? targetShiftDate = null,
+        ShiftDefinition? targetShift = null,
         Guid? departmentId = null) =>
         new(
             swap.Id,
@@ -22,7 +24,13 @@ public static class SwapRequestMapper
             swap.ManagerNote,
             swap.ReviewedBy,
             requesterShiftDate,
+            requesterShift?.Name,
+            requesterShift?.StartTime,
+            requesterShift?.EndTime,
             targetShiftDate,
+            targetShift?.Name,
+            targetShift?.StartTime,
+            targetShift?.EndTime,
             departmentId,
             swap.CreatedAt,
             swap.UpdatedAt);
