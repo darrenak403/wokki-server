@@ -47,6 +47,15 @@ public static class EmployeeSelfEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/schedule-preferences/draft", GetMyDraftScheduleForPreferencesAsync)
+            .WithName("GetMyDraftScheduleForPreferences")
+            .WithDescription("Lịch Draft của phòng ban nhân viên cho tuần (thứ Hai weekStartDate).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<EmployeeDraftScheduleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapGet("/schedule-preferences/{scheduleId:guid}", GetMySchedulePreferencesAsync)
             .WithName("GetMySchedulePreferences")
             .WithDescription("Đăng ký ca mong muốn của nhân viên cho lịch Draft.")
@@ -106,6 +115,22 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.GetMyScheduleAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyDraftScheduleForPreferencesAsync(
+        [FromQuery] DateOnly weekStartDate,
+        [FromServices] ISchedulePreferenceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetDraftScheduleForEmployeeAsync(
+            currentUser.UserId.Value,
+            weekStartDate,
+            cancellationToken);
         return response.ToHttpResult();
     }
 

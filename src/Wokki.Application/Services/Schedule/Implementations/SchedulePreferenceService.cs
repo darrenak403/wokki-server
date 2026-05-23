@@ -1,3 +1,4 @@
+using Wokki.Application.Common;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
@@ -9,6 +10,31 @@ namespace Wokki.Application.Services.Schedule.Implementations;
 
 public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedulePreferenceService
 {
+    public async Task<ApiResponse<EmployeeDraftScheduleResponse?>> GetDraftScheduleForEmployeeAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
+
+        if (!ScheduleRules.IsMonday(weekStartDate))
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
+
+        var schedule = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
+            employee.DepartmentId,
+            weekStartDate,
+            cancellationToken);
+
+        if (schedule is null || schedule.Status != ScheduleStatus.Draft)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
+
+        return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(
+            new EmployeeDraftScheduleResponse(schedule.Id, schedule.WeekStartDate),
+            AppMessages.SchedulePreference.Found);
+    }
+
     public async Task<ApiResponse<MySchedulePreferenceResponse>> GetMineAsync(
         Guid userId,
         Guid scheduleId,

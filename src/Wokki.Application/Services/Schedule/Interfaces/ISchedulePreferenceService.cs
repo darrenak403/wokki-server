@@ -5,6 +5,11 @@ namespace Wokki.Application.Services.Schedule.Interfaces;
 
 public interface ISchedulePreferenceService
 {
+    Task<ApiResponse<EmployeeDraftScheduleResponse?>> GetDraftScheduleForEmployeeAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResponse<MySchedulePreferenceResponse>> GetMineAsync(
         Guid userId,
         Guid scheduleId,
