@@ -9,24 +9,25 @@ Clean Architecture backend (.NET 10, Minimal API, EF Core, PostgreSQL).
 
 ## Quick start (Docker — khuyến nghị)
 
+Requires [Task](https://taskfile.dev). From repo root:
+
 ```bash
-cd docker
-cp .env.example .env.local
-docker compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+cp docker/.env.example docker/.env.local
+task docker:build
 ```
 
 - API: http://localhost:8386
 - Scalar: http://localhost:8386/scalar
 
-Chi tiết: [docker/README.md](docker/README.md)
+Chi tiết: [docker/README.md](docker/README.md) (Postgres, Bedrock env, pgweb)
+
+**Bedrock:** `task run` → User Secrets; Docker dev → `docker/.env.local`; prod → `docker/.env`. Xem [docker/README.md](docker/README.md).
 
 ## Quick start (local .NET)
 
 ```bash
-cd docker && cp .env.example .env.local
-docker compose -f docker-compose.dev.yml --env-file .env.local up -d postgres
-
-dotnet run --project src/Wokki.Api
+task docker:postgres   # chỉ Postgres; Bedrock qua User Secrets
+task run
 ```
 
 - API: http://localhost:8386
@@ -46,7 +47,7 @@ Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.In
 
 **Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, shift definitions, **published weekly schedule**, attendance (closed), pay period, pending swap, chat channels.
 
-**Reset demo data:** `docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local down -v` then start Postgres and run the API again.
+**Reset demo data:** `task docker:clear` then `task docker:build`.
 
 Full IDs: [docs/fe/seed-credentials.md](docs/fe/seed-credentials.md).
 
@@ -65,13 +66,15 @@ curl -s http://localhost:8386/api/v1/auth/me -H "Authorization: Bearer <accessTo
 ## Migrations
 
 ```bash
-dotnet ef migrations add <Name> \
-  --project src/Wokki.Infrastructure \
-  --startup-project src/Wokki.Api \
-  --output-dir Persistence/Migrations
+task migration:add -- <MigrationName>
+task migration:update          # local DB when using task docker:postgres + task run
 ```
 
+With `task docker:build`, the API applies pending migrations on startup (`Database:AutoMigrate`).
+
 `Database:AutoMigrate` defaults to `true` in Development, `false` in Production.
+
+All tasks: `task ls`
 
 ## Solution structure
 

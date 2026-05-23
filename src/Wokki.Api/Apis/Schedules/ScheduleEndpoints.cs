@@ -33,6 +33,16 @@ public static class ScheduleEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/roster", ListRosterAsync)
+            .WithName("ListScheduleRoster")
+            .WithDescription("Roster phân ca toàn chi nhánh (mọi trạng thái lịch) — Admin/Manager.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<IReadOnlyList<RosterAssignmentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPost("/", CreateAsync)
             .WithName("CreateSchedule")
             .WithDescription("Tạo lịch tuần (Draft).")
@@ -133,9 +143,18 @@ public static class ScheduleEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id:guid}/preference-board", GetPreferenceBoardAsync)
+            .WithName("GetSchedulePreferenceBoard")
+            .WithDescription("Bảng đăng ký ca của toàn bộ nhân viên trong tuần (Admin/Manager).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<SchedulePreferenceBoardResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPost("/{id:guid}/suggest", SuggestAsync)
             .WithName("SuggestScheduleAssignments")
-            .WithDescription("Gợi ý phân công bằng heuristic (không ghi DB).")
+            .WithDescription("Gợi ý phân công tùy chọn: useAi=true gọi Bedrock, false chỉ heuristic (không ghi DB).")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<ScheduleSuggestionsResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
@@ -163,6 +182,19 @@ public static class ScheduleEndpoints
         CancellationToken cancellationToken = default)
     {
         var response = await service.ListAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListRosterAsync(
+        [AsParameters] ScheduleRosterRequest request,
+        [FromServices] IScheduleService service,
+        [FromServices] IValidator<ScheduleRosterRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.ListRosterAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -284,12 +316,22 @@ public static class ScheduleEndpoints
         return response.ToHttpResult();
     }
 
+    private static async Task<IResult> GetPreferenceBoardAsync(
+        [FromRoute] Guid id,
+        [FromServices] ISchedulePreferenceService service,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await service.GetBoardAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
     private static async Task<IResult> SuggestAsync(
         [FromRoute] Guid id,
+        [FromBody] SuggestScheduleRequest? request,
         [FromServices] IScheduleService service,
         CancellationToken cancellationToken = default)
     {
-        var response = await service.SuggestAsync(id, cancellationToken);
+        var response = await service.SuggestAsync(id, request ?? new SuggestScheduleRequest(), cancellationToken);
         return response.ToHttpResult();
     }
 

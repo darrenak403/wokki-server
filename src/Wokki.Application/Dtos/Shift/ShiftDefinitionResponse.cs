@@ -8,6 +8,7 @@ public sealed record ShiftDefinitionResponse(
     TimeOnly StartTime,
     TimeOnly EndTime,
     string RequiredRole,
+    int MaxStaffPerSlot,
     string Color,
     bool IsActive,
     DateTime CreatedAt);

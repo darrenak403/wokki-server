@@ -2,7 +2,9 @@ namespace Wokki.Application.Dtos.Schedule;
 
 public sealed record ScheduleSuggestionsResponse(
     IReadOnlyList<ScheduleSuggestionItem> Suggestions,
-    string? Reason);
+    string? Reason,
+    string Provider = "heuristic",
+    bool FallbackUsed = false);
 
 public sealed record ScheduleSuggestionItem(
     Guid Id,

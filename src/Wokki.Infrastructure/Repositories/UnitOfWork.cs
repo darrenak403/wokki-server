@@ -20,6 +20,9 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IChannelRepository? _channels;
     private IMessageRepository? _messages;
     private IEmployeeAvailabilityRepository? _employeeAvailabilities;
+    private IJobPositionRepository? _jobPositions;
+    private IDepartmentSchedulingPolicyRepository? _departmentSchedulingPolicies;
+    private ISchedulePreferenceRepository? _schedulePreferences;
     private IDbContextTransaction? _transaction;
 
     public IUserRepository Users => _users ??= new UserRepository(context);
@@ -37,6 +40,12 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IMessageRepository Messages => _messages ??= new MessageRepository(context);
     public IEmployeeAvailabilityRepository EmployeeAvailabilities =>
         _employeeAvailabilities ??= new EmployeeAvailabilityRepository(context);
+    public IJobPositionRepository JobPositions =>
+        _jobPositions ??= new JobPositionRepository(context);
+    public IDepartmentSchedulingPolicyRepository DepartmentSchedulingPolicies =>
+        _departmentSchedulingPolicies ??= new DepartmentSchedulingPolicyRepository(context);
+    public ISchedulePreferenceRepository SchedulePreferences =>
+        _schedulePreferences ??= new SchedulePreferenceRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);

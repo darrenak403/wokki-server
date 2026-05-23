@@ -9,7 +9,9 @@ public interface IScheduleSuggestionService
 
 public sealed record ScheduleSuggestionGenerationResult(
     IReadOnlyList<ScheduleSuggestionDto> Suggestions,
-    string? Reason);
+    string? Reason,
+    string Provider = "heuristic",
+    bool FallbackUsed = false);
 
 public sealed record ScheduleSuggestionDto(
     Guid Id,

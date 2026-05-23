@@ -8,6 +8,7 @@ public class Employee
     public string LastName { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string Position { get; set; } = string.Empty;
+    public Guid? JobPositionId { get; set; }
     public decimal HourlyRate { get; set; }
     public Guid DepartmentId { get; set; }
     public DateTime EmployedAt { get; set; } = DateTime.UtcNow;

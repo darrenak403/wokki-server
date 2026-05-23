@@ -1,7 +1,8 @@
 name: wokki-dev
 
-# Env: docker/.env.local (copy từ .env.example)
-# Chạy: docker compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+# Env: docker/.env.local only (copy từ .env.example). Không dùng docker/.env cho dev.
+# task docker:build | docker:up — Taskfile truyền --env-file .env.local
+# Local API (task run): User Secrets — không load .env.local.
 
 services:
   postgres:
@@ -45,6 +46,11 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES}
+      AWS__Region: ${AWS_REGION}
+      AWS__AccessKeyId: ${AWS_ACCESS_KEY_ID}
+      AWS__SecretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+      AWS__Bedrock__Region: ${BEDROCK_REGION:-${AWS_REGION}}
+      AWS__Bedrock__ModelId: ${BEDROCK_MODEL_ID}
 
   db-ui:
     image: sosedoff/pgweb:0.16.2

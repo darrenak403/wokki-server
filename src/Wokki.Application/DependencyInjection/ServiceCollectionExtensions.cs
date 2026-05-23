@@ -39,6 +39,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
         services.AddScoped<IScheduleService, ScheduleService>();
+        services.AddScoped<ISchedulePreferenceService, SchedulePreferenceService>();
+        services.AddScoped<IDepartmentSchedulingConfigService, DepartmentSchedulingConfigService>();
         services.AddScoped<ISwapRequestService, SwapRequestService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IPayrollService, PayrollService>();

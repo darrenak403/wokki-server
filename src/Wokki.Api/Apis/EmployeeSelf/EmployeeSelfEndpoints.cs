@@ -47,6 +47,33 @@ public static class EmployeeSelfEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/schedule-preferences/{scheduleId:guid}", GetMySchedulePreferencesAsync)
+            .WithName("GetMySchedulePreferences")
+            .WithDescription("Đăng ký ca mong muốn của nhân viên cho lịch Draft.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<MySchedulePreferenceResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPut("/schedule-preferences/{scheduleId:guid}", SaveMySchedulePreferencesAsync)
+            .WithName("SaveMySchedulePreferences")
+            .WithDescription("Lưu nháp đăng ký ca (Draft).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<MySchedulePreferenceResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/schedule-preferences/{scheduleId:guid}/submit", SubmitMySchedulePreferencesAsync)
+            .WithName("SubmitMySchedulePreferences")
+            .WithDescription("Gửi đăng ký ca (khóa chỉnh sửa).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<MySchedulePreferenceResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapGet("/attendance", GetMyAttendanceAsync)
             .WithName("GetMyAttendance")
             .WithDescription("Lịch sử chấm công của nhân viên đang đăng nhập.")
@@ -79,6 +106,46 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.GetMyScheduleAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMySchedulePreferencesAsync(
+        [FromRoute] Guid scheduleId,
+        [FromServices] ISchedulePreferenceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetMineAsync(currentUser.UserId.Value, scheduleId, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> SaveMySchedulePreferencesAsync(
+        [FromRoute] Guid scheduleId,
+        [FromBody] SaveSchedulePreferencesRequest request,
+        [FromServices] ISchedulePreferenceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.SaveMineAsync(currentUser.UserId.Value, scheduleId, request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> SubmitMySchedulePreferencesAsync(
+        [FromRoute] Guid scheduleId,
+        [FromServices] ISchedulePreferenceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.SubmitMineAsync(currentUser.UserId.Value, scheduleId, cancellationToken);
         return response.ToHttpResult();
     }
 

@@ -9,6 +9,21 @@ public static class AppMessages
         public static readonly AppMessage Ok = new("HEALTH_OK", "Service is healthy.", StatusCodes.Status200OK);
     }
 
+    public static class Bedrock
+    {
+        public static readonly AppMessage Connected =
+            new("BEDROCK_CONNECTED", "AWS Bedrock connection is healthy.", StatusCodes.Status200OK);
+
+        public static readonly AppMessage Disconnected =
+            new("BEDROCK_DISCONNECTED", "AWS Bedrock connection failed.", StatusCodes.Status503ServiceUnavailable);
+
+        public static readonly AppMessage Throttled =
+            new(
+                "BEDROCK_THROTTLED",
+                "Bedrock daily token quota exceeded. Wait and retry, use a smaller model, or request a quota increase.",
+                StatusCodes.Status429TooManyRequests);
+    }
+
     public static class User
     {
         public static readonly AppMessage Found = new("USER_FOUND", "User found.", StatusCodes.Status200OK);
@@ -95,6 +110,37 @@ public static class AppMessages
         public static readonly AppMessage SuggestionsGenerated = new("SCHEDULE_SUGGESTIONS_GENERATED", "Schedule suggestions generated.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsApplied = new("SCHEDULE_SUGGESTIONS_APPLIED", "Schedule suggestions applied.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsEmpty = new("SCHEDULE_SUGGESTIONS_EMPTY", "No suggestions to apply.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage RosterListed = new("SCHEDULE_ROSTER_LISTED", "Schedule roster listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage LocationNotFound = new("SCHEDULE_LOCATION_NOT_FOUND", "No active location found for roster.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage LocationAmbiguous = new("SCHEDULE_LOCATION_AMBIGUOUS", "Multiple locations exist; specify departmentId.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage RosterRangeInvalid = new("SCHEDULE_ROSTER_RANGE_INVALID", "Date range must not exceed 28 days.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class SchedulePreference
+    {
+        public static readonly AppMessage Found = new("SCHEDULE_PREFERENCE_FOUND", "Schedule preferences found.", StatusCodes.Status200OK);
+        public static readonly AppMessage Saved = new("SCHEDULE_PREFERENCE_SAVED", "Schedule preferences saved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Submitted = new("SCHEDULE_PREFERENCE_SUBMITTED", "Schedule preferences submitted.", StatusCodes.Status200OK);
+        public static readonly AppMessage BoardListed = new("SCHEDULE_PREFERENCE_BOARD_LISTED", "Preference board listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage WrongDepartment = new("SCHEDULE_PREFERENCE_WRONG_DEPT", "Schedule does not belong to your department.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidShift = new("SCHEDULE_PREFERENCE_INVALID_SHIFT", "Shift is not valid for this schedule.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage DateOutOfRange = new("SCHEDULE_PREFERENCE_DATE_OUT_OF_RANGE", "Date is outside the schedule week.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidPreferenceType = new("SCHEDULE_PREFERENCE_INVALID_TYPE", "Preference type must be Preferred, Available, or Unavailable.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AlreadySubmitted = new("SCHEDULE_PREFERENCE_ALREADY_SUBMITTED", "Preferences are already submitted and cannot be edited.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage Empty = new("SCHEDULE_PREFERENCE_EMPTY", "Submit at least one preference line first.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class SchedulingConfig
+    {
+        public static readonly AppMessage PolicyFound = new("SCHEDULING_POLICY_FOUND", "Department scheduling policy found.", StatusCodes.Status200OK);
+        public static readonly AppMessage PolicyUpdated = new("SCHEDULING_POLICY_UPDATED", "Department scheduling policy updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage InvalidWeeklyCap = new("SCHEDULING_INVALID_WEEKLY_CAP", "Max shifts per employee per week must be between 1 and 168.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage JobPositionsListed = new("JOB_POSITIONS_LISTED", "Job positions listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage JobPositionCreated = new("JOB_POSITION_CREATED", "Job position created.", StatusCodes.Status201Created);
+        public static readonly AppMessage JobPositionUpdated = new("JOB_POSITION_UPDATED", "Job position updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage JobPositionDeleted = new("JOB_POSITION_DELETED", "Job position deactivated.", StatusCodes.Status200OK);
+        public static readonly AppMessage JobPositionNotFound = new("JOB_POSITION_NOT_FOUND", "Job position not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage InvalidHeadcount = new("JOB_POSITION_INVALID_HEADCOUNT", "Target headcount must be at least 1.", StatusCodes.Status400BadRequest);
     }
 
     public static class Chat

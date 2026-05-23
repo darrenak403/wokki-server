@@ -9,6 +9,7 @@ public sealed class UpdateShiftDefinitionRequestValidator : AbstractValidator<Up
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(150);
         RuleFor(x => x.RequiredRole).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.MaxStaffPerSlot).GreaterThan(0).LessThanOrEqualTo(50);
         RuleFor(x => x.Color).NotEmpty().MaximumLength(16);
         RuleFor(x => x).Must(x => x.EndTime > x.StartTime)
             .WithMessage("End time must be after start time.");

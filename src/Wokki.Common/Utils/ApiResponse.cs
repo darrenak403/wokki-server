@@ -21,6 +21,12 @@ public sealed class ApiResponse<T>
     public static ApiResponse<T> FailureResponse(AppMessage message, IReadOnlyList<ErrorDetail>? errors = null) =>
         new(false, default, message, errors);
 
+    public static ApiResponse<T> FailureResponse(
+        T data,
+        AppMessage message,
+        IReadOnlyList<ErrorDetail>? errors = null) =>
+        new(false, data, message, errors);
+
     public static ApiResponse<PagedResponse<TItem>> SuccessPagedResponse<TItem>(
         PagedResponse<TItem> pagedData,
         AppMessage message) =>

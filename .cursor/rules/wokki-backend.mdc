@@ -35,9 +35,13 @@ Domain (entities, repos, `RoleConstants`) → Application (services, DTOs, valid
 - Do not create or reintroduce `src/Wokki.Application/Features/*`
 - Namespace must follow folder path (`Wokki.Application.Dtos.Auth`, `Wokki.Application.Services.User.Interfaces`, etc.)
 
+## Commands (Taskfile)
+
+Agents **must** use `task` from repo root (`Taskfile.yml`): `task build`, `task docker:build`, `task migration:update`, etc. See [AGENTS.md](../../AGENTS.md). Do not substitute raw `docker compose` / `dotnet ef` when a task exists.
+
 ## Guardrails
 
 - Never add business logic, EF queries, or token generation inside `Wokki.Api`
 - Never inject `DbContext` into `Wokki.Application`
 - Never return raw entities from API; always map DTOs and `ApiResponse<T>`
-- Before finishing any task: run build gate and ensure no namespace drift from the structure above
+- Before finishing any task: `task build` (build gate) and ensure no namespace drift from the structure above

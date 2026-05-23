@@ -1,7 +1,7 @@
 name: wokki-prod
 
-# Env: docker/.env (copy từ .env.example, chỉ prod)
-# Chạy: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# Env: docker/.env only (copy từ .env.example khi deploy). Không dùng .env.local.
+# task docker:prod — hoặc: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
 services:
   postgres:
@@ -46,6 +46,11 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-60}
+      AWS__Region: ${AWS_REGION}
+      AWS__AccessKeyId: ${AWS_ACCESS_KEY_ID}
+      AWS__SecretAccessKey: ${AWS_SECRET_ACCESS_KEY}
+      AWS__Bedrock__Region: ${BEDROCK_REGION:-${AWS_REGION}}
+      AWS__Bedrock__ModelId: ${BEDROCK_MODEL_ID}
 
   db-ui:
     image: dpage/pgadmin4:9.3

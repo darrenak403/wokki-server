@@ -198,6 +198,22 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.ToTable("departments", (string)null);
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.DepartmentSchedulingPolicy", b =>
+                {
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MaxShiftsPerEmployeePerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DepartmentId");
+
+                    b.ToTable("department_scheduling_policies", (string)null);
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.Employee", b =>
                 {
                     b.Property<Guid>("Id")
@@ -221,6 +237,9 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("HourlyRate")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("JobPositionId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -246,6 +265,8 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("JobPositionId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -285,6 +306,45 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasIndex("EmployeeId", "DayOfWeek", "EffectiveFrom");
 
                     b.ToTable("employee_availabilities", (string)null);
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TargetHeadcount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("job_positions", (string)null);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Location", b =>
@@ -453,6 +513,68 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.ToTable("schedules", (string)null);
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.SchedulePreferenceLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("PreferenceType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ShiftDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftDefinitionId");
+
+                    b.HasIndex("SubmissionId", "ShiftDefinitionId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("schedule_preference_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.SchedulePreferenceSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("ScheduleId", "EmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("schedule_preference_submissions", (string)null);
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.ShiftAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -514,6 +636,11 @@ namespace Wokki.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("LocationId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("MaxStaffPerSlot")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -681,6 +808,15 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.DepartmentSchedulingPolicy", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Department", null)
+                        .WithOne()
+                        .HasForeignKey("Wokki.Domain.Entities.DepartmentSchedulingPolicy", "DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.Employee", b =>
                 {
                     b.HasOne("Wokki.Domain.Entities.Department", null)
@@ -688,6 +824,11 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.JobPosition", null)
+                        .WithMany()
+                        .HasForeignKey("JobPositionId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Wokki.Domain.Entities.User", null)
                         .WithMany()
@@ -701,6 +842,15 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasOne("Wokki.Domain.Entities.Employee", null)
                         .WithMany()
                         .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -759,6 +909,36 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.SchedulePreferenceLine", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.ShiftDefinition", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.SchedulePreferenceSubmission", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.SchedulePreferenceSubmission", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Schedule", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.ShiftAssignment", b =>
                 {
                     b.HasOne("Wokki.Domain.Entities.Employee", null)
@@ -807,6 +987,11 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TargetAssignmentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.SchedulePreferenceSubmission", b =>
+                {
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

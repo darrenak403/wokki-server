@@ -29,20 +29,40 @@ Backend: **.NET 10**, Clean Architecture, Minimal API, EF Core + PostgreSQL, Sca
 - **Namespace must match folder path** (example: `Wokki.Application.Services.Auth.Interfaces`)
 - **Definition of done**: build passes and project still respects the structure above
 
+## Commands (Taskfile — mandatory for agents)
+
+Use **[Task](https://taskfile.dev)** from the repo root. Do **not** run raw `docker compose` / `dotnet ef` unless no task exists (then add one to `Taskfile.yml` first).
+
+| Task                           | Purpose                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `task ls`                      | List all tasks                                                                                 |
+| `task build`                   | `dotnet build` solution                                                                        |
+| `task run`                     | Run API locally (.NET)                                                                         |
+| `task docker:build`            | Build images + start dev stack (Postgres + API; applies migrations via `Database:AutoMigrate`) |
+| `task docker:postgres`         | Postgres only (for `task run`)                                                                 |
+| `task docker:up`               | Start dev containers (no rebuild)                                                              |
+| `task docker:down`             | Stop dev containers                                                                            |
+| `task migration:add -- <Name>` | Add EF migration                                                                               |
+| `task migration:update`        | Apply pending migrations to DB                                                                 |
+| `task migration:remove`        | Remove last migration                                                                          |
+
+Prerequisite: `cp docker/.env.example docker/.env.local` (once).
+
 ## Run locally
 
 ```bash
-docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local up -d postgres
-dotnet run --project src/Wokki.Api
+task docker:postgres   # or task docker:build for full stack
+task run
 ```
 
 Docs: http://localhost:8386/scalar
 
+**Bedrock:** `AWS:Bedrock` in `appsettings.json`. **Local `task run`:** User Secrets (`AWS:AccessKeyId`, `AWS:SecretAccessKey`, `AWS:Bedrock:*`). **Dev Docker:** `docker/.env.local` only. **Prod Docker:** `docker/.env` only. Health: `GET /api/v1/bedrock/health`.
 
 <claude-mem-context>
 # Memory Context
 
-# [wokki-server] recent context, 2026-05-23 3:42pm GMT+7
+# [wokki-server] recent context, 2026-05-23 3:46pm GMT+7
 
 No previous sessions found.
 </claude-mem-context>

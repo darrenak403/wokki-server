@@ -14,6 +14,7 @@ public static class ShiftDefinitionMapper
             shift.StartTime,
             shift.EndTime,
             shift.RequiredRole,
+            shift.MaxStaffPerSlot,
             shift.Color,
             shift.IsActive,
             shift.CreatedAt);
@@ -28,6 +29,7 @@ public static class ShiftDefinitionMapper
             StartTime = request.StartTime,
             EndTime = request.EndTime,
             RequiredRole = request.RequiredRole.Trim(),
+            MaxStaffPerSlot = request.MaxStaffPerSlot < 1 ? 1 : request.MaxStaffPerSlot,
             Color = request.Color.Trim(),
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -39,6 +41,7 @@ public static class ShiftDefinitionMapper
         shift.StartTime = request.StartTime;
         shift.EndTime = request.EndTime;
         shift.RequiredRole = request.RequiredRole.Trim();
+        shift.MaxStaffPerSlot = request.MaxStaffPerSlot < 1 ? 1 : request.MaxStaffPerSlot;
         shift.Color = request.Color.Trim();
         shift.IsActive = request.IsActive;
     }

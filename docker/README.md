@@ -1,43 +1,66 @@
 # Docker
 
-## Env
+## Env files
 
-| File | Khi nào dùng |
-|------|----------------|
-| `.env.example` | Template (commit) — `cp` sang file bên dưới |
-| `.env.local` | **Luôn dùng khi dev local** (không commit) |
-| `.env` | **Chỉ prod** — tạo khi deploy, không dùng cho dev (không commit) |
+| File           | Môi trường              | Commit? | Dùng với                          |
+| -------------- | ----------------------- | ------- | --------------------------------- |
+| `.env.example` | Template                | Có      | `cp` → `.env.local` hoặc `.env`   |
+| `.env.local`   | Dev Docker              | Không   | `task docker:build`, `docker:up`  |
+| `.env`         | Production Docker       | Không   | `task docker:prod` hoặc compose prod |
+
+**Local API (`task run`):** chỉ **User Secrets** (`AWS:AccessKeyId`, `AWS:SecretAccessKey`, `AWS:Bedrock:*`). File `docker/.env.local` **không** được `dotnet run` đọc.
+
+**Dev Docker:** chỉ **`docker/.env.local`** → biến compose map sang `AWS__*`, `AWS__Bedrock__*`.
+
+**Prod Docker:** chỉ **`docker/.env`** (tạo khi deploy).
 
 ```bash
-# Dev — một lần
-cp .env.example .env.local
+# Dev Docker — một lần
+cp docker/.env.example docker/.env.local
+# Sửa: JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BEDROCK_*
 ```
 
-## Dev
+## AWS / Bedrock (compose → app config)
+
+| Biến trong `.env` / `.env.local` | ASP.NET config key              |
+| -------------------------------- | ------------------------------- |
+| `AWS_REGION`                     | `AWS:Region`                    |
+| `AWS_ACCESS_KEY_ID`              | `AWS:AccessKeyId`               |
+| `AWS_SECRET_ACCESS_KEY`          | `AWS:SecretAccessKey`           |
+| `BEDROCK_REGION`                 | `AWS:Bedrock:Region`            |
+| `BEDROCK_MODEL_ID`               | `AWS:Bedrock:ModelId`           |
+| `BEDROCK_HEALTH_CHECK_MODEL_ID`  | `AWS:Bedrock:HealthCheckModelId` (tùy chọn) |
+
+Tune mặc định (`MaxTokens`, health tokens, …) trong `src/Wokki.Api/appsettings.json` → `AWS:Bedrock`.
+
+Health: `GET /api/v1/bedrock/health` — chi tiết [docs/fe/bedrock-health.md](../docs/fe/bedrock-health.md).
+
+## Dev stack
+
+From **repo root**:
 
 ```bash
-cd docker
-docker compose -f docker-compose.dev.yml --env-file .env.local up -d --build
+cp docker/.env.example docker/.env.local
+task docker:build
 ```
 
-- http://localhost:8386 — API  
-- http://localhost:8386/scalar — docs  
-- http://localhost:8888 — pgweb (DB UI, auto-connect)
+- http://localhost:8386 — API
+- http://localhost:8386/scalar — docs
+- http://localhost:8888 — pgweb
 
-## Prod
+## Prod stack
 
 ```bash
-cd docker
-cp .env.example .env
-# Sửa .env: mật khẩu DB, JWT_SECRET, DATABASE_AUTOMIGRATE=false, APIDOCS_ENABLED=false
-# pgAdmin prod chạy local-only: http://127.0.0.1:8081
-
-docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+cp docker/.env.example docker/.env
+# Sửa .env: DB, JWT, AWS_*, BEDROCK_*, DATABASE_AUTOMIGRATE=false, APIDOCS_ENABLED=false, DB_UI_*
+task docker:prod
 ```
 
-## Chỉ Postgres (API chạy `dotnet run` local)
+pgAdmin: http://127.0.0.1:8081 (chỉ localhost)
+
+## Chỉ Postgres (API chạy local + User Secrets)
 
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.local up -d postgres
-dotnet run --project ../src/Wokki.Api
+task docker:postgres
+task run
 ```

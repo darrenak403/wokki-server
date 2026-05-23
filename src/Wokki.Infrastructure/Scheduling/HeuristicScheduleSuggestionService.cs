@@ -1,110 +1,72 @@
 using Wokki.Application.Common.Interfaces;
-using Wokki.Domain.Enums;
-using Wokki.Domain.Repositories;
+using Wokki.Application.Scheduling;
+using Wokki.Domain.Entities;
 using ShiftAssignmentEntity = Wokki.Domain.Entities.ShiftAssignment;
 
 namespace Wokki.Infrastructure.Scheduling;
 
-public sealed class HeuristicScheduleSuggestionService(IUnitOfWork unitOfWork) : IScheduleSuggestionService
+public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContextLoader contextLoader)
+    : IScheduleSuggestionService
 {
-    private const int HistoryWeeks = 4;
     private const int MinHistoryAssignments = 3;
 
     public async Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
         CancellationToken cancellationToken = default)
     {
-        var schedule = await unitOfWork.Schedules.GetByIdAsync(scheduleId, cancellationToken: cancellationToken);
-        if (schedule is null)
-            return new ScheduleSuggestionGenerationResult([], "schedule_not_found");
+        var (context, reason) = await contextLoader.LoadAsync(scheduleId, cancellationToken);
+        if (context is null)
+            return new ScheduleSuggestionGenerationResult([], reason);
 
-        if (schedule.Status != ScheduleStatus.Draft)
-            return new ScheduleSuggestionGenerationResult([], "schedule_not_draft");
-
-        var department = await unitOfWork.Departments.GetByIdAsync(schedule.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null)
-            return new ScheduleSuggestionGenerationResult([], "department_not_found");
-
-        var historyFrom = schedule.WeekStartDate.AddDays(-7 * HistoryWeeks);
-        var historyTo = schedule.WeekStartDate.AddDays(-1);
-        var historical = await unitOfWork.ShiftAssignments.ListPublishedByDepartmentInDateRangeAsync(
-            schedule.DepartmentId,
-            historyFrom,
-            historyTo,
-            cancellationToken);
-
-        if (historical.Count < MinHistoryAssignments)
+        if (context.HistoricalAssignments.Count < MinHistoryAssignments
+            && context.SubmittedPreferences.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "insufficient_history");
 
-        var employeePage = await unitOfWork.Employees.ListAsync(
-            1,
-            500,
-            schedule.DepartmentId,
-            cancellationToken: cancellationToken);
-        var employees = employeePage.Items.Where(e => e.TerminatedAt is null).ToList();
-        if (employees.Count == 0)
+        if (context.Employees.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_employees");
 
-        var shifts = await unitOfWork.ShiftDefinitions.ListAsync(
-            department.LocationId,
-            schedule.DepartmentId,
-            activeOnly: true,
-            cancellationToken);
-        if (shifts.Count == 0)
+        if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts");
 
-        var availabilities = await unitOfWork.EmployeeAvailabilities.ListByEmployeeIdsAsync(
-            employees.Select(e => e.Id),
-            cancellationToken);
+        var planned = new List<ShiftAssignmentEntity>(context.ExistingAssignments);
+        var shiftMap = context.Shifts.ToDictionary(s => s.Id);
 
-        var existing = await unitOfWork.ShiftAssignments.ListByScheduleAsync(scheduleId, cancellationToken);
-        var planned = new List<ShiftAssignmentEntity>(existing);
-        var shiftMap = shifts.ToDictionary(s => s.Id);
-
-        var frequency = historical
+        var frequency = context.HistoricalAssignments
             .GroupBy(a => (a.ShiftDefinitionId, a.Date.DayOfWeek, a.EmployeeId))
             .ToDictionary(g => g.Key, g => g.Count());
 
-        var weekEnd = schedule.WeekStartDate.AddDays(6);
+        var weekEnd = context.Schedule.WeekStartDate.AddDays(6);
         var suggestions = new List<ScheduleSuggestionDto>();
 
-        for (var date = schedule.WeekStartDate; date <= weekEnd; date = date.AddDays(1))
+        for (var date = context.Schedule.WeekStartDate; date <= weekEnd; date = date.AddDays(1))
         {
-            foreach (var shift in shifts)
+            foreach (var shift in context.Shifts)
             {
-                if (existing.Any(a => a.ShiftDefinitionId == shift.Id && a.Date == date))
-                    continue;
-
-                var best = RankEmployees(
-                    employees,
-                    shift,
-                    date,
-                    frequency,
-                    availabilities,
-                    planned,
-                    shiftMap);
-
-                if (best is null || best.Value.Score <= 0)
-                    continue;
-
-                var suggestion = new ScheduleSuggestionDto(
-                    Guid.NewGuid(),
-                    shift.Id,
-                    best.Value.EmployeeId,
-                    date,
-                    best.Value.Score);
-
-                suggestions.Add(suggestion);
-
-                planned.Add(new ShiftAssignmentEntity
+                while (SchedulingAssignmentRules.MeetsSlotCapacity(shift.Id, date, shift, planned))
                 {
-                    Id = suggestion.Id,
-                    ScheduleId = scheduleId,
-                    ShiftDefinitionId = shift.Id,
-                    EmployeeId = best.Value.EmployeeId,
-                    Date = date,
-                    CreatedAt = DateTime.UtcNow
-                });
+                    var best = RankEmployees(context, shift, date, frequency, planned, shiftMap);
+                    if (best is null || best.Value.Score <= 0)
+                        break;
+
+                    var suggestion = new ScheduleSuggestionDto(
+                        Guid.NewGuid(),
+                        shift.Id,
+                        best.Value.EmployeeId,
+                        date,
+                        best.Value.Score);
+
+                    suggestions.Add(suggestion);
+
+                    planned.Add(new ShiftAssignmentEntity
+                    {
+                        Id = suggestion.Id,
+                        ScheduleId = scheduleId,
+                        ShiftDefinitionId = shift.Id,
+                        EmployeeId = best.Value.EmployeeId,
+                        Date = date,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
         }
 
@@ -112,52 +74,81 @@ public sealed class HeuristicScheduleSuggestionService(IUnitOfWork unitOfWork) :
     }
 
     private static (Guid EmployeeId, int Score)? RankEmployees(
-        IReadOnlyList<Wokki.Domain.Entities.Employee> employees,
-        Wokki.Domain.Entities.ShiftDefinition shift,
+        ScheduleSuggestionContext context,
+        ShiftDefinition shift,
         DateOnly date,
         Dictionary<(Guid ShiftDefinitionId, DayOfWeek DayOfWeek, Guid EmployeeId), int> frequency,
-        IReadOnlyList<Wokki.Domain.Entities.EmployeeAvailability> availabilities,
         List<ShiftAssignmentEntity> planned,
-        Dictionary<Guid, Wokki.Domain.Entities.ShiftDefinition> shiftMap)
+        Dictionary<Guid, ShiftDefinition> shiftMap)
     {
         (Guid EmployeeId, int Score)? best = null;
 
-        foreach (var employee in employees)
+        foreach (var employee in context.Employees)
         {
-            var score = 0;
-
-            if (!RoleMatches(employee.Position, shift.RequiredRole))
+            if (SchedulingAssignmentRules.IsUnavailableByPreference(employee.Id, shift.Id, date, context))
                 continue;
 
-            score += 10;
+            if (!RoleMatches(employee, shift, context))
+                continue;
 
-            var freqKey = (shift.Id, date.DayOfWeek, employee.Id);
-            if (frequency.TryGetValue(freqKey, out var count))
-                score += Math.Min(count * 5, 25);
+            if (!SchedulingAssignmentRules.MeetsWeeklyCap(employee.Id, planned, context))
+                continue;
 
-            if (!IsAvailable(employee.Id, date.DayOfWeek, shift.StartTime, shift.EndTime, availabilities))
+            if (!IsAvailable(employee.Id, date.DayOfWeek, shift.StartTime, shift.EndTime, context.Availabilities))
                 continue;
 
             if (HasOverlapInPlan(planned, shiftMap, employee.Id, date, shift.StartTime, shift.EndTime))
                 continue;
 
-            if (best is null || score > best.Value.Score)
+            var score = 10;
+            score += SchedulingAssignmentRules.PreferenceScore(employee.Id, shift.Id, date, context);
+
+            var freqKey = (shift.Id, date.DayOfWeek, employee.Id);
+            if (frequency.TryGetValue(freqKey, out var count))
+                score += Math.Min(count * 5, 25);
+
+            var weeklyLoad = planned.Count(a => a.EmployeeId == employee.Id);
+            score -= weeklyLoad * 2;
+
+            var position = SchedulingAssignmentRules.ResolveJobPosition(employee, context);
+            if (position is not null)
+            {
+                var roleLoad = planned.Count(a =>
+                {
+                    var emp = context.Employees.FirstOrDefault(e => e.Id == a.EmployeeId);
+                    return emp is not null
+                           && SchedulingAssignmentRules.ResolveJobPosition(emp, context)?.Id == position.Id;
+                });
+                score -= roleLoad;
+            }
+
+            if (best is null || score > best.Value.Score
+                || (score == best.Value.Score && weeklyLoad < planned.Count(a => a.EmployeeId == best.Value.EmployeeId)))
                 best = (employee.Id, score);
         }
 
         return best;
     }
 
-    private static bool RoleMatches(string position, string requiredRole) =>
-        !string.IsNullOrWhiteSpace(requiredRole)
-        && string.Equals(position.Trim(), requiredRole.Trim(), StringComparison.OrdinalIgnoreCase);
+    private static bool RoleMatches(Employee employee, ShiftDefinition shift, ScheduleSuggestionContext context)
+    {
+        var position = SchedulingAssignmentRules.ResolveJobPosition(employee, context);
+        if (position is not null)
+        {
+            return string.Equals(position.Code, shift.RequiredRole, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(position.Name, shift.RequiredRole, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return !string.IsNullOrWhiteSpace(shift.RequiredRole)
+               && string.Equals(employee.Position.Trim(), shift.RequiredRole.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
 
     private static bool IsAvailable(
         Guid employeeId,
         DayOfWeek dayOfWeek,
         TimeOnly shiftStart,
         TimeOnly shiftEnd,
-        IReadOnlyList<Wokki.Domain.Entities.EmployeeAvailability> availabilities)
+        IReadOnlyList<EmployeeAvailability> availabilities)
     {
         var rows = availabilities.Where(a => a.EmployeeId == employeeId).ToList();
         if (rows.Count == 0)
@@ -172,7 +163,7 @@ public sealed class HeuristicScheduleSuggestionService(IUnitOfWork unitOfWork) :
 
     private static bool HasOverlapInPlan(
         List<ShiftAssignmentEntity> planned,
-        Dictionary<Guid, Wokki.Domain.Entities.ShiftDefinition> shiftMap,
+        Dictionary<Guid, ShiftDefinition> shiftMap,
         Guid employeeId,
         DateOnly date,
         TimeOnly startTime,

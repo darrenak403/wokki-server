@@ -2,6 +2,7 @@ using Serilog;
 using Scalar.AspNetCore;
 using Wokki.Api.Apis.Attendance;
 using Wokki.Api.Apis.Chat;
+using Wokki.Api.Apis.Bedrock;
 using Wokki.Api.Apis.Auth;
 using Wokki.Api.Hubs;
 using Wokki.Api.Apis.Departments;
@@ -66,6 +67,7 @@ public static class PipelineExtensions
             .ExcludeFromDescription();
 
         app.MapHealthApi();
+        app.MapBedrockApi();
         app.MapAuthApi();
         app.MapUserApi();
         app.MapEmployeeApi();

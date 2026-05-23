@@ -6,6 +6,7 @@ vars:
   SLN: Wokki.slnx
   API_PROJECT: src/Wokki.Api
   COMPOSE_DEV: docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local
+  COMPOSE_PROD: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env
   MIGRATION_PROJECT: src/Wokki.Infrastructure
   STARTUP_PROJECT: src/Wokki.Api
   MIGRATIONS_DIR: Persistence/Migrations
@@ -80,6 +81,11 @@ tasks:
     desc: Stop dev containers and remove all volumes
     cmds:
       - '{{.COMPOSE_DEV}} down -v'
+
+  'docker:prod':
+    desc: Build and start prod stack (requires docker/.env)
+    cmds:
+      - '{{.COMPOSE_PROD}} up -d --build'
 
   pull:
     desc: 'Pull latest changes (usage: task pull hoặc task pull br=<branch>)'

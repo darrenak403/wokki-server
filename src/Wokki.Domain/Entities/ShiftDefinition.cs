@@ -9,6 +9,8 @@ public class ShiftDefinition
     public TimeOnly StartTime { get; set; }
     public TimeOnly EndTime { get; set; }
     public string RequiredRole { get; set; } = string.Empty;
+    /// <summary>Max employees assignable to this shift on the same date.</summary>
+    public int MaxStaffPerSlot { get; set; } = 1;
     public string Color { get; set; } = "#3B82F6";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

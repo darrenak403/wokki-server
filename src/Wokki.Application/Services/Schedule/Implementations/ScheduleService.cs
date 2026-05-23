@@ -16,7 +16,7 @@ namespace Wokki.Application.Services.Schedule.Implementations;
 public sealed class ScheduleService(
     IUnitOfWork unitOfWork,
     INotificationService notifications,
-    IScheduleSuggestionService scheduleSuggestions) : IScheduleService
+    IScheduleSuggestionOrchestrator scheduleSuggestions) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
@@ -38,6 +38,57 @@ public sealed class ScheduleService(
             pageSize,
             total,
             AppMessages.Schedule.Listed);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<RosterAssignmentResponse>>> ListRosterAsync(
+        ScheduleRosterRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var weekEnd = request.WeekEndDate ?? request.WeekStartDate.AddDays(6);
+        if (weekEnd < request.WeekStartDate || weekEnd.DayNumber - request.WeekStartDate.DayNumber > 28)
+            return ApiResponse<IReadOnlyList<RosterAssignmentResponse>>.FailureResponse(AppMessages.Schedule.RosterRangeInvalid);
+
+        var (locationId, locationError) = await ResolveRosterLocationIdAsync(request.DepartmentId, cancellationToken);
+        if (locationError is not null)
+            return ApiResponse<IReadOnlyList<RosterAssignmentResponse>>.FailureResponse(locationError);
+        if (locationId is null)
+            return ApiResponse<IReadOnlyList<RosterAssignmentResponse>>.FailureResponse(AppMessages.Schedule.LocationNotFound);
+
+        var rows = await unitOfWork.ShiftAssignments.ListRosterAsync(
+            locationId.Value,
+            request.WeekStartDate,
+            weekEnd,
+            request.DepartmentId,
+            request.EmployeeId,
+            cancellationToken);
+
+        var locationNames = (await unitOfWork.Locations.ListAsync(activeOnly: true, cancellationToken))
+            .ToDictionary(l => l.Id, l => l.Name);
+
+        var responses = rows.Select(row => new RosterAssignmentResponse(
+            row.Assignment.Id,
+            row.Assignment.ScheduleId,
+            row.Schedule.Status,
+            row.Schedule.WeekStartDate,
+            row.Assignment.ShiftDefinitionId,
+            row.ShiftDefinition.Name,
+            row.ShiftDefinition.Color,
+            row.ShiftDefinition.StartTime,
+            row.ShiftDefinition.EndTime,
+            row.Assignment.EmployeeId,
+            row.Employee.FirstName,
+            row.Employee.LastName,
+            row.Assignment.Date,
+            row.Department.Id,
+            row.Department.Name,
+            row.Department.LocationId,
+            locationNames.GetValueOrDefault(row.Department.LocationId) ?? string.Empty,
+            row.Assignment.Note,
+            row.Assignment.CreatedAt)).ToList();
+
+        return ApiResponse<IReadOnlyList<RosterAssignmentResponse>>.SuccessResponse(
+            responses,
+            AppMessages.Schedule.RosterListed);
     }
 
     public async Task<ApiResponse<ScheduleDetailResponse>> GetByIdAsync(
@@ -311,13 +362,14 @@ public sealed class ScheduleService(
 
     public async Task<ApiResponse<ScheduleSuggestionsResponse>> SuggestAsync(
         Guid scheduleId,
+        SuggestScheduleRequest request,
         CancellationToken cancellationToken = default)
     {
         var schedule = await unitOfWork.Schedules.GetByIdAsync(scheduleId, cancellationToken: cancellationToken);
         if (schedule is null)
             return ApiResponse<ScheduleSuggestionsResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
-        var generated = await scheduleSuggestions.GenerateAsync(scheduleId, cancellationToken);
+        var generated = await scheduleSuggestions.GenerateAsync(scheduleId, request.UseAi, cancellationToken);
         if (generated.Reason is "schedule_not_draft")
             return ApiResponse<ScheduleSuggestionsResponse>.FailureResponse(AppMessages.Schedule.NotDraft);
 
@@ -350,8 +402,30 @@ public sealed class ScheduleService(
         }
 
         return ApiResponse<ScheduleSuggestionsResponse>.SuccessResponse(
-            new ScheduleSuggestionsResponse(items, generated.Reason),
+            new ScheduleSuggestionsResponse(items, generated.Reason, generated.Provider, generated.FallbackUsed),
             AppMessages.Schedule.SuggestionsGenerated);
+    }
+
+    private async Task<(Guid? LocationId, AppMessage? Error)> ResolveRosterLocationIdAsync(
+        Guid? departmentId,
+        CancellationToken cancellationToken)
+    {
+        if (departmentId.HasValue)
+        {
+            var department = await unitOfWork.Departments.GetByIdAsync(departmentId.Value, cancellationToken: cancellationToken);
+            if (department is null)
+                return (null, AppMessages.Schedule.DepartmentNotFound);
+
+            return (department.LocationId, null);
+        }
+
+        var locations = await unitOfWork.Locations.ListAsync(activeOnly: true, cancellationToken);
+        return locations.Count switch
+        {
+            0 => (null, AppMessages.Schedule.LocationNotFound),
+            1 => (locations[0].Id, null),
+            _ => (null, AppMessages.Schedule.LocationAmbiguous)
+        };
     }
 
     public async Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> ApplySuggestionsAsync(

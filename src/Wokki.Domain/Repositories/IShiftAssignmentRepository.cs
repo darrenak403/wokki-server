@@ -16,6 +16,13 @@ public interface IShiftAssignmentRepository
         DateOnly fromDate,
         DateOnly toDate,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RosterAssignmentRow>> ListRosterAsync(
+        Guid locationId,
+        DateOnly fromDate,
+        DateOnly toDate,
+        Guid? departmentId,
+        Guid? employeeId,
+        CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(
         Guid scheduleId,
         Guid shiftDefinitionId,

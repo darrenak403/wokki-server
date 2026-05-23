@@ -13,6 +13,7 @@ using Wokki.Infrastructure.Caching;
 using Wokki.Infrastructure.Notifications;
 using Wokki.Infrastructure.Persistence;
 using Wokki.Infrastructure.Repositories;
+using Wokki.Infrastructure.Bedrock;
 using Wokki.Infrastructure.Scheduling;
 using Wokki.Infrastructure.Tenancy;
 
@@ -34,7 +35,8 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IScheduleSuggestionService, HeuristicScheduleSuggestionService>();
+        services.AddBedrock(configuration);
+        services.AddScheduleSuggestions(configuration);
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IPasswordHasher, MicrosoftPasswordHasher>();
