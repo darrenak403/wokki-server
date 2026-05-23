@@ -207,9 +207,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         if (submission is null || submission.Lines.Count == 0)
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.SchedulePreference.Empty);
 
-        if (submission.Status == SchedulePreferenceStatus.Submitted)
-            return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.SchedulePreference.AlreadySubmitted);
-
+        // Re-submit: SaveMineAsync sets Draft before POST submit; idempotent if already Submitted.
         submission.Status = SchedulePreferenceStatus.Submitted;
         submission.SubmittedAt = DateTime.UtcNow;
         submission.UpdatedAt = DateTime.UtcNow;
