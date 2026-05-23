@@ -20,6 +20,17 @@ public static class EmployeeSelfEndpoints
 {
     public static IEndpointRouteBuilder MapEmployeeSelfApi(this IEndpointRouteBuilder builder)
     {
+        builder.MapGet("/api/v1/self/schedule-preferences/draft/{weekStartDate}", GetMyDraftScheduleForPreferencesAsync)
+            .WithName("GetMyDraftScheduleForPreferences")
+            .WithTags("EmployeeSelf")
+            .WithDescription("Lịch Draft của phòng ban nhân viên cho tuần (thứ Hai weekStartDate yyyy-MM-dd).")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Fixed)
+            .Produces<ApiResponse<EmployeeDraftScheduleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         builder.MapGroup("/api/v1/self")
             .MapEmployeeSelfRoutes()
             .WithTags("EmployeeSelf")
@@ -44,15 +55,6 @@ public static class EmployeeSelfEndpoints
             .WithDescription("Lịch ca của nhân viên đang đăng nhập (4 tuần tới).")
             .RequireAuthorization()
             .Produces<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
-        group.MapGet("/schedule-preferences/draft", GetMyDraftScheduleForPreferencesAsync)
-            .WithName("GetMyDraftScheduleForPreferences")
-            .WithDescription("Lịch Draft của phòng ban nhân viên cho tuần (thứ Hai weekStartDate).")
-            .RequireAuthorization()
-            .Produces<ApiResponse<EmployeeDraftScheduleResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
@@ -119,7 +121,7 @@ public static class EmployeeSelfEndpoints
     }
 
     private static async Task<IResult> GetMyDraftScheduleForPreferencesAsync(
-        [FromQuery] DateOnly weekStartDate,
+        [FromRoute] string weekStartDate,
         [FromServices] ISchedulePreferenceService service,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
@@ -127,9 +129,12 @@ public static class EmployeeSelfEndpoints
         if (currentUser.UserId is null)
             return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
+        if (!DateOnly.TryParse(weekStartDate, out var parsedWeekStartDate))
+            return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday), statusCode: 400);
+
         var response = await service.GetDraftScheduleForEmployeeAsync(
             currentUser.UserId.Value,
-            weekStartDate,
+            parsedWeekStartDate,
             cancellationToken);
         return response.ToHttpResult();
     }

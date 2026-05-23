@@ -30,8 +30,31 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         if (schedule is null || schedule.Status != ScheduleStatus.Draft)
             return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
 
+        var department = await unitOfWork.Departments.GetByIdAsync(
+            schedule.DepartmentId,
+            cancellationToken: cancellationToken);
+        if (department is null)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
+
+        var shifts = await unitOfWork.ShiftDefinitions.ListAsync(
+            department.LocationId,
+            schedule.DepartmentId,
+            activeOnly: true,
+            cancellationToken);
+
         return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(
-            new EmployeeDraftScheduleResponse(schedule.Id, schedule.WeekStartDate),
+            new EmployeeDraftScheduleResponse(
+                schedule.Id,
+                schedule.WeekStartDate,
+                shifts
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => new SchedulePreferenceBoardShiftColumn(
+                        s.Id,
+                        s.Name,
+                        s.StartTime,
+                        s.EndTime,
+                        s.MaxStaffPerSlot))
+                    .ToList()),
             AppMessages.SchedulePreference.Found);
     }
 
@@ -140,9 +163,6 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         }
         else
         {
-            if (submission.Status == SchedulePreferenceStatus.Submitted)
-                return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.SchedulePreference.AlreadySubmitted);
-
             unitOfWork.SchedulePreferences.RemoveLines(submission);
             foreach (var line in lines)
                 line.SubmissionId = submission.Id;
@@ -174,6 +194,9 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
 
         if (schedule.Status != ScheduleStatus.Draft)
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.NotDraft);
+
+        if (schedule.DepartmentId != employee.DepartmentId)
+            return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.SchedulePreference.WrongDepartment);
 
         var submission = await unitOfWork.SchedulePreferences.GetByScheduleAndEmployeeAsync(
             scheduleId,
@@ -267,12 +290,15 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                 employees.Count,
                 submittedCount,
                 rows,
-                shifts.Select(s => new SchedulePreferenceBoardShiftColumn(
-                    s.Id,
-                    s.Name,
-                    s.StartTime,
-                    s.EndTime,
-                    s.MaxStaffPerSlot)).ToList()),
+                shifts
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => new SchedulePreferenceBoardShiftColumn(
+                        s.Id,
+                        s.Name,
+                        s.StartTime,
+                        s.EndTime,
+                        s.MaxStaffPerSlot))
+                    .ToList()),
             AppMessages.SchedulePreference.BoardListed);
     }
 

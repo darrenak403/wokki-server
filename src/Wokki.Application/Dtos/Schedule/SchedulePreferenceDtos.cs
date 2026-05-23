@@ -19,7 +19,10 @@ public sealed record MySchedulePreferenceResponse(
     string Status,
     IReadOnlyList<SchedulePreferenceLineResponse> Lines);
 
-public sealed record EmployeeDraftScheduleResponse(Guid ScheduleId, DateOnly WeekStartDate);
+public sealed record EmployeeDraftScheduleResponse(
+    Guid ScheduleId,
+    DateOnly WeekStartDate,
+    IReadOnlyList<SchedulePreferenceBoardShiftColumn> Shifts);
 
 public sealed record SchedulePreferenceBoardResponse(
     Guid ScheduleId,
