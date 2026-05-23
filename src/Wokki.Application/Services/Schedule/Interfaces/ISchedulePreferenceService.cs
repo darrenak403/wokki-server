@@ -10,6 +10,11 @@ public interface ISchedulePreferenceService
         DateOnly weekStartDate,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<EmployeeDraftScheduleResponse?>> GetScheduleForEmployeePreferencesAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResponse<MySchedulePreferenceResponse>> GetMineAsync(
         Guid userId,
         Guid scheduleId,

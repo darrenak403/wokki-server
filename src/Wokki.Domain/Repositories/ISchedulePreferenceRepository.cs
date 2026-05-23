@@ -21,5 +21,11 @@ public interface ISchedulePreferenceRepository
 
     Task AddAsync(SchedulePreferenceSubmission entity, CancellationToken cancellationToken = default);
 
-    void RemoveLines(SchedulePreferenceSubmission submission);
+    Task AddLinesAsync(
+        IReadOnlyList<SchedulePreferenceLine> lines,
+        CancellationToken cancellationToken = default);
+
+    void RemoveLines(IEnumerable<SchedulePreferenceLine> lines);
+
+    void Remove(SchedulePreferenceSubmission submission);
 }

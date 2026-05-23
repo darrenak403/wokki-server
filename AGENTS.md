@@ -12,6 +12,8 @@ Backend: **.NET 10**, Clean Architecture, Minimal API, EF Core + PostgreSQL, Sca
 
 ## Hard rules
 
+- **Always update agents/docs for business changes** — any time a task introduces, removes, or changes business behavior, workflow, permissions, status rules, API business meaning, or user-facing business copy, the agent must update the relevant docs and agent context in the same task. Do this proactively; do not wait for the user to ask. Update locked docs (`docs/brd.md`, `docs/business-rules.md`, `docs/process-flows.md`, API/FE handoff docs if needed) and mirror durable guidance in both backend `AGENTS.md` and frontend `AGENTS.md` when the rule affects both apps.
+- **Schedule preferences are advisory** — employee đăng ký ca is separate from official `ShiftAssignment`; Admin/Manager decides final Draft/Published schedule. Users can update preferences only while the schedule is Draft; Published preferences are view-only.
 - **No business logic in `Wokki.Api`** — only map HTTP → application service
 - **Services return `ApiResponse<T>`** — use `SuccessResponse`, `FailureResponse`, `SuccessPagedResponse` only
 - **New endpoints** → `Apis/{Feature}/{Feature}Endpoints.cs` with `MapXxxApi` / `MapXxxRoutes` / static handlers; register in `PipelineExtensions.MapEndpoints()`
@@ -62,7 +64,7 @@ Docs: http://localhost:8386/scalar
 <claude-mem-context>
 # Memory Context
 
-# [wokki-server] recent context, 2026-05-23 9:53pm GMT+7
+# [wokki-server] recent context, 2026-05-24 1:45am GMT+7
 
 No previous sessions found.
 </claude-mem-context>

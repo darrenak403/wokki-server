@@ -33,16 +33,6 @@ public static class ScheduleEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
-        group.MapGet("/roster", ListRosterAsync)
-            .WithName("ListScheduleRoster")
-            .WithDescription("Roster phân ca toàn chi nhánh (mọi trạng thái lịch) — Admin/Manager.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
-            .Produces<ApiResponse<IReadOnlyList<RosterAssignmentResponse>>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
         group.MapPost("/", CreateAsync)
             .WithName("CreateSchedule")
             .WithDescription("Tạo lịch tuần (Draft).")
@@ -104,7 +94,7 @@ public static class ScheduleEndpoints
 
         group.MapPost("/{id:guid}/copy", CopyAsync)
             .WithName("CopySchedule")
-            .WithDescription("Copy lịch sang tuần mới (Draft).")
+            .WithDescription("Copy lịch + đăng ký ca sang tuần đích (Draft); ghi đè nếu tuần đích đã có lịch Nháp.")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<ScheduleResponse>>(StatusCodes.Status201Created)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
@@ -182,19 +172,6 @@ public static class ScheduleEndpoints
         CancellationToken cancellationToken = default)
     {
         var response = await service.ListAsync(request, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> ListRosterAsync(
-        [AsParameters] ScheduleRosterRequest request,
-        [FromServices] IScheduleService service,
-        [FromServices] IValidator<ScheduleRosterRequest> validator,
-        CancellationToken cancellationToken = default)
-    {
-        if (!request.ValidateRequest(validator, out var validationResult))
-            return validationResult!;
-
-        var response = await service.ListRosterAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
 

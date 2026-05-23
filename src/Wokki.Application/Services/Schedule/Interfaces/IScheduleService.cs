@@ -25,9 +25,6 @@ public interface IScheduleService
         CopyScheduleRequest request,
         Guid createdByUserId,
         CancellationToken cancellationToken = default);
-    Task<ApiResponse<IReadOnlyList<RosterAssignmentResponse>>> ListRosterAsync(
-        ScheduleRosterRequest request,
-        CancellationToken cancellationToken = default);
     Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> ListAssignmentsAsync(
         Guid scheduleId,
         CancellationToken cancellationToken = default);

@@ -31,6 +31,17 @@ public static class EmployeeSelfEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        builder.MapGet("/api/v1/self/schedule-preferences/week/{weekStartDate}", GetMyScheduleForPreferencesAsync)
+            .WithName("GetMyScheduleForPreferences")
+            .WithTags("EmployeeSelf")
+            .WithDescription("Lịch Draft hoặc Published của phòng ban nhân viên cho màn đăng ký ca.")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Fixed)
+            .Produces<ApiResponse<EmployeeDraftScheduleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         builder.MapGroup("/api/v1/self")
             .MapEmployeeSelfRoutes()
             .WithTags("EmployeeSelf")
@@ -133,6 +144,25 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday), statusCode: 400);
 
         var response = await service.GetDraftScheduleForEmployeeAsync(
+            currentUser.UserId.Value,
+            parsedWeekStartDate,
+            cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyScheduleForPreferencesAsync(
+        [FromRoute] string weekStartDate,
+        [FromServices] ISchedulePreferenceService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!DateOnly.TryParse(weekStartDate, out var parsedWeekStartDate))
+            return Results.Json(ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday), statusCode: 400);
+
+        var response = await service.GetScheduleForEmployeePreferencesAsync(
             currentUser.UserId.Value,
             parsedWeekStartDate,
             cancellationToken);

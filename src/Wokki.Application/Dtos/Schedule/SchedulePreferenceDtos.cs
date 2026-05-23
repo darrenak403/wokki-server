@@ -1,3 +1,5 @@
+using Wokki.Domain.Enums;
+
 namespace Wokki.Application.Dtos.Schedule;
 
 public sealed record SchedulePreferenceLineInput(
@@ -22,6 +24,7 @@ public sealed record MySchedulePreferenceResponse(
 public sealed record EmployeeDraftScheduleResponse(
     Guid ScheduleId,
     DateOnly WeekStartDate,
+    ScheduleStatus Status,
     IReadOnlyList<SchedulePreferenceBoardShiftColumn> Shifts);
 
 public sealed record SchedulePreferenceBoardResponse(

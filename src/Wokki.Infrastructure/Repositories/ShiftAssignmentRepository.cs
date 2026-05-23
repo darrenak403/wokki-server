@@ -41,38 +41,6 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
             select a
         ).ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<RosterAssignmentRow>> ListRosterAsync(
-        Guid locationId,
-        DateOnly fromDate,
-        DateOnly toDate,
-        Guid? departmentId,
-        Guid? employeeId,
-        CancellationToken cancellationToken = default)
-    {
-        var query =
-            from a in context.ShiftAssignments.AsNoTracking()
-            join s in context.Schedules.AsNoTracking() on a.ScheduleId equals s.Id
-            join d in context.Departments.AsNoTracking() on s.DepartmentId equals d.Id
-            join e in context.Employees.AsNoTracking() on a.EmployeeId equals e.Id
-            join sd in context.ShiftDefinitions.AsNoTracking() on a.ShiftDefinitionId equals sd.Id
-            where d.LocationId == locationId
-                  && a.Date >= fromDate
-                  && a.Date <= toDate
-                  && (!departmentId.HasValue || s.DepartmentId == departmentId.Value)
-                  && (!employeeId.HasValue || a.EmployeeId == employeeId.Value)
-            orderby a.Date, d.Name, sd.StartTime
-            select new RosterAssignmentRow
-            {
-                Assignment = a,
-                Schedule = s,
-                ShiftDefinition = sd,
-                Employee = e,
-                Department = d
-            };
-
-        return await query.ToListAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyList<ShiftAssignment>> ListByEmployeeInDateRangeAsync(
         Guid employeeId,
         DateOnly fromDate,

@@ -92,6 +92,14 @@ public static class AppMessages
         public static readonly AppMessage DepartmentNotFound = new("SCHEDULE_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage WeekNotMonday = new("SCHEDULE_WEEK_NOT_MONDAY", "Week start date must be a Monday.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AlreadyExists = new("SCHEDULE_ALREADY_EXISTS", "A schedule already exists for this department and week.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage CopyTargetNotDraft = new(
+            "SCHEDULE_COPY_TARGET_NOT_DRAFT",
+            "Target week schedule must be draft to overwrite.",
+            StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CopySameWeek = new(
+            "SCHEDULE_COPY_SAME_WEEK",
+            "Source and target week must be different.",
+            StatusCodes.Status400BadRequest);
         public static readonly AppMessage NotDraft = new("SCHEDULE_NOT_DRAFT", "Schedule is not in draft state.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage NotPublished = new("SCHEDULE_NOT_PUBLISHED", "Schedule is not published.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AlreadyPublished = new("SCHEDULE_ALREADY_PUBLISHED", "Schedule is already published.", StatusCodes.Status400BadRequest);
@@ -110,10 +118,6 @@ public static class AppMessages
         public static readonly AppMessage SuggestionsGenerated = new("SCHEDULE_SUGGESTIONS_GENERATED", "Schedule suggestions generated.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsApplied = new("SCHEDULE_SUGGESTIONS_APPLIED", "Schedule suggestions applied.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsEmpty = new("SCHEDULE_SUGGESTIONS_EMPTY", "No suggestions to apply.", StatusCodes.Status400BadRequest);
-        public static readonly AppMessage RosterListed = new("SCHEDULE_ROSTER_LISTED", "Schedule roster listed.", StatusCodes.Status200OK);
-        public static readonly AppMessage LocationNotFound = new("SCHEDULE_LOCATION_NOT_FOUND", "No active location found for roster.", StatusCodes.Status404NotFound);
-        public static readonly AppMessage LocationAmbiguous = new("SCHEDULE_LOCATION_AMBIGUOUS", "Multiple locations exist; specify departmentId.", StatusCodes.Status400BadRequest);
-        public static readonly AppMessage RosterRangeInvalid = new("SCHEDULE_ROSTER_RANGE_INVALID", "Date range must not exceed 28 days.", StatusCodes.Status400BadRequest);
     }
 
     public static class SchedulePreference

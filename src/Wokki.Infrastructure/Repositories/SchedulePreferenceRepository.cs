@@ -49,6 +49,14 @@ public sealed class SchedulePreferenceRepository(AppDbContext context) : ISchedu
     public Task AddAsync(SchedulePreferenceSubmission entity, CancellationToken cancellationToken = default) =>
         context.SchedulePreferenceSubmissions.AddAsync(entity, cancellationToken).AsTask();
 
-    public void RemoveLines(SchedulePreferenceSubmission submission) =>
-        context.SchedulePreferenceLines.RemoveRange(submission.Lines);
+    public Task AddLinesAsync(
+        IReadOnlyList<SchedulePreferenceLine> lines,
+        CancellationToken cancellationToken = default) =>
+        context.SchedulePreferenceLines.AddRangeAsync(lines, cancellationToken);
+
+    public void RemoveLines(IEnumerable<SchedulePreferenceLine> lines) =>
+        context.SchedulePreferenceLines.RemoveRange(lines);
+
+    public void Remove(SchedulePreferenceSubmission submission) =>
+        context.SchedulePreferenceSubmissions.Remove(submission);
 }

@@ -46,6 +46,56 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             new EmployeeDraftScheduleResponse(
                 schedule.Id,
                 schedule.WeekStartDate,
+                schedule.Status,
+                shifts
+                    .OrderBy(s => s.StartTime)
+                    .Select(s => new SchedulePreferenceBoardShiftColumn(
+                        s.Id,
+                        s.Name,
+                        s.StartTime,
+                        s.EndTime,
+                        s.MaxStaffPerSlot))
+                    .ToList()),
+            AppMessages.SchedulePreference.Found);
+    }
+
+    public async Task<ApiResponse<EmployeeDraftScheduleResponse?>> GetScheduleForEmployeePreferencesAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
+
+        if (!ScheduleRules.IsMonday(weekStartDate))
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
+
+        var schedule = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
+            employee.DepartmentId,
+            weekStartDate,
+            cancellationToken);
+
+        if (schedule is null)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
+
+        var department = await unitOfWork.Departments.GetByIdAsync(
+            schedule.DepartmentId,
+            cancellationToken: cancellationToken);
+        if (department is null)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
+
+        var shifts = await unitOfWork.ShiftDefinitions.ListAsync(
+            department.LocationId,
+            schedule.DepartmentId,
+            activeOnly: true,
+            cancellationToken);
+
+        return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(
+            new EmployeeDraftScheduleResponse(
+                schedule.Id,
+                schedule.WeekStartDate,
+                schedule.Status,
                 shifts
                     .OrderBy(s => s.StartTime)
                     .Select(s => new SchedulePreferenceBoardShiftColumn(
@@ -143,6 +193,10 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                 PreferenceType = preferenceType
             });
         }
+        lines = lines
+            .GroupBy(l => (l.ShiftDefinitionId, l.Date))
+            .Select(g => g.Last())
+            .ToList();
 
         if (submission is null)
         {
@@ -163,16 +217,38 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         }
         else
         {
-            unitOfWork.SchedulePreferences.RemoveLines(submission);
-            foreach (var line in lines)
-                line.SubmissionId = submission.Id;
-            submission.Lines = lines;
+            var incomingByCell = lines
+                .GroupBy(l => (l.ShiftDefinitionId, l.Date))
+                .ToDictionary(g => g.Key, g => g.Last());
+            var existingByCell = submission.Lines.ToDictionary(l => (l.ShiftDefinitionId, l.Date));
+            var linesToRemove = submission.Lines
+                .Where(l => !incomingByCell.ContainsKey((l.ShiftDefinitionId, l.Date)))
+                .ToList();
+            if (linesToRemove.Count > 0)
+                unitOfWork.SchedulePreferences.RemoveLines(linesToRemove);
+
+            var linesToAdd = new List<SchedulePreferenceLine>();
+            foreach (var (cell, incomingLine) in incomingByCell)
+            {
+                if (existingByCell.TryGetValue(cell, out var existingLine))
+                {
+                    existingLine.PreferenceType = incomingLine.PreferenceType;
+                    continue;
+                }
+
+                incomingLine.SubmissionId = submission.Id;
+                linesToAdd.Add(incomingLine);
+            }
+
             submission.Status = SchedulePreferenceStatus.Draft;
             submission.UpdatedAt = DateTime.UtcNow;
             submission.SubmittedAt = null;
+            if (linesToAdd.Count > 0)
+                await unitOfWork.SchedulePreferences.AddLinesAsync(linesToAdd, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        submission.Lines = lines;
 
         return ApiResponse<MySchedulePreferenceResponse>.SuccessResponse(
             MapMine(scheduleId, submission),
