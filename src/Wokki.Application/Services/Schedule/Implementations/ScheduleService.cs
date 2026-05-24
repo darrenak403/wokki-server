@@ -510,11 +510,10 @@ public sealed class ScheduleService(
                 suggestion.Score));
         }
 
-        if (items.Count > 0)
-            await scheduleInsights.GenerateContextAsync(
-                scheduleId,
-                BuildInsightContextRequest(items, generated.Provider, generated.FallbackUsed, generated.Reason),
-                cancellationToken);
+        await scheduleInsights.GenerateContextAsync(
+            scheduleId,
+            BuildInsightContextRequest(items, generated.Provider, generated.FallbackUsed, generated.Reason),
+            cancellationToken);
 
         return ApiResponse<ScheduleSuggestionsResponse>.SuccessResponse(
             new ScheduleSuggestionsResponse(items, generated.Reason, generated.Provider, generated.FallbackUsed),
