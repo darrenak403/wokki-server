@@ -1,5 +1,7 @@
 # AGENTS.md — Wokki Server
 
+**Claude Code entry:** [CLAUDE.md](./CLAUDE.md) · **Product/code map:** [.cursor/contexts/wokki.md](./.cursor/contexts/wokki.md)
+
 Backend: **.NET 10**, Clean Architecture, Minimal API, EF Core + PostgreSQL, Scalar docs.
 
 ## Before you code
