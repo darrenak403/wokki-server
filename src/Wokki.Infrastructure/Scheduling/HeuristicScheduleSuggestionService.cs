@@ -134,7 +134,9 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
                     return emp is not null
                            && SchedulingAssignmentRules.ResolveJobPosition(emp, context)?.Id == position.Id;
                 });
-                score -= roleLoad;
+                var roleBalanceWeight = LocationSchedulingPolicyRules.GetInt(
+                    context.LocationSchedulingPolicy, "role_balance_weight", 5);
+                score -= roleLoad * roleBalanceWeight;
             }
 
             if (best is null || score > best.Value.Score

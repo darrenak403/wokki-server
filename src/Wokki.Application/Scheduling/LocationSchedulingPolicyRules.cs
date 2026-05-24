@@ -57,6 +57,14 @@ public static class LocationSchedulingPolicyRules
             true,
             120),
         Number(
+            "role_balance_weight",
+            "employeeLimits",
+            "Hệ số cân bằng vị trí: mỗi ca cùng vị trí đã xếp trong tuần sẽ bị trừ số điểm này. Tăng giá trị để phân bổ đều nhân viên cùng vị trí ra các ca khác nhau.",
+            "Hệ số cân bằng vị trí (điểm trừ/ca cùng vị trí)",
+            5,
+            true,
+            40),
+        Number(
             "preferred_weight",
             "preferenceRules",
             "Điểm thưởng cộng thêm khi nhân viên đăng ký 'Mong muốn làm' ca này. Điểm càng cao, hệ thống càng ưu tiên xếp nhân viên đó vào ca họ muốn.",

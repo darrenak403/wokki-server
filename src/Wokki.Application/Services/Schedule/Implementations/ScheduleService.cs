@@ -193,6 +193,11 @@ public sealed class ScheduleService(
 
         var weekOffset = request.TargetWeekStartDate.DayNumber - source.WeekStartDate.DayNumber;
         var sourceAssignments = await unitOfWork.ShiftAssignments.ListByScheduleAsync(id, cancellationToken);
+        var sourceSubmittedPreferences = await unitOfWork.SchedulePreferences.ListByScheduleAsync(
+            id,
+            includeLines: true,
+            status: SchedulePreferenceStatus.Submitted,
+            cancellationToken);
         var existingTarget = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
             source.DepartmentId,
             request.TargetWeekStartDate,
@@ -241,11 +246,18 @@ public sealed class ScheduleService(
                 weekOffset,
                 cancellationToken);
 
-            await PrefillPreferencesFromAssignmentsAsync(
-                sourceAssignments,
-                target.Id,
-                weekOffset,
-                cancellationToken);
+            if (sourceSubmittedPreferences.Count > 0)
+                await CloneSubmittedPreferencesAsync(
+                    sourceSubmittedPreferences,
+                    target.Id,
+                    weekOffset,
+                    cancellationToken);
+            else
+                await PrefillPreferencesFromAssignmentsAsync(
+                    sourceAssignments,
+                    target.Id,
+                    weekOffset,
+                    cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -313,6 +325,44 @@ public sealed class ScheduleService(
         }
     }
 
+    private async Task CloneSubmittedPreferencesAsync(
+        IReadOnlyList<SchedulePreferenceSubmissionEntity> submissions,
+        Guid targetScheduleId,
+        int weekOffset,
+        CancellationToken cancellationToken)
+    {
+        foreach (var submission in submissions)
+        {
+            var lines = submission.Lines
+                .Select(l => new SchedulePreferenceLineEntity
+                {
+                    Id = Guid.NewGuid(),
+                    ShiftDefinitionId = l.ShiftDefinitionId,
+                    Date = l.Date.AddDays(weekOffset),
+                    PreferenceType = l.PreferenceType
+                })
+                .ToList();
+
+            if (lines.Count == 0)
+                continue;
+
+            var submissionId = Guid.NewGuid();
+            foreach (var line in lines)
+                line.SubmissionId = submissionId;
+
+            await unitOfWork.SchedulePreferences.AddAsync(new SchedulePreferenceSubmissionEntity
+            {
+                Id = submissionId,
+                ScheduleId = targetScheduleId,
+                EmployeeId = submission.EmployeeId,
+                Status = SchedulePreferenceStatus.Submitted,
+                SubmittedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                Lines = lines
+            }, cancellationToken);
+        }
+    }
+
     private async Task PrefillPreferencesFromAssignmentsAsync(
         IReadOnlyList<ShiftAssignmentEntity> sourceAssignments,
         Guid targetScheduleId,
@@ -351,8 +401,8 @@ public sealed class ScheduleService(
                 Id = submissionId,
                 ScheduleId = targetScheduleId,
                 EmployeeId = employeeAssignments.Key,
-                Status = SchedulePreferenceStatus.Draft,
-                SubmittedAt = null,
+                Status = SchedulePreferenceStatus.Submitted,
+                SubmittedAt = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = null,
                 Lines = lines
