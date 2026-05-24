@@ -10,7 +10,7 @@ public sealed record LocationSchedulingPolicyResponse(
 
 public sealed record UpsertLocationSchedulingPolicyRequest(
     IReadOnlyList<LocationSchedulingRuleUpsertDto> Rules,
-    string SchemaVersion = "location-scheduling-policy.v2");
+    string SchemaVersion = "location-scheduling-policy.v3");
 
 public sealed record LocationSchedulingRuleDto(
     string Key,

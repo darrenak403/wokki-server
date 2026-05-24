@@ -30,7 +30,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | Resource | Base | Manager | Admin | Notes |
 |----------|------|---------|-------|-------|
 | Employees | `/employees` | R/W list | Full | Soft delete = terminate |
-| Locations | `/locations` | R/W | Full | `GET/PUT /locations/{id}/scheduling-policy` manages branch scheduling rules as a versioned typed rule list (`rules[]`: left-side content + right-side input value). |
+| Locations | `/locations` | R/W | Full | `GET/PUT /locations/{id}/scheduling-policy` manages branch scheduling rules (`location-scheduling-policy.v3`: five F&B rules for employee shift caps and preference-board guards). |
 | Departments | `/departments` | R/W | Full | |
 
 ## Scheduling

@@ -8,13 +8,23 @@ public static class SchedulingAssignmentRules
 {
     public static int MaxShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
         context.SchedulingPolicy?.MaxShiftsPerEmployeePerWeek
-        ?? LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_week", 20);
+        ?? LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_week", 6);
+
+    public static int MaxShiftsPerEmployeePerDay(ScheduleSuggestionContext context) =>
+        LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_day", 1);
 
     public static bool MeetsWeeklyCap(
         Guid employeeId,
         List<ShiftAssignmentEntity> planned,
         ScheduleSuggestionContext context) =>
         planned.Count(a => a.EmployeeId == employeeId) < MaxShiftsPerEmployeePerWeek(context);
+
+    public static bool MeetsDailyCap(
+        Guid employeeId,
+        DateOnly date,
+        List<ShiftAssignmentEntity> planned,
+        ScheduleSuggestionContext context) =>
+        planned.Count(a => a.EmployeeId == employeeId && a.Date == date) < MaxShiftsPerEmployeePerDay(context);
 
     public static bool MeetsSlotCapacity(
         Guid shiftDefinitionId,

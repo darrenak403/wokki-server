@@ -106,6 +106,9 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
             if (!SchedulingAssignmentRules.MeetsWeeklyCap(employee.Id, planned, context))
                 continue;
 
+            if (!SchedulingAssignmentRules.MeetsDailyCap(employee.Id, date, planned, context))
+                continue;
+
             if (!IsAvailable(employee.Id, date.DayOfWeek, shift.StartTime, shift.EndTime, context.Availabilities))
                 continue;
 
