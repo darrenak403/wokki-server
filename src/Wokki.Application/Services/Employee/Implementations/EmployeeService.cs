@@ -62,6 +62,10 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         if (department is null || !department.IsActive)
             return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
+        var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
+        if (!await AllDepartmentsActiveAsync(departmentIds, cancellationToken))
+            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+
         var temporaryPassword = string.IsNullOrWhiteSpace(request.Password)
             ? PasswordGenerator.Generate()
             : request.Password;
@@ -82,6 +86,12 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         {
             await unitOfWork.Users.AddAsync(user, cancellationToken);
             await unitOfWork.Employees.AddAsync(employee, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
+                employee.Id,
+                departmentIds,
+                request.DepartmentId,
+                cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
@@ -108,8 +118,17 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         if (department is null || !department.IsActive)
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
+        var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
+        if (!await AllDepartmentsActiveAsync(departmentIds, cancellationToken))
+            return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+
         employee.ApplyUpdate(request);
         unitOfWork.Employees.Update(employee);
+        await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
+            employee.Id,
+            departmentIds,
+            request.DepartmentId,
+            cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var response = await BuildResponseAsync(employee, cancellationToken);
@@ -143,5 +162,26 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
             location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
 
         return employee.ToResponse(user, department, location);
+    }
+
+    private static IReadOnlyList<Guid> NormalizeDepartmentIds(Guid primaryDepartmentId, IReadOnlyList<Guid>? departmentIds) =>
+        (departmentIds ?? [])
+        .Append(primaryDepartmentId)
+        .Where(id => id != Guid.Empty)
+        .Distinct()
+        .ToList();
+
+    private async Task<bool> AllDepartmentsActiveAsync(
+        IReadOnlyList<Guid> departmentIds,
+        CancellationToken cancellationToken)
+    {
+        foreach (var id in departmentIds)
+        {
+            var department = await unitOfWork.Departments.GetByIdAsync(id, cancellationToken: cancellationToken);
+            if (department is null || !department.IsActive)
+                return false;
+        }
+
+        return true;
     }
 }

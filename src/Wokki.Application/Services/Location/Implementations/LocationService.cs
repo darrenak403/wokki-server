@@ -1,7 +1,9 @@
 using Wokki.Application.Dtos.Location;
 using Wokki.Application.Mappings.Locations;
+using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Location.Interfaces;
 using Wokki.Common.Utils;
+using Wokki.Domain.Entities;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Location.Implementations;
@@ -51,4 +53,71 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
 
         return ApiResponse<LocationResponse>.SuccessResponse(location.ToResponse(), AppMessages.Location.Updated);
     }
+
+    public async Task<ApiResponse<LocationSchedulingPolicyResponse>> GetSchedulingPolicyAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var location = await unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken);
+        if (location is null)
+            return ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Location.NotFound);
+
+        var policy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(id, cancellationToken: cancellationToken);
+
+        return ApiResponse<LocationSchedulingPolicyResponse>.SuccessResponse(
+            ToPolicyResponse(policy ?? new LocationSchedulingPolicy
+            {
+                LocationId = id,
+                RulesJson = LocationSchedulingPolicyRules.Serialize(LocationSchedulingPolicyRules.GetDefaultRules())
+            }),
+            AppMessages.Location.SchedulingPolicyFound);
+    }
+
+    public async Task<ApiResponse<LocationSchedulingPolicyResponse>> UpsertSchedulingPolicyAsync(
+        Guid id,
+        UpsertLocationSchedulingPolicyRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var location = await unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken);
+        if (location is null)
+            return ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Location.NotFound);
+
+        if (!LocationSchedulingPolicyRules.TryValidate(request.Rules))
+            return ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Location.SchedulingPolicyInvalid);
+
+        var policy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
+            id,
+            track: true,
+            cancellationToken);
+        if (policy is null)
+        {
+            policy = new LocationSchedulingPolicy { LocationId = id };
+            ApplyPolicy(policy, request);
+            await unitOfWork.LocationSchedulingPolicies.AddAsync(policy, cancellationToken);
+        }
+        else
+        {
+            ApplyPolicy(policy, request);
+            unitOfWork.LocationSchedulingPolicies.Update(policy);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse<LocationSchedulingPolicyResponse>.SuccessResponse(
+            ToPolicyResponse(policy),
+            AppMessages.Location.SchedulingPolicyUpdated);
+    }
+
+    private static void ApplyPolicy(LocationSchedulingPolicy policy, UpsertLocationSchedulingPolicyRequest request)
+    {
+        policy.RulesJson = LocationSchedulingPolicyRules.SerializeUpsert(request.Rules);
+        policy.UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static LocationSchedulingPolicyResponse ToPolicyResponse(LocationSchedulingPolicy p) =>
+        new(
+            p.LocationId,
+            LocationSchedulingPolicyRules.SchemaVersion,
+            LocationSchedulingPolicyRules.GetEffectiveRules(p),
+            p.UpdatedAt);
 }

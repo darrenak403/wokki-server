@@ -144,13 +144,42 @@ public static class ScheduleEndpoints
 
         group.MapPost("/{id:guid}/suggest", SuggestAsync)
             .WithName("SuggestScheduleAssignments")
-            .WithDescription("Gợi ý phân công tùy chọn: useAi=true gọi Bedrock, false chỉ heuristic (không ghi DB).")
+            .WithDescription("Gợi ý phân công ca (không ghi DB). Bedrock không tham gia tạo lịch.")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<ScheduleSuggestionsResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/insights/context", GenerateInsightContextAsync)
+            .WithName("GenerateScheduleInsightContext")
+            .WithDescription("Tạo/refresh snapshot JSON để Bedrock hỗ trợ giải thích lịch tuần; không gọi Bedrock và không ghi phân công.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<ScheduleInsightContextResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/insights/context", GetInsightContextAsync)
+            .WithName("GetScheduleInsightContext")
+            .WithDescription("Lấy snapshot JSON giải thích lịch tuần.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<ScheduleInsightContextResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/insights/chat", ChatInsightAsync)
+            .WithName("ChatScheduleInsight")
+            .WithDescription("Hỏi Bedrock assistant dựa trên snapshot lịch tuần; best-effort và không thay đổi lịch.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<ScheduleInsightChatResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status503ServiceUnavailable);
 
         group.MapPost("/{id:guid}/apply-suggestions", ApplySuggestionsAsync)
             .WithName("ApplyScheduleSuggestions")
@@ -323,6 +352,42 @@ public static class ScheduleEndpoints
             return validationResult!;
 
         var response = await service.ApplySuggestionsAsync(id, request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GenerateInsightContextAsync(
+        [FromRoute] Guid id,
+        [FromBody] GenerateScheduleInsightContextRequest? request,
+        [FromServices] IScheduleInsightService service,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await service.GenerateContextAsync(
+            id,
+            request ?? new GenerateScheduleInsightContextRequest(),
+            cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetInsightContextAsync(
+        [FromRoute] Guid id,
+        [FromServices] IScheduleInsightService service,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await service.GetContextAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ChatInsightAsync(
+        [FromRoute] Guid id,
+        [FromBody] ScheduleInsightChatRequest request,
+        [FromServices] IScheduleInsightService service,
+        [FromServices] IValidator<ScheduleInsightChatRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.ChatAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 }

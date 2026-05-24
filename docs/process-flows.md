@@ -179,6 +179,29 @@ sequenceDiagram
     API-->>M: 201 assignments
 ```
 
+### Schedule insight assistant (Bedrock advisory)
+
+```mermaid
+sequenceDiagram
+    participant M as Manager
+    participant API as Schedule API
+    participant I as ScheduleInsightService
+    participant B as AWS Bedrock
+
+    M->>API: POST /schedules/{id}/suggest
+    API->>I: GenerateContextAsync after successful suggestions
+    I->>I: Serialize rules, preferences, assignments, suggestions, summaries
+    API-->>M: 200 suggestions; context is refreshed in DB
+
+    M->>API: POST /schedules/{id}/insights/chat
+    API->>I: ChatAsync(question)
+    I->>B: Converse with context snapshot
+    B-->>I: Advisory explanation
+    API-->>M: 200 answer
+```
+
+Bedrock is not part of schedule generation or apply. If Bedrock is unavailable, `suggest` and `apply-suggestions` still work; only the chat endpoint fails independently.
+
 ---
 
 ## 8. Chat

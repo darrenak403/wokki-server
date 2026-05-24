@@ -30,7 +30,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | Resource | Base | Manager | Admin | Notes |
 |----------|------|---------|-------|-------|
 | Employees | `/employees` | R/W list | Full | Soft delete = terminate |
-| Locations | `/locations` | R/W | Full | |
+| Locations | `/locations` | R/W | Full | `GET/PUT /locations/{id}/scheduling-policy` manages branch scheduling rules as a versioned typed rule list (`rules[]`: left-side content + right-side input value). |
 | Departments | `/departments` | R/W | Full | |
 
 ## Scheduling
@@ -44,8 +44,11 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | POST | `/schedules/{id}/copy` | Admin, Manager | Copy week to new Draft |
 | GET/POST | `/schedules/{id}/assignments` | Admin, Manager | List / add assignment |
 | DELETE | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Remove assignment |
-| POST | `/schedules/{id}/suggest` | Admin, Manager | Heuristic suggestions (no write) |
+| POST | `/schedules/{id}/suggest` | Admin, Manager | Schedule suggestions (no write; Bedrock not used) |
 | POST | `/schedules/{id}/apply-suggestions` | Admin, Manager | Apply suggestions (Draft only) |
+| POST | `/schedules/{id}/insights/context` | Admin, Manager | Generate/refresh JSON context snapshot for schedule insight |
+| GET | `/schedules/{id}/insights/context` | Admin, Manager | Read latest context snapshot |
+| POST | `/schedules/{id}/insights/chat` | Admin, Manager | Ask optional Bedrock assistant about the context; no schedule mutation |
 | GET/POST/PUT/DELETE | `/shifts` | Admin, Manager | Shift definitions |
 
 ## Employee self-service (`/api/v1/self`) — User (+ employee profile)

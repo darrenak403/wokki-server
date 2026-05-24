@@ -137,9 +137,11 @@ Thứ tự **trong wave** (tránh FK sai):
 | 5 | `/api/v1/schedules/{scheduleId}/assignments/{assignmentId}` | DELETE | — | Xóa phân ca (Draft) |
 | 6 | `/api/v1/schedules/{scheduleId}/suggest` | POST | body gợi ý (tuỳ chọn) | Không ghi DB |
 | 7 | `/api/v1/schedules/{scheduleId}/apply-suggestions` | POST | danh sách gợi ý | **Chỉ Draft** |
-| 8 | `/api/v1/schedules/{scheduleId}/publish` | POST | `{}` | Draft → **Published** — mở wave 4 |
-| 9 | `/api/v1/schedules/{scheduleId}/unpublish` | POST | — | Published → Draft (sửa lại) |
-| 10 | `/api/v1/schedules/{scheduleId}/copy` | POST | tuần đích | Copy sang Draft mới |
+| 8 | `/api/v1/schedules/{scheduleId}/insights/context` | POST/GET | suggestions snapshot / — | Bedrock insight context; không mutate lịch |
+| 9 | `/api/v1/schedules/{scheduleId}/insights/chat` | POST | `{ question }` | Hỏi Bedrock hỗ trợ; lỗi không ảnh hưởng lịch |
+| 10 | `/api/v1/schedules/{scheduleId}/publish` | POST | `{}` | Draft → **Published** — mở wave 4 |
+| 11 | `/api/v1/schedules/{scheduleId}/unpublish` | POST | — | Published → Draft (sửa lại) |
+| 12 | `/api/v1/schedules/{scheduleId}/copy` | POST | tuần đích | Copy sang Draft mới |
 
 **Sau bước 8** nhân viên mới thấy ca trên `GET /self/schedule`.
 

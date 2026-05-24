@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Wokki.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Wokki.Infrastructure.Persistence;
 namespace Wokki.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260524051134_AddScheduleInsightContexts")]
+    partial class AddScheduleInsightContexts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -308,27 +311,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.ToTable("employee_availabilities", (string)null);
                 });
 
-            modelBuilder.Entity("Wokki.Domain.Entities.EmployeeDepartmentMembership", b =>
-                {
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsPrimary")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("EmployeeId", "DepartmentId");
-
-                    b.HasIndex("DepartmentId");
-
-                    b.ToTable("employee_department_memberships", (string)null);
-                });
-
             modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -401,23 +383,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("locations", (string)null);
-                });
-
-            modelBuilder.Entity("Wokki.Domain.Entities.LocationSchedulingPolicy", b =>
-                {
-                    b.Property<Guid>("LocationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("RulesJson")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("LocationId");
-
-                    b.ToTable("location_scheduling_policies", (string)null);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Message", b =>
@@ -556,12 +521,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ScheduleId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<bool>("FallbackUsed")
                         .HasColumnType("boolean");
 
@@ -571,9 +530,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<string>("JsonContent")
                         .IsRequired()
                         .HasColumnType("jsonb");
-
-                    b.Property<Guid>("LocationId")
-                        .HasColumnType("uuid");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -588,14 +544,7 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateOnly>("WeekStartDate")
-                        .HasColumnType("date");
-
                     b.HasKey("ScheduleId");
-
-                    b.HasIndex("ExpiresAt");
-
-                    b.HasIndex("DepartmentId", "WeekStartDate");
 
                     b.ToTable("schedule_insight_contexts", (string)null);
                 });
@@ -933,35 +882,11 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Wokki.Domain.Entities.EmployeeDepartmentMembership", b =>
-                {
-                    b.HasOne("Wokki.Domain.Entities.Department", null)
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Wokki.Domain.Entities.Employee", null)
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
                 {
                     b.HasOne("Wokki.Domain.Entities.Department", null)
                         .WithMany()
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Wokki.Domain.Entities.LocationSchedulingPolicy", b =>
-                {
-                    b.HasOne("Wokki.Domain.Entities.Location", null)
-                        .WithOne()
-                        .HasForeignKey("Wokki.Domain.Entities.LocationSchedulingPolicy", "LocationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

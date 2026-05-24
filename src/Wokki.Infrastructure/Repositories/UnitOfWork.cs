@@ -22,7 +22,10 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IEmployeeAvailabilityRepository? _employeeAvailabilities;
     private IJobPositionRepository? _jobPositions;
     private IDepartmentSchedulingPolicyRepository? _departmentSchedulingPolicies;
+    private ILocationSchedulingPolicyRepository? _locationSchedulingPolicies;
+    private IEmployeeDepartmentMembershipRepository? _employeeDepartmentMemberships;
     private ISchedulePreferenceRepository? _schedulePreferences;
+    private IScheduleInsightContextRepository? _scheduleInsightContexts;
     private IDbContextTransaction? _transaction;
 
     public IUserRepository Users => _users ??= new UserRepository(context);
@@ -44,8 +47,14 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
         _jobPositions ??= new JobPositionRepository(context);
     public IDepartmentSchedulingPolicyRepository DepartmentSchedulingPolicies =>
         _departmentSchedulingPolicies ??= new DepartmentSchedulingPolicyRepository(context);
+    public ILocationSchedulingPolicyRepository LocationSchedulingPolicies =>
+        _locationSchedulingPolicies ??= new LocationSchedulingPolicyRepository(context);
+    public IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships =>
+        _employeeDepartmentMemberships ??= new EmployeeDepartmentMembershipRepository(context);
     public ISchedulePreferenceRepository SchedulePreferences =>
         _schedulePreferences ??= new SchedulePreferenceRepository(context);
+    public IScheduleInsightContextRepository ScheduleInsightContexts =>
+        _scheduleInsightContexts ??= new ScheduleInsightContextRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);

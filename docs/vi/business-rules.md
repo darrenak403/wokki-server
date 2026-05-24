@@ -110,16 +110,20 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 
 ---
 
-## Gợi ý lịch (Heuristic / AI MVP)
+## Gợi ý lịch
 
 | ID | Quy tắc | Thực thi |
 |----|---------|---------|
-| BR-070 | `POST .../suggest` **chỉ đọc**, không ghi DB. | `HeuristicScheduleSuggestionService` |
+| BR-070 | `POST .../suggest` không ghi `ShiftAssignment` chính thức và **không** gọi AWS Bedrock. Sau khi gợi ý thành công, API có thể refresh snapshot insight hỗ trợ trong DB. | `ScheduleService`, `ScheduleSuggestionOrchestrator` |
 | BR-071 | Suggest/apply chỉ trên lịch **`Draft`**. | Services |
-| BR-072 | Cần ≥ **3** phân ca published trong **4 tuần** trước; không đủ → `reason: insufficient_history`. | Ngưỡng heuristic |
+| BR-072 | Auto-scheduling chạy theo từng phòng ban/tuần và cần policy chi nhánh đã lưu, nhân viên active của phòng ban, ca active, và đăng ký ca nếu rule chi nhánh đang bật yêu cầu. Policy chi nhánh là danh sách rule typed có version; doanh nghiệp có thể thêm/xóa rule, còn solver đọc rule lõi bằng `key` ổn định. Thiếu input trả `reason` rõ như `missing_location_rules`, `no_employees`, `no_shifts`, hoặc `missing_preferences`. | `HeuristicScheduleSuggestionService`, `LocationSchedulingPolicyRules` |
 | BR-073 | Gợi ý không double-book trong tuần mục tiêu. | `HasOverlapInPlan` |
-| BR-074 | `Position` nhân viên phải khớp `RequiredRole` của ca. | `RoleMatches` |
+| BR-074 | Eligibility dùng membership phòng ban. `Employee.DepartmentId` chỉ là phòng ban primary/backward-compatible; guard apply phải chấp nhận mọi membership active của phòng ban lịch. | `EmployeeDepartmentMembership`, `TryPrepareAssignmentAsync` |
 | BR-075 | `apply-suggestions` validate **tất cả** dòng rồi commit **một transaction** (cả hoặc không). | `ApplySuggestionsAsync` |
+| BR-076 | Context insight lịch là snapshot JSON lưu DB để giải thích, gắn `LocationId`, `DepartmentId`, `WeekStartDate`, và `ExpiresAt`; không phải nguồn dữ liệu chính thức và không thay thế `ShiftAssignment`. | `ScheduleInsightService` |
+| BR-077 | Chat insight dùng Bedrock chỉ mang tính hỗ trợ. Nó có thể tóm tắt, giải thích và gợi ý Manager cân nhắc, nhưng không được tạo, cập nhật, apply hoặc publish phân ca. | `ScheduleInsightService.ChatAsync` |
+| BR-078 | Bedrock lỗi, hết quota, trả rỗng hoặc timeout không được ảnh hưởng `suggest` hay `apply-suggestions`; chat insight lỗi độc lập bằng response service-unavailable. | `ScheduleInsightService`, `IBedrockService` |
+| BR-079 | Tạo/refresh context insight không gọi Bedrock; chỉ serialize lịch, luật, preference, phân ca, gợi ý và metadata tóm tắt hiện có. | `GenerateContextAsync` |
 
 ---
 

@@ -54,6 +54,10 @@ public static class AppMessages
         public static readonly AppMessage Created = new("LOCATION_CREATED", "Location created.", StatusCodes.Status201Created);
         public static readonly AppMessage Updated = new("LOCATION_UPDATED", "Location updated.", StatusCodes.Status200OK);
         public static readonly AppMessage Exists = new("LOCATION_EXISTS", "Location name already exists.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage SchedulingPolicyFound = new("LOCATION_SCHEDULING_POLICY_FOUND", "Location scheduling policy found.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyUpdated = new("LOCATION_SCHEDULING_POLICY_UPDATED", "Location scheduling policy updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyMissing = new("LOCATION_SCHEDULING_POLICY_MISSING", "Location scheduling policy is required before auto-scheduling.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage SchedulingPolicyInvalid = new("LOCATION_SCHEDULING_POLICY_INVALID", "Location scheduling policy is invalid.", StatusCodes.Status400BadRequest);
     }
 
     public static class Department
@@ -132,6 +136,16 @@ public static class AppMessages
         public static readonly AppMessage InvalidPreferenceType = new("SCHEDULE_PREFERENCE_INVALID_TYPE", "Preference type must be Preferred, Available, or Unavailable.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AlreadySubmitted = new("SCHEDULE_PREFERENCE_ALREADY_SUBMITTED", "Preferences are already submitted and cannot be edited.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage Empty = new("SCHEDULE_PREFERENCE_EMPTY", "Submit at least one preference line first.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class ScheduleInsight
+    {
+        public static readonly AppMessage ContextFound = new("SCHEDULE_INSIGHT_CONTEXT_FOUND", "Schedule insight context found.", StatusCodes.Status200OK);
+        public static readonly AppMessage ContextGenerated = new("SCHEDULE_INSIGHT_CONTEXT_GENERATED", "Schedule insight context generated.", StatusCodes.Status200OK);
+        public static readonly AppMessage ContextNotFound = new("SCHEDULE_INSIGHT_CONTEXT_NOT_FOUND", "Schedule insight context not found. Generate or refresh it first.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ContextExpired = new("SCHEDULE_INSIGHT_CONTEXT_EXPIRED", "Schedule insight context expired. Generate or refresh it first.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ChatAnswered = new("SCHEDULE_INSIGHT_CHAT_ANSWERED", "Schedule insight assistant answered.", StatusCodes.Status200OK);
+        public static readonly AppMessage ChatUnavailable = new("SCHEDULE_INSIGHT_CHAT_UNAVAILABLE", "Schedule insight assistant is unavailable. Scheduling is not affected.", StatusCodes.Status503ServiceUnavailable);
     }
 
     public static class SchedulingConfig

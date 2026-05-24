@@ -112,16 +112,20 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 
 ---
 
-## Schedule suggestions (AI/heuristic)
+## Schedule suggestions
 
 | ID | Rule | Enforcement |
 |----|------|-------------|
-| BR-070 | `POST .../suggest` is **read-only** (no DB writes). | `HeuristicScheduleSuggestionService` |
+| BR-070 | `POST .../suggest` does not write official `ShiftAssignment` rows and does **not** call AWS Bedrock. After successful suggestions, it may refresh the advisory insight context snapshot in DB. | `ScheduleService`, `ScheduleSuggestionOrchestrator` |
 | BR-071 | Suggest/apply only on **`Draft`** schedules. | Services |
-| BR-072 | Requires ≥ **3** published historical assignments in prior **4 weeks**; else `reason: insufficient_history`. | Heuristic threshold |
+| BR-072 | Auto-scheduling is scoped to one department/week and requires a saved location scheduling policy, active department employees, active shifts, and submitted preferences when the enabled branch rule requires it. Branch policy is a versioned typed rule list; companies may add/remove rules, while solver-owned rules are read by stable `key`. Missing input returns explicit `reason` such as `missing_location_rules`, `no_employees`, `no_shifts`, or `missing_preferences`. | `HeuristicScheduleSuggestionService`, `LocationSchedulingPolicyRules` |
 | BR-073 | Suggestions must not double-book (in-memory overlap check for the target week). | `HasOverlapInPlan` |
-| BR-074 | Employee `Position` must match shift `RequiredRole` to be suggested. | `RoleMatches` |
+| BR-074 | Employee eligibility uses department membership. `Employee.DepartmentId` is only the primary/backward-compatible department; assignment guards must accept any active membership for the schedule department. | `EmployeeDepartmentMembership`, `TryPrepareAssignmentAsync` |
 | BR-075 | `apply-suggestions` validates **all** rows then commits in **one transaction** (all or none). | `ApplySuggestionsAsync` |
+| BR-076 | Schedule insight context is a DB-stored JSON snapshot for explanation only, keyed by schedule and carrying `LocationId`, `DepartmentId`, `WeekStartDate`, and `ExpiresAt`; it is not a source of truth and never replaces `ShiftAssignment`. | `ScheduleInsightService` |
+| BR-077 | Bedrock schedule insight chat is advisory only. It may summarize, explain, and suggest manager review actions, but it must not create, update, apply, or publish assignments. | `ScheduleInsightService.ChatAsync` |
+| BR-078 | Bedrock failures, throttling, empty output, or timeout must not affect `suggest` or `apply-suggestions`; insight chat fails independently with a service-unavailable response. | `ScheduleInsightService`, `IBedrockService` |
+| BR-079 | Generate/refresh schedule insight context does not call Bedrock; it only serializes current schedule, rules, preferences, assignments, suggestions, and summary metadata. | `GenerateContextAsync` |
 
 ---
 

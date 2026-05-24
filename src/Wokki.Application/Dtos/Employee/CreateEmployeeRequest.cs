@@ -11,4 +11,5 @@ public sealed record CreateEmployeeRequest(
     decimal HourlyRate,
     Guid DepartmentId,
     string Role = RoleConstants.User,
-    string? Password = null);
+    string? Password = null,
+    IReadOnlyList<Guid>? DepartmentIds = null);

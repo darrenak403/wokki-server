@@ -70,6 +70,9 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
         var policy = await unitOfWork.DepartmentSchedulingPolicies.GetByDepartmentIdAsync(
             schedule.DepartmentId,
             cancellationToken);
+        var locationPolicy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
+            department.LocationId,
+            cancellationToken: cancellationToken);
 
         return (new ScheduleSuggestionContext
         {
@@ -82,6 +85,7 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
             JobPositions = jobPositions,
+            LocationSchedulingPolicy = locationPolicy,
             SchedulingPolicy = policy
         }, null);
     }

@@ -35,7 +35,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | OBJ-03 | Eliminate manual timesheets for hourly staff | Clock-in/out tied to assignments |
 | OBJ-04 | Accelerate payroll prep | Department summary + CSV export |
 | OBJ-05 | Reduce reliance on external chat for shift coordination | In-app channels + real-time messages |
-| OBJ-06 | Assist managers with assignment suggestions | Heuristic suggest/apply on Draft schedules |
+| OBJ-06 | Assist managers with assignment suggestions and explain weekly schedule outcomes | Deterministic suggest/apply on Draft schedules; optional Bedrock insight chat reads schedule context only |
 
 ### 2.3 Deployment model
 
@@ -68,7 +68,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | 2 | Shift definitions, weekly schedules, publish/unpublish, copy week, `/self/schedule` |
 | 3 | Swap requests, peer accept/decline, manager override, notifications |
 | 4 | Clock-in/out, attendance list/adjust, payroll summary & CSV export |
-| 5 | Internal chat (REST + SignalR), heuristic schedule suggest/apply |
+| 5 | Internal chat (REST + SignalR), schedule suggest/apply, optional Bedrock schedule insight assistant |
 
 ### 4.2 Out of scope (MVP)
 
@@ -77,7 +77,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | Native iOS/Android apps | Clients use API; UI out of repo |
 | Multi-tenant in one database | Deferred; instance-per-customer |
 | Dynamic RBAC / custom roles | Fixed Admin / Manager / User |
-| External LLM for scheduling | Heuristic engine only; LLM later behind same port |
+| External LLM for scheduling | Bedrock is advisory insight/chat only; it must not generate or apply assignments |
 | SignalR Redis backplane | Single-instance MVP; document scale limit |
 | Public pay-period lock API | Lock via data/status; export/snapshot pattern |
 | Schedule `Locked` status in workflows | Enum present; publish flow uses Draft/Published only |
@@ -155,6 +155,8 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 | FR-504 | P1 | Real-time delivery via SignalR hub `/ws/chat` with JWT. |
 | FR-505 | P1 | Manager shall request heuristic suggestions without DB change. |
 | FR-506 | P1 | Manager shall apply suggestions to Draft schedule in one transaction. |
+| FR-507 | P1 | Manager/Admin shall generate a weekly schedule insight context snapshot without calling Bedrock or changing assignments. |
+| FR-508 | P1 | Manager/Admin shall ask Bedrock questions about a generated schedule context; answers are advisory and must not mutate schedules. |
 
 ---
 
@@ -274,7 +276,7 @@ Glossary: **[glossary.md](./glossary.md)**.
 | Schedule `Locked` | Enum only | Lock after payroll sign-off |
 | Pay period lock API | Status in DB | Explicit Admin lock endpoint |
 | Audit log coverage | Partial entity | Wire all BR-sensitive actions |
-| AI suggestions | Heuristic | Optional LLM behind `IScheduleSuggestionService` |
+| Schedule insights | Bedrock optional chat over JSON context | RAG/file storage, richer diagnostics, analytics |
 | Multi-tenant | Instance per customer | Shared SaaS model |
 | SignalR scale | Single server | Redis backplane / Azure SignalR |
 

@@ -8,8 +8,6 @@ namespace Wokki.Infrastructure.Scheduling;
 public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContextLoader contextLoader)
     : IScheduleSuggestionService
 {
-    private const int MinHistoryAssignments = 3;
-
     public async Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
         CancellationToken cancellationToken = default)
@@ -18,15 +16,21 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         if (context is null)
             return new ScheduleSuggestionGenerationResult([], reason);
 
-        if (context.HistoricalAssignments.Count < MinHistoryAssignments
-            && context.SubmittedPreferences.Count == 0)
-            return new ScheduleSuggestionGenerationResult([], "insufficient_history");
+        if (context.LocationSchedulingPolicy is null)
+            return new ScheduleSuggestionGenerationResult([], "missing_location_rules");
 
         if (context.Employees.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_employees");
 
         if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts");
+
+        if (LocationSchedulingPolicyRules.GetBool(
+                context.LocationSchedulingPolicy,
+                "require_submitted_preferences",
+                true)
+            && context.SubmittedPreferences.Count == 0)
+            return new ScheduleSuggestionGenerationResult([], "missing_preferences");
 
         var planned = new List<ShiftAssignmentEntity>(context.ExistingAssignments);
         var shiftMap = context.Shifts.ToDictionary(s => s.Id);
@@ -85,10 +89,18 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
 
         foreach (var employee in context.Employees)
         {
-            if (SchedulingAssignmentRules.IsUnavailableByPreference(employee.Id, shift.Id, date, context))
+            if (LocationSchedulingPolicyRules.GetBool(
+                    context.LocationSchedulingPolicy,
+                    "unavailable_is_hard_block",
+                    true)
+                && SchedulingAssignmentRules.IsUnavailableByPreference(employee.Id, shift.Id, date, context))
                 continue;
 
-            if (!RoleMatches(employee, shift, context))
+            if (LocationSchedulingPolicyRules.GetBool(
+                    context.LocationSchedulingPolicy,
+                    "require_role_match",
+                    true)
+                && !RoleMatches(employee, shift, context))
                 continue;
 
             if (!SchedulingAssignmentRules.MeetsWeeklyCap(employee.Id, planned, context))

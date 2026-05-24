@@ -22,8 +22,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EmployeeAvailability> EmployeeAvailabilities => Set<EmployeeAvailability>();
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<DepartmentSchedulingPolicy> DepartmentSchedulingPolicies => Set<DepartmentSchedulingPolicy>();
+    public DbSet<LocationSchedulingPolicy> LocationSchedulingPolicies => Set<LocationSchedulingPolicy>();
+    public DbSet<EmployeeDepartmentMembership> EmployeeDepartmentMemberships => Set<EmployeeDepartmentMembership>();
     public DbSet<SchedulePreferenceSubmission> SchedulePreferenceSubmissions => Set<SchedulePreferenceSubmission>();
     public DbSet<SchedulePreferenceLine> SchedulePreferenceLines => Set<SchedulePreferenceLine>();
+    public DbSet<ScheduleInsightContext> ScheduleInsightContexts => Set<ScheduleInsightContext>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

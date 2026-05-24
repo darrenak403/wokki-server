@@ -6,4 +6,5 @@ public sealed record UpdateEmployeeRequest(
     string Phone,
     string Position,
     decimal HourlyRate,
-    Guid DepartmentId);
+    Guid DepartmentId,
+    IReadOnlyList<Guid>? DepartmentIds = null);

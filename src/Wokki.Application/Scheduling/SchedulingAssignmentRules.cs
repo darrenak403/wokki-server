@@ -7,7 +7,8 @@ namespace Wokki.Application.Scheduling;
 public static class SchedulingAssignmentRules
 {
     public static int MaxShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
-        context.SchedulingPolicy?.MaxShiftsPerEmployeePerWeek ?? 20;
+        context.SchedulingPolicy?.MaxShiftsPerEmployeePerWeek
+        ?? LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_week", 20);
 
     public static bool MeetsWeeklyCap(
         Guid employeeId,
@@ -38,8 +39,8 @@ public static class SchedulingAssignmentRules
 
         return line.PreferenceType switch
         {
-            PreferenceType.Preferred => 30,
-            PreferenceType.Available => 5,
+            PreferenceType.Preferred => LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "preferred_weight", 30),
+            PreferenceType.Available => LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "available_weight", 5),
             PreferenceType.Unavailable => int.MinValue,
             _ => 0
         };

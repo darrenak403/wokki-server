@@ -179,6 +179,29 @@ sequenceDiagram
     API-->>M: 201 phân ca
 ```
 
+### Trợ lý insight lịch (Bedrock hỗ trợ)
+
+```mermaid
+sequenceDiagram
+    participant M as Manager
+    participant API as Schedule API
+    participant I as ScheduleInsightService
+    participant B as AWS Bedrock
+
+    M->>API: POST /schedules/{id}/suggest
+    API->>I: GenerateContextAsync sau khi gợi ý thành công
+    I->>I: Serialize luật, preference, phân ca, gợi ý, summary
+    API-->>M: 200 danh sách gợi ý; context được refresh trong DB
+
+    M->>API: POST /schedules/{id}/insights/chat
+    API->>I: ChatAsync(câu hỏi)
+    I->>B: Converse với context snapshot
+    B-->>I: Giải thích hỗ trợ
+    API-->>M: 200 câu trả lời
+```
+
+Bedrock không nằm trong bước sinh lịch hoặc apply. Nếu Bedrock không hoạt động, `suggest` và `apply-suggestions` vẫn chạy; chỉ endpoint chat lỗi độc lập.
+
 ---
 
 ## 8. Chat

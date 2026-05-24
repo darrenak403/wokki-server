@@ -18,7 +18,10 @@ public interface IUnitOfWork : IAsyncDisposable
     IEmployeeAvailabilityRepository EmployeeAvailabilities { get; }
     IJobPositionRepository JobPositions { get; }
     IDepartmentSchedulingPolicyRepository DepartmentSchedulingPolicies { get; }
+    ILocationSchedulingPolicyRepository LocationSchedulingPolicies { get; }
+    IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships { get; }
     ISchedulePreferenceRepository SchedulePreferences { get; }
+    IScheduleInsightContextRepository ScheduleInsightContexts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

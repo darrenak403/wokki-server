@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Wokki.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Wokki.Infrastructure.Persistence;
 namespace Wokki.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260524065823_LocationSchedulingPolicyAndDepartmentMemberships")]
+    partial class LocationSchedulingPolicyAndDepartmentMemberships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -408,12 +411,117 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("LocationId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("RulesJson")
+                    b.Property<bool>("AllowOvertime")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowPartialApply")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowTerminatedEmployees")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowUnderstaffedSuggestions")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AutoApplySuggestions")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("AvailableWeight")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("AvoidOvertime")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AvoidSameEmployeeAlwaysSameShift")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("BalanceShiftCount")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("BalanceWeekendShifts")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("BreakMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("BreakRequiredAfterMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CoverageByRoleRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CustomRulesJson")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<int?>("DefaultMaxStaffPerShift")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DefaultMinStaffPerShift")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FairnessWeight")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxConsecutiveWorkDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxHoursPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxHoursPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxShiftsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxShiftsPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinRestMinutesBetweenShifts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinShiftsPerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MissingPreferencePenalty")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OvertimePenaltyWeight")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PreferLowerCostWhenEqual")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PreferredWeight")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RequireActiveEmployee")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireDepartmentMembership")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireFullCoverage")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireManagerReviewBeforeApply")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireRoleMatch")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireSubmittedPreferences")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UnavailableIsHardBlock")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("WeeklyRestDaysRequired")
+                        .HasColumnType("integer");
 
                     b.HasKey("LocationId");
 

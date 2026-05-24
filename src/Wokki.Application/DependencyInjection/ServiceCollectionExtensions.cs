@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<ISchedulePreferenceService, SchedulePreferenceService>();
+        services.AddScoped<IScheduleInsightService, ScheduleInsightService>();
         services.AddScoped<IDepartmentSchedulingConfigService, DepartmentSchedulingConfigService>();
         services.AddScoped<ISwapRequestService, SwapRequestService>();
         services.AddScoped<IAttendanceService, AttendanceService>();

@@ -18,7 +18,8 @@ namespace Wokki.Application.Services.Schedule.Implementations;
 public sealed class ScheduleService(
     IUnitOfWork unitOfWork,
     INotificationService notifications,
-    IScheduleSuggestionOrchestrator scheduleSuggestions) : IScheduleService
+    IScheduleSuggestionOrchestrator scheduleSuggestions,
+    IScheduleInsightService scheduleInsights) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
@@ -458,6 +459,12 @@ public sealed class ScheduleService(
                 suggestion.Score));
         }
 
+        if (items.Count > 0)
+            await scheduleInsights.GenerateContextAsync(
+                scheduleId,
+                BuildInsightContextRequest(items, generated.Provider, generated.FallbackUsed, generated.Reason),
+                cancellationToken);
+
         return ApiResponse<ScheduleSuggestionsResponse>.SuccessResponse(
             new ScheduleSuggestionsResponse(items, generated.Reason, generated.Provider, generated.FallbackUsed),
             AppMessages.Schedule.SuggestionsGenerated);
@@ -545,7 +552,10 @@ public sealed class ScheduleService(
         if (employee is null || employee.TerminatedAt is not null)
             return (null, null, AppMessages.Schedule.EmployeeNotFound);
 
-        if (employee.DepartmentId != schedule.DepartmentId)
+        if (!await unitOfWork.Employees.IsMemberOfDepartmentAsync(
+                employee.Id,
+                schedule.DepartmentId,
+                cancellationToken))
             return (null, null, AppMessages.Schedule.EmployeeWrongDepartment);
 
         var weekEnd = schedule.WeekStartDate.AddDays(6);
@@ -716,4 +726,24 @@ public sealed class ScheduleService(
             // Notifications must not roll back core workflow.
         }
     }
+
+    private static GenerateScheduleInsightContextRequest BuildInsightContextRequest(
+        IReadOnlyList<ScheduleSuggestionItem> suggestions,
+        string provider,
+        bool fallbackUsed,
+        string? reason) =>
+        new(
+            suggestions.Select(s => new ScheduleInsightSuggestionInput(
+                    s.ShiftDefinitionId,
+                    s.EmployeeId,
+                    s.Date,
+                    s.Score,
+                    ["generated_suggestion"],
+                    null))
+                .ToList(),
+            provider,
+            fallbackUsed,
+            suggestions.Count > 0 ? "generated" : "no_suggestions",
+            null,
+            string.IsNullOrWhiteSpace(reason) ? null : [reason]);
 }

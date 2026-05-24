@@ -13,6 +13,7 @@ public interface IEmployeeRepository
         Guid? locationId = null,
         bool includeTerminated = false,
         CancellationToken cancellationToken = default);
+    Task<bool> IsMemberOfDepartmentAsync(Guid employeeId, Guid departmentId, CancellationToken cancellationToken = default);
     Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
     void Update(Employee employee);
 }

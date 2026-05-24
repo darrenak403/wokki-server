@@ -30,7 +30,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | Resource | Base | Manager | Admin | Ghi chú |
 |----------|------|---------|-------|---------|
 | Employees | `/employees` | Đọc/ghi danh sách | Đầy đủ | Xóa = chấm dứt (soft) |
-| Locations | `/locations` | Đọc/ghi | Đầy đủ | |
+| Locations | `/locations` | Đọc/ghi | Đầy đủ | `GET/PUT /locations/{id}/scheduling-policy` quản lý luật chi nhánh bằng danh sách typed rule có version (`rules[]`: nội dung luật bên trái + giá trị cần điền bên phải). |
 | Departments | `/departments` | Đọc/ghi | Đầy đủ | |
 
 ## Lập lịch (Scheduling)
@@ -44,8 +44,11 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | POST | `/schedules/{id}/copy` | Admin, Manager | Copy tuần sang Draft mới |
 | GET/POST | `/schedules/{id}/assignments` | Admin, Manager | Danh sách / thêm phân ca |
 | DELETE | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Xóa phân ca |
-| POST | `/schedules/{id}/suggest` | Admin, Manager | Gợi ý heuristic (không ghi DB) |
+| POST | `/schedules/{id}/suggest` | Admin, Manager | Gợi ý phân ca (không ghi DB; không dùng Bedrock) |
 | POST | `/schedules/{id}/apply-suggestions` | Admin, Manager | Áp dụng gợi ý (chỉ Draft) |
+| POST | `/schedules/{id}/insights/context` | Admin, Manager | Tạo/refresh snapshot JSON cho insight lịch |
+| GET | `/schedules/{id}/insights/context` | Admin, Manager | Đọc context snapshot mới nhất |
+| POST | `/schedules/{id}/insights/chat` | Admin, Manager | Hỏi trợ lý Bedrock tùy chọn dựa trên context; không mutate lịch |
 | GET/POST/PUT/DELETE | `/shifts` | Admin, Manager | Mẫu ca (shift definition) |
 
 ## Self-service nhân viên (`/api/v1/self`) — User (cần Employee)
