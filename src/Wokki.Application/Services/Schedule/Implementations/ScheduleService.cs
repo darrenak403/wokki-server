@@ -487,17 +487,18 @@ public sealed class ScheduleService(
         if (generated.Reason is "department_not_found")
             return ApiResponse<ScheduleSuggestionsResponse>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
 
+        var shiftIds = generated.Suggestions.Select(s => s.ShiftDefinitionId).Distinct();
+        var employeeIds = generated.Suggestions.Select(s => s.EmployeeId).Distinct();
+        var shifts = (await unitOfWork.ShiftDefinitions.GetByIdsAsync(shiftIds, cancellationToken))
+            .ToDictionary(s => s.Id);
+        var employees = (await unitOfWork.Employees.GetByIdsAsync(employeeIds, cancellationToken))
+            .ToDictionary(e => e.Id);
+
         var items = new List<ScheduleSuggestionItem>(generated.Suggestions.Count);
         foreach (var suggestion in generated.Suggestions)
         {
-            var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(
-                suggestion.ShiftDefinitionId,
-                cancellationToken: cancellationToken);
-            var employee = await unitOfWork.Employees.GetByIdAsync(
-                suggestion.EmployeeId,
-                cancellationToken: cancellationToken);
-            if (shift is null || employee is null)
-                continue;
+            if (!shifts.TryGetValue(suggestion.ShiftDefinitionId, out var shift)) continue;
+            if (!employees.TryGetValue(suggestion.EmployeeId, out var employee)) continue;
 
             items.Add(new ScheduleSuggestionItem(
                 suggestion.Id,

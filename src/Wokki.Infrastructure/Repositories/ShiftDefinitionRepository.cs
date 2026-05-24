@@ -31,6 +31,16 @@ public sealed class ShiftDefinitionRepository(AppDbContext context) : IShiftDefi
         return await query.OrderBy(s => s.Name).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ShiftDefinition>> GetByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return [];
+        return await context.ShiftDefinitions.AsNoTracking()
+            .Where(s => idList.Contains(s.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(ShiftDefinition shift, CancellationToken cancellationToken = default) =>
         await context.ShiftDefinitions.AddAsync(shift, cancellationToken);
 

@@ -10,6 +10,8 @@ public interface IShiftDefinitionRepository
         Guid? departmentId = null,
         bool activeOnly = true,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ShiftDefinition>> GetByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task AddAsync(ShiftDefinition shift, CancellationToken cancellationToken = default);
     void Update(ShiftDefinition shift);
 }

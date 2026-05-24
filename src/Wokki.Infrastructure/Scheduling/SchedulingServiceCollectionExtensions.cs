@@ -15,10 +15,13 @@ public static class SchedulingServiceCollectionExtensions
             configuration.GetSection(ScheduleSuggestionFeatureSettings.SectionName));
 
         services.AddScoped<ScheduleSuggestionContextLoader>();
+        services.AddScoped<ScheduleSuggestionPromptBuilder>();
         services.AddScoped<HeuristicScheduleSuggestionService>();
+        services.AddScoped<CpSatScheduleSuggestionService>();
+        services.AddScoped<BedrockScheduleSuggestionService>();
         services.AddScoped<IScheduleSuggestionOrchestrator, ScheduleSuggestionOrchestrator>();
         services.AddScoped<IScheduleSuggestionService>(sp =>
-            sp.GetRequiredService<HeuristicScheduleSuggestionService>());
+            sp.GetRequiredService<CpSatScheduleSuggestionService>());
 
         return services;
     }
@@ -27,6 +30,4 @@ public static class SchedulingServiceCollectionExtensions
 public sealed class ScheduleSuggestionFeatureSettings
 {
     public const string SectionName = "Features:ScheduleSuggestions";
-
-    public string Provider { get; set; } = "Bedrock";
 }

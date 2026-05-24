@@ -156,10 +156,11 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         if (string.IsNullOrWhiteSpace(shift.RequiredRole))
             return true;
 
-        return string.Equals(
-            employee.Position.Trim(),
-            shift.RequiredRole.Trim(),
-            StringComparison.OrdinalIgnoreCase);
+        var position = employee.Position?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(position))
+            return false;
+
+        return string.Equals(position, shift.RequiredRole.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAvailable(

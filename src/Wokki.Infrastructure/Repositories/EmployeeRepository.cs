@@ -53,6 +53,16 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         return (items, total);
     }
 
+    public async Task<IReadOnlyList<Employee>> GetByIdsAsync(
+        IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        if (idList.Count == 0) return [];
+        return await context.Employees.AsNoTracking()
+            .Where(e => idList.Contains(e.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> IsMemberOfDepartmentAsync(
         Guid employeeId,
         Guid departmentId,
