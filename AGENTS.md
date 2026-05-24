@@ -65,10 +65,4 @@ Docs: http://localhost:8386/scalar
 
 **Bedrock:** `AWS:Bedrock` in `appsettings.json`. **Local `task run`:** User Secrets (`AWS:AccessKeyId`, `AWS:SecretAccessKey`, `AWS:Bedrock:*`). **Dev Docker:** `docker/.env.local` only. **Prod Docker:** `docker/.env` only. Health: `GET /api/v1/bedrock/health`.
 
-<claude-mem-context>
-# Memory Context
-
 # [wokki-server] recent context, 2026-05-24 2:13pm GMT+7
-
-No previous sessions found.
-</claude-mem-context>
