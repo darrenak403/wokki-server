@@ -16,7 +16,6 @@ public static class SchedulingServiceCollectionExtensions
 
         services.AddScoped<ScheduleSuggestionContextLoader>();
         services.AddScoped<ScheduleSuggestionPromptBuilder>();
-        services.AddScoped<HeuristicScheduleSuggestionService>();
         services.AddScoped<CpSatScheduleSuggestionService>();
         services.AddScoped<BedrockScheduleSuggestionService>();
         services.AddScoped<IScheduleSuggestionOrchestrator, ScheduleSuggestionOrchestrator>();
