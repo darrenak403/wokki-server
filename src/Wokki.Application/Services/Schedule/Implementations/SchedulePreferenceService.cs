@@ -53,8 +53,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                         s.Id,
                         s.Name,
                         s.StartTime,
-                        s.EndTime,
-                        s.MaxStaffPerSlot))
+                        s.EndTime))
                     .ToList()),
             AppMessages.SchedulePreference.Found);
     }
@@ -102,8 +101,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                         s.Id,
                         s.Name,
                         s.StartTime,
-                        s.EndTime,
-                        s.MaxStaffPerSlot))
+                        s.EndTime))
                     .ToList()),
             AppMessages.SchedulePreference.Found);
     }
@@ -355,8 +353,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                         s.Id,
                         s.Name,
                         s.StartTime,
-                        s.EndTime,
-                        s.MaxStaffPerSlot))
+                        s.EndTime))
                     .ToList()),
             AppMessages.SchedulePreference.BoardListed);
     }

@@ -51,5 +51,4 @@ public sealed record SchedulePreferenceBoardShiftColumn(
     Guid ShiftDefinitionId,
     string ShiftName,
     TimeOnly StartTime,
-    TimeOnly EndTime,
-    int MaxStaffPerSlot);
+    TimeOnly EndTime);

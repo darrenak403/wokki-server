@@ -44,7 +44,9 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         {
             foreach (var shift in context.Shifts)
             {
-                while (SchedulingAssignmentRules.MeetsSlotCapacity(shift.Id, date, shift, planned))
+                var slotAssigned = 0;
+                const int maxPerSlot = 1; // default: one employee per shift slot
+                while (slotAssigned < maxPerSlot)
                 {
                     var best = RankEmployees(context, shift, date, frequency, planned, shiftMap);
                     if (best is null || best.Value.Score <= 0)
@@ -68,6 +70,8 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
                         Date = date,
                         CreatedAt = DateTime.UtcNow
                     });
+
+                    slotAssigned++;
                 }
             }
         }

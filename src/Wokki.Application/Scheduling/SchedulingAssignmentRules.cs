@@ -28,13 +28,6 @@ public static class SchedulingAssignmentRules
         ScheduleSuggestionContext context) =>
         planned.Count(a => a.EmployeeId == employeeId && a.Date == date) < MaxShiftsPerEmployeePerDay(context);
 
-    public static bool MeetsSlotCapacity(
-        Guid shiftDefinitionId,
-        DateOnly date,
-        ShiftDefinition shift,
-        List<ShiftAssignmentEntity> planned) =>
-        planned.Count(a => a.ShiftDefinitionId == shiftDefinitionId && a.Date == date) < shift.MaxStaffPerSlot;
-
     public static int PreferenceScore(
         Guid employeeId,
         Guid shiftDefinitionId,

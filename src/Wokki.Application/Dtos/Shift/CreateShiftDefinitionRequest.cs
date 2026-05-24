@@ -6,6 +6,5 @@ public sealed record CreateShiftDefinitionRequest(
     TimeOnly StartTime,
     TimeOnly EndTime,
     string RequiredRole,
-    int MaxStaffPerSlot = 1,
     string Color = "#3B82F6",
     Guid? DepartmentId = null);

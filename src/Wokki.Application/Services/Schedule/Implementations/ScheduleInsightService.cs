@@ -268,10 +268,7 @@ public sealed class ScheduleInsightService(
                     Date = date,
                     ShiftDefinitionId = shift.Id,
                     ShiftName = shift.Name,
-                    Assigned = assigned,
-                    MaxStaffPerSlot = shift.MaxStaffPerSlot,
-                    IsFull = assigned >= shift.MaxStaffPerSlot,
-                    MissingToFull = Math.Max(shift.MaxStaffPerSlot - assigned, 0)
+                    Assigned = assigned
                 });
             }
         }
@@ -301,8 +298,7 @@ public sealed class ScheduleInsightService(
                 s.Name,
                 StartTime = s.StartTime.ToString("HH:mm"),
                 EndTime = s.EndTime.ToString("HH:mm"),
-                s.RequiredRole,
-                s.MaxStaffPerSlot
+                s.RequiredRole
             }),
             SubmittedPreferences = preferenceLines.Select(p => new
             {
@@ -358,9 +354,7 @@ public sealed class ScheduleInsightService(
             },
             CoverageSummary = new
             {
-                Slots = coverageRows,
-                FullSlots = coverageRows.Count(r => (bool)r.GetType().GetProperty("IsFull")!.GetValue(r)!),
-                MissingSlots = coverageRows.Count(r => !(bool)r.GetType().GetProperty("IsFull")!.GetValue(r)!)
+                Slots = coverageRows
             },
             SolverMetadata = new
             {

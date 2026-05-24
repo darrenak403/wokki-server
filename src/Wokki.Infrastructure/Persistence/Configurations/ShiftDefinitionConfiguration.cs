@@ -12,7 +12,6 @@ public sealed class ShiftDefinitionConfiguration : IEntityTypeConfiguration<Shif
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).HasMaxLength(150).IsRequired();
         builder.Property(x => x.RequiredRole).HasMaxLength(50).IsRequired();
-        builder.Property(x => x.MaxStaffPerSlot).HasDefaultValue(1);
         builder.Property(x => x.Color).HasMaxLength(16).IsRequired();
         builder.HasIndex(x => x.LocationId);
 
