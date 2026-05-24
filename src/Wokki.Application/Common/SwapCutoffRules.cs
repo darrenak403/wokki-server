@@ -25,7 +25,7 @@ internal static class SwapCutoffRules
 
     public static DateOnly GetWeekMonday(DateOnly date)
     {
-        var offset = ((int)DayOfWeek.Monday - (int)date.DayOfWeek + 7) % 7;
+        var offset = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
         return date.AddDays(-offset);
     }
 
