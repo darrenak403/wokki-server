@@ -55,7 +55,23 @@ public static class LocationSchedulingPolicyRules
             "Không xếp ca nhân viên đã báo bận",
             true,
             true,
-            120)
+            120),
+        Number(
+            "preferred_weight",
+            "preferenceRules",
+            "Điểm thưởng cộng thêm khi nhân viên đăng ký 'Mong muốn làm' ca này. Điểm càng cao, hệ thống càng ưu tiên xếp nhân viên đó vào ca họ muốn.",
+            "Điểm ưu tiên cho ca 'Mong muốn'",
+            30,
+            true,
+            130),
+        Number(
+            "available_weight",
+            "preferenceRules",
+            "Điểm thưởng nhỏ khi nhân viên đăng ký 'Có thể làm' ca này. Thấp hơn điểm 'Mong muốn' nhưng vẫn tăng xác suất được xếp.",
+            "Điểm ưu tiên cho ca 'Có thể làm'",
+            5,
+            true,
+            140)
     ];
 
     public static IReadOnlyList<LocationSchedulingRuleDto> GetDefaultRules() => DefaultRules;

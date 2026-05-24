@@ -47,11 +47,12 @@ public static class SchedulingAssignmentRules
         if (line is null)
             return 0;
 
+        var preferredWeight = LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "preferred_weight", 30);
         return line.PreferenceType switch
         {
-            PreferenceType.Preferred => LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "preferred_weight", 30),
+            PreferenceType.Preferred => preferredWeight,
             PreferenceType.Available => LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "available_weight", 5),
-            PreferenceType.Unavailable => int.MinValue,
+            PreferenceType.Unavailable => -preferredWeight,
             _ => 0
         };
     }
