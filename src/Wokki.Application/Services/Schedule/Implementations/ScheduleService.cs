@@ -640,8 +640,15 @@ public sealed class ScheduleService(
         if (employee is null)
             return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
 
-        var fromDate = DateOnly.FromDateTime(DateTime.UtcNow);
-        var toDate = fromDate.AddDays(28);
+        var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);
+        var location = department is not null
+            ? await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken)
+            : null;
+        var employeeTimeZone = SwapCutoffRules.ResolveTimeZone(location?.TimeZone ?? "UTC");
+        var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone);
+        var today = DateOnly.FromDateTime(nowLocal);
+        var fromDate = SwapCutoffRules.GetWeekMonday(today); // Monday of current week
+        var toDate = today.AddDays(28); // BR-027: max 28 days forward from today
         var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeInDateRangeAsync(
             employee.Id,
             fromDate,
