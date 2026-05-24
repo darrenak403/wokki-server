@@ -56,13 +56,18 @@ Cutoff: `SwapCutoffRules` (location timezone). Notifications must not roll back 
 
 ### Auto-scheduling & Bedrock
 
-1. **Branch policy** `LocationSchedulingPolicy` (`location-scheduling-policy.v3`) — five F&B system rules + optional custom rules.
+1. **Branch policy** `LocationSchedulingPolicy` (`location-scheduling-policy.v3`) — five F&B system rules + optional custom rules:
+   - `max_shifts_per_week`, `max_shifts_per_day`, `require_role_match`, `require_submitted_preferences`, `unavailable_is_hard_block`
 2. **Department** `DepartmentSchedulingConfig` — overrides.
-3. `POST .../suggest` — heuristic only, no DB write.
-4. `POST .../apply-suggestions` — Draft only.
-5. **Bedrock** — `ScheduleInsightService` + context snapshot + chat; **never** mutates assignments.
+3. `POST .../suggest` — heuristic only, no DB write; may refresh insight context (`BR-070`).
+4. `POST .../apply-suggestions` — Draft only; all rows validated then one transaction (`BR-075`).
+5. **Bedrock** — `ScheduleInsightService` + context snapshot + chat; **never** mutates assignments (`BR-077`–`BR-079`).
 
-Use **department membership** for guards when employee spans multiple departments.
+Missing setup returns explicit reasons: `missing_location_rules`, `no_employees`, `no_shifts`, `missing_preferences` (`BR-072`).
+
+Use **department membership** for guards when employee spans multiple departments (`BR-074`).
+
+**Key services:** `ScheduleService`, `SchedulePreferenceService`, `HeuristicScheduleSuggestionService`, `ScheduleInsightService`, `DepartmentSchedulingConfigService`, `LocationService` (policy).
 
 ---
 
@@ -127,3 +132,15 @@ Business codes live in `Wokki.Common` → `AppMessages`. FE maps `message.code` 
 
 - API: `http://localhost:8386` · Scalar: `/scalar`
 - Users: `admin@gmail.com`, `manager@gmail.com`, `user@gmail.com` / `12345@Abc`
+
+---
+
+## Claude quick commands
+
+| Command | Purpose |
+|---------|---------|
+| `/ck:wokki` | Load BRD + `BR-xxx` + file map for topic |
+| `/ck:cook` | Implement from plan |
+| Skill `wokki` | `.claude/skills/wokki/SKILL.md` |
+
+**Auto-loaded:** `CLAUDE.md` + `wokki-bootstrap.md` on session start (hook).

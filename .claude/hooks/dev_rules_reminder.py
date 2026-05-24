@@ -32,6 +32,7 @@ COMMAND_CONTEXT_MAP: dict[str, str] = {
     "/ck:cook": "dev",
     "/ck:fix": "dev",
     "/ck:docs-fe": "dev",
+    "/ck:wokki": "research",
     "/ck:init": "dev",
     "/ck:brainstorm": "research",
     "/ck:plan": "research",

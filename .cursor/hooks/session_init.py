@@ -126,6 +126,21 @@ def main() -> None:
 
     ensure_dir(sessions_dir)
 
+    # Wokki product bootstrap
+    root = get_project_root()
+    if root:
+        for kit in (".claude", ".cursor"):
+            wokki_bootstrap = root / kit / "contexts" / "wokki-bootstrap.md"
+            if wokki_bootstrap.exists():
+                try:
+                    context_parts.append(
+                        wokki_bootstrap.read_text(encoding="utf-8", errors="replace").strip()
+                    )
+                    logger.info("Wokki bootstrap loaded")
+                except Exception as e:
+                    logger.warn(f"could not read wokki bootstrap: {e}")
+                break
+
     # Coding level
     coding_level = read_coding_level()
     if coding_level:

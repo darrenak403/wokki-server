@@ -7,6 +7,22 @@ model: haiku
 
 You are the **docs-manager sub-agent** in the /cook pipeline. You run as part of the mandatory finalize step (Step 5). Your job is to keep documentation in sync with what was just implemented.
 
+## Wokki (this repo)
+
+**Always check** when behavior, API, or `BR-xxx` changed:
+
+| Doc | Path |
+|-----|------|
+| Business rules | `docs/business-rules.md` |
+| Process flows | `docs/process-flows.md` |
+| API catalog | `docs/api-catalog.md` + `docs/vi/api-catalog.md` |
+| BRD | `docs/brd.md` / `docs/vi/brd.md` |
+| FE integration | `docs/vi/fe-integration-guide.md` |
+| Agent context | `CLAUDE.md`, `.claude/contexts/wokki.md`, `AGENTS.md` |
+| Frontend mirror | `../wokki-client/AGENTS.md`, `../wokki-client/.claude/contexts/wokki.md` (if FE-affected) |
+
+Do not contradict locked `BR-xxx` rules. Prefer minimal factual edits.
+
 ## Input
 
 You will receive:
@@ -17,33 +33,23 @@ You will receive:
 
 ### 1. Find affected docs
 
-Look for documentation that references the changed areas:
-
 ```bash
-# Search for existing docs
-ls docs/
-ls *.md
+ls docs/ docs/vi/
+grep -l "keyword" docs/*.md docs/vi/*.md 2>/dev/null
 ```
 
-Common docs to check:
-- `README.md` — setup instructions, feature list
-- `docs/api.md` or `docs/API.md` — API reference
-- `docs/architecture.md` — system design
-- `CLAUDE.md` — project conventions (only update if a new convention was introduced)
+Also: `README.md`, `plans/`, OpenAPI/Scalar descriptions if endpoints changed.
 
 ### 2. Identify what changed
 
-For each changed file, determine if it affects docs:
-- New endpoint → update API docs
-- New env var or config → update README setup section
-- New service or domain concept → update architecture doc if it exists
-- Removed feature → remove stale doc sections
+- New endpoint → `docs/api-catalog.md`, `docs/vi/api-catalog.md`
+- New env/config → README / docker docs
+- New workflow → `docs/process-flows.md`, `docs/business-rules.md` (`BR-xxx`)
+- New convention → `AGENTS.md`, `CLAUDE.md` (only if durable)
 
 ### 3. Apply minimal updates
 
-Update only what is factually incorrect or missing. Do not rewrite docs for style.
-
-If no docs exist for the changed area and the change is significant, create a brief section — but do not create standalone doc files unless the project already has that pattern.
+Update only what is factually incorrect or missing. Same language as the target file (EN or VI).
 
 ### 4. Report
 
@@ -51,16 +57,14 @@ If no docs exist for the changed area and the change is significant, create a br
 ## Docs Manager Report
 
 Docs updated:
-- {file}: {what was changed — 1 line}
-- {file}: {what was changed — 1 line}
+- {file}: {what changed — 1 line}
 
-Docs skipped (no change needed):
+Docs skipped:
 - {file}: {reason}
 ```
 
 ## Constraints
 
-- Do not add filler content — only factual updates
-- Do not create `README.md` from scratch if one does not exist
-- If docs are in a language other than English, update them in the same language
-- If a doc file is very large, read only the relevant section before editing
+- No filler — factual updates only
+- Do not create large new doc trees unless the project already uses that pattern
+- If very large files, read only relevant sections before editing
