@@ -56,7 +56,7 @@ Cutoff: `SwapCutoffRules` (location timezone). Notifications must not roll back 
 
 ### Auto-scheduling & Bedrock
 
-1. **Branch policy** `LocationSchedulingPolicy` (`location-scheduling-policy.v5`) — minimal solver rules + optional custom (not read by solver yet). Map via `LocationSchedulingSolverPolicy`; caps/weights in `SchedulingSolverDefaults`. Department config = **job positions only** (no dept policy).
+1. **Branch policy** `LocationSchedulingPolicy` (`location-scheduling-policy.v5`) — minimal solver rules + optional custom (not read by solver yet). Map via `LocationSchedulingSolverPolicy`; caps/weights in `SchedulingSolverDefaults`. Hierarchy: location → department → employee (no job positions).
 2. **Department** `DepartmentSchedulingConfig` — overrides.
 3. `POST .../suggest` — heuristic only, no DB write; may refresh insight context (`BR-070`).
 4. `POST .../apply-suggestions` — Draft only; all rows validated then one transaction (`BR-075`).

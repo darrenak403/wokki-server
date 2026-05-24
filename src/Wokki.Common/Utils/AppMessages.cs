@@ -148,16 +148,6 @@ public static class AppMessages
         public static readonly AppMessage ChatUnavailable = new("SCHEDULE_INSIGHT_CHAT_UNAVAILABLE", "Schedule insight assistant is unavailable. Scheduling is not affected.", StatusCodes.Status503ServiceUnavailable);
     }
 
-    public static class SchedulingConfig
-    {
-        public static readonly AppMessage JobPositionsListed = new("JOB_POSITIONS_LISTED", "Job positions listed.", StatusCodes.Status200OK);
-        public static readonly AppMessage JobPositionCreated = new("JOB_POSITION_CREATED", "Job position created.", StatusCodes.Status201Created);
-        public static readonly AppMessage JobPositionUpdated = new("JOB_POSITION_UPDATED", "Job position updated.", StatusCodes.Status200OK);
-        public static readonly AppMessage JobPositionDeleted = new("JOB_POSITION_DELETED", "Job position deactivated.", StatusCodes.Status200OK);
-        public static readonly AppMessage JobPositionNotFound = new("JOB_POSITION_NOT_FOUND", "Job position not found.", StatusCodes.Status404NotFound);
-        public static readonly AppMessage InvalidHeadcount = new("JOB_POSITION_INVALID_HEADCOUNT", "Target headcount must be at least 1.", StatusCodes.Status400BadRequest);
-    }
-
     public static class Chat
     {
         public static readonly AppMessage Listed = new("CHAT_CHANNELS_LISTED", "Channels listed.", StatusCodes.Status200OK);

@@ -39,7 +39,6 @@ public sealed record SchedulePreferenceBoardEmployeeRow(
     Guid EmployeeId,
     string EmployeeName,
     string Position,
-    Guid? JobPositionId,
     string? Status,
     IReadOnlyList<SchedulePreferenceCellResponse> Cells);
 

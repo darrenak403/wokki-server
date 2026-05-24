@@ -68,14 +68,4 @@ public static class SchedulingAssignmentRules
             && l.ShiftDefinitionId == shiftDefinitionId
             && l.Date == date
             && l.PreferenceType == PreferenceType.Unavailable);
-
-    public static JobPosition? ResolveJobPosition(Employee employee, ScheduleSuggestionContext context)
-    {
-        if (employee.JobPositionId is Guid id)
-            return context.JobPositions.FirstOrDefault(p => p.Id == id);
-
-        return context.JobPositions.FirstOrDefault(p =>
-            string.Equals(p.Code, employee.Position, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(p.Name, employee.Position, StringComparison.OrdinalIgnoreCase));
-    }
 }

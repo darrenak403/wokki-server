@@ -20,7 +20,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChannelMember> ChannelMembers => Set<ChannelMember>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<EmployeeAvailability> EmployeeAvailabilities => Set<EmployeeAvailability>();
-    public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<LocationSchedulingPolicy> LocationSchedulingPolicies => Set<LocationSchedulingPolicy>();
     public DbSet<EmployeeDepartmentMembership> EmployeeDepartmentMemberships => Set<EmployeeDepartmentMembership>();
     public DbSet<SchedulePreferenceSubmission> SchedulePreferenceSubmissions => Set<SchedulePreferenceSubmission>();

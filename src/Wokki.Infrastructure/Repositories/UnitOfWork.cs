@@ -20,7 +20,6 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IChannelRepository? _channels;
     private IMessageRepository? _messages;
     private IEmployeeAvailabilityRepository? _employeeAvailabilities;
-    private IJobPositionRepository? _jobPositions;
     private ILocationSchedulingPolicyRepository? _locationSchedulingPolicies;
     private IEmployeeDepartmentMembershipRepository? _employeeDepartmentMemberships;
     private ISchedulePreferenceRepository? _schedulePreferences;
@@ -42,8 +41,6 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IMessageRepository Messages => _messages ??= new MessageRepository(context);
     public IEmployeeAvailabilityRepository EmployeeAvailabilities =>
         _employeeAvailabilities ??= new EmployeeAvailabilityRepository(context);
-    public IJobPositionRepository JobPositions =>
-        _jobPositions ??= new JobPositionRepository(context);
     public ILocationSchedulingPolicyRepository LocationSchedulingPolicies =>
         _locationSchedulingPolicies ??= new LocationSchedulingPolicyRepository(context);
     public IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships =>

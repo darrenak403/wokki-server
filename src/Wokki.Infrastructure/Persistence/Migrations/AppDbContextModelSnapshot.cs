@@ -222,9 +222,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid?>("JobPositionId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -249,8 +246,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
-
-                    b.HasIndex("JobPositionId");
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -311,45 +306,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasIndex("DepartmentId");
 
                     b.ToTable("employee_department_memberships", (string)null);
-                });
-
-            modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<int>("TargetHeadcount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DepartmentId", "Code")
-                        .IsUnique();
-
-                    b.ToTable("job_positions", (string)null);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Location", b =>
@@ -887,11 +843,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Wokki.Domain.Entities.JobPosition", null)
-                        .WithMany()
-                        .HasForeignKey("JobPositionId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("Wokki.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -919,15 +870,6 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasOne("Wokki.Domain.Entities.Employee", null)
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Wokki.Domain.Entities.JobPosition", b =>
-                {
-                    b.HasOne("Wokki.Domain.Entities.Department", null)
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

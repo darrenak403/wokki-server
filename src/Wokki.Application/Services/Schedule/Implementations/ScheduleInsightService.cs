@@ -61,11 +61,6 @@ public sealed class ScheduleInsightService(
             includeLines: true,
             status: SchedulePreferenceStatus.Submitted,
             cancellationToken);
-        var jobPositions = await unitOfWork.JobPositions.ListByDepartmentAsync(
-            schedule.DepartmentId,
-            activeOnly: true,
-            cancellationToken);
-
         var suggestions = request.Suggestions ?? [];
         var payload = BuildPayload(
             schedule,
@@ -74,7 +69,6 @@ public sealed class ScheduleInsightService(
             shifts,
             existingAssignments,
             submittedPreferences,
-            jobPositions,
             suggestions,
             request);
         var json = JsonSerializer.Serialize(payload, JsonOptions);
@@ -191,7 +185,6 @@ public sealed class ScheduleInsightService(
         IReadOnlyList<ShiftDefinition> shifts,
         IReadOnlyList<ShiftAssignment> existingAssignments,
         IReadOnlyList<SchedulePreferenceSubmission> submittedPreferences,
-        IReadOnlyList<JobPosition> jobPositions,
         IReadOnlyList<ScheduleInsightSuggestionInput> suggestions,
         GenerateScheduleInsightContextRequest request)
     {
@@ -294,22 +287,13 @@ public sealed class ScheduleInsightService(
             ScheduleStatus = schedule.Status.ToString(),
             Rules = new
             {
-                MaxShiftsPerEmployeePerWeek = maxWeekly,
-                JobPositions = jobPositions.Select(p => new
-                {
-                    p.Id,
-                    p.Code,
-                    p.Name,
-                    p.TargetHeadcount,
-                    p.IsActive
-                })
+                MaxShiftsPerEmployeePerWeek = maxWeekly
             },
             Employees = employees.Select(e => new
             {
                 e.Id,
                 Name = $"{e.FirstName} {e.LastName}".Trim(),
-                e.Position,
-                e.JobPositionId
+                e.Position
             }),
             Shifts = shifts.Select(s => new
             {

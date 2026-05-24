@@ -92,7 +92,7 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
                 && SchedulingAssignmentRules.IsUnavailableByPreference(employee.Id, shift.Id, date, context))
                 continue;
 
-            if (solverPolicy.RequireRoleMatch && !RoleMatches(employee, shift, context))
+            if (solverPolicy.RequireRoleMatch && !RoleMatches(employee, shift))
                 continue;
 
             if (!SchedulingAssignmentRules.MeetsWeeklyCap(employee.Id, planned, context))
@@ -125,14 +125,16 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
                     * SchedulingSolverDefaults.MinShiftsPerWeekBoostPerMissingShift;
             }
 
-            var position = SchedulingAssignmentRules.ResolveJobPosition(employee, context);
-            if (position is not null)
+            if (!string.IsNullOrWhiteSpace(employee.Position))
             {
                 var roleLoad = planned.Count(a =>
                 {
                     var emp = context.Employees.FirstOrDefault(e => e.Id == a.EmployeeId);
                     return emp is not null
-                           && SchedulingAssignmentRules.ResolveJobPosition(emp, context)?.Id == position.Id;
+                           && string.Equals(
+                               emp.Position,
+                               employee.Position,
+                               StringComparison.OrdinalIgnoreCase);
                 });
                 score -= roleLoad * SchedulingSolverDefaults.RoleBalancePenaltyPerShift;
             }
@@ -145,17 +147,15 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         return best;
     }
 
-    private static bool RoleMatches(Employee employee, ShiftDefinition shift, ScheduleSuggestionContext context)
+    private static bool RoleMatches(Employee employee, ShiftDefinition shift)
     {
-        var position = SchedulingAssignmentRules.ResolveJobPosition(employee, context);
-        if (position is not null)
-        {
-            return string.Equals(position.Code, shift.RequiredRole, StringComparison.OrdinalIgnoreCase)
-                   || string.Equals(position.Name, shift.RequiredRole, StringComparison.OrdinalIgnoreCase);
-        }
+        if (string.IsNullOrWhiteSpace(shift.RequiredRole))
+            return true;
 
-        return !string.IsNullOrWhiteSpace(shift.RequiredRole)
-               && string.Equals(employee.Position.Trim(), shift.RequiredRole.Trim(), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(
+            employee.Position.Trim(),
+            shift.RequiredRole.Trim(),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAvailable(

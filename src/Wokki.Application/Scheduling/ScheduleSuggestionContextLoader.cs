@@ -1,4 +1,3 @@
-using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 
@@ -62,11 +61,6 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
                 l.PreferenceType)))
             .ToList();
 
-        var jobPositions = await unitOfWork.JobPositions.ListByDepartmentAsync(
-            schedule.DepartmentId,
-            activeOnly: true,
-            cancellationToken);
-
         var locationPolicy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
             department.LocationId,
             cancellationToken: cancellationToken);
@@ -81,7 +75,6 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             HistoricalAssignments = historical,
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
-            JobPositions = jobPositions,
             LocationSchedulingPolicy = locationPolicy
         }, null);
     }

@@ -93,7 +93,7 @@ public static class LocationSchedulingPolicyRules
         Bool(
             "require_role_match",
             "employeeEligibilityRules",
-            "Ca thu ngân chỉ xếp thu ngân, ca bếp chỉ xếp bếp. Tắt nếu cho phép xếp chéo khi thiếu người.",
+            "So khớp chức danh nhân viên (trường Position) với RequiredRole của ca. Tắt nếu cho phép xếp chéo khi thiếu người.",
             "Chỉ xếp nhân viên đúng vai trò ca",
             true,
             false,
@@ -110,7 +110,7 @@ public static class LocationSchedulingPolicyRules
         Bool(
             "allow_overtime",
             "workHourLimits",
-            "Cho phép gợi ý vượt chuẩn khi thiếu người (vẫn tuân trần ca/tuần của phòng ban).",
+            "Cho phép gợi ý vượt chuẩn khi thiếu người (vẫn tuân trần ca/tuần hệ thống).",
             "Cho phép tăng ca",
             false,
             false,

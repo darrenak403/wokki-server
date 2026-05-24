@@ -336,7 +336,6 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
                 emp.Id,
                 $"{emp.FirstName} {emp.LastName}".Trim(),
                 emp.Position,
-                emp.JobPositionId,
                 submission?.Status.ToString(),
                 cells);
         }).ToList();
