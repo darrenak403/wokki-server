@@ -2,6 +2,7 @@ using Google.OrTools.Sat;
 using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Scheduling;
+using Wokki.Domain.Constants;
 using Wokki.Domain.Entities;
 
 namespace Wokki.Infrastructure.Scheduling;
@@ -178,11 +179,19 @@ public sealed class CpSatScheduleSuggestionService(
         if (string.IsNullOrWhiteSpace(shift.RequiredRole))
             return true;
 
+        // Auth roles (User/Admin/Manager) stored in RequiredRole carry no job-position restriction.
+        var required = shift.RequiredRole.Trim();
+        if (string.Equals(required, RoleConstants.User, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(required, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(required, RoleConstants.Manager, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Only compare against employee job position when RequiredRole is an actual position value.
         var position = employee.Position?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(position))
             return false;
 
-        return string.Equals(position, shift.RequiredRole.Trim(), StringComparison.OrdinalIgnoreCase);
+        return string.Equals(position, required, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsAvailableForShift(
