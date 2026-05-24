@@ -217,41 +217,27 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         }
         else
         {
-            var incomingByCell = lines
-                .GroupBy(l => (l.ShiftDefinitionId, l.Date))
-                .ToDictionary(g => g.Key, g => g.Last());
-            var existingByCell = submission.Lines.ToDictionary(l => (l.ShiftDefinitionId, l.Date));
-            var linesToRemove = submission.Lines
-                .Where(l => !incomingByCell.ContainsKey((l.ShiftDefinitionId, l.Date)))
-                .ToList();
-            if (linesToRemove.Count > 0)
-                unitOfWork.SchedulePreferences.RemoveLines(linesToRemove);
-
-            var linesToAdd = new List<SchedulePreferenceLine>();
-            foreach (var (cell, incomingLine) in incomingByCell)
-            {
-                if (existingByCell.TryGetValue(cell, out var existingLine))
-                {
-                    existingLine.PreferenceType = incomingLine.PreferenceType;
-                    continue;
-                }
-
-                incomingLine.SubmissionId = submission.Id;
-                linesToAdd.Add(incomingLine);
-            }
+            unitOfWork.SchedulePreferences.RemoveLines(submission.Lines.ToList());
+            foreach (var line in lines)
+                line.SubmissionId = submission.Id;
+            if (lines.Count > 0)
+                await unitOfWork.SchedulePreferences.AddLinesAsync(lines, cancellationToken);
 
             submission.Status = SchedulePreferenceStatus.Draft;
             submission.UpdatedAt = DateTime.UtcNow;
             submission.SubmittedAt = null;
-            if (linesToAdd.Count > 0)
-                await unitOfWork.SchedulePreferences.AddLinesAsync(linesToAdd, cancellationToken);
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        submission.Lines = lines;
+
+        var saved = await unitOfWork.SchedulePreferences.GetByScheduleAndEmployeeAsync(
+            scheduleId,
+            employee.Id,
+            includeLines: true,
+            cancellationToken);
 
         return ApiResponse<MySchedulePreferenceResponse>.SuccessResponse(
-            MapMine(scheduleId, submission),
+            MapMine(scheduleId, saved ?? submission),
             AppMessages.SchedulePreference.Saved);
     }
 
