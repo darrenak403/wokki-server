@@ -30,7 +30,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | Resource | Base | Manager | Admin | Ghi chú |
 |----------|------|---------|-------|---------|
 | Employees | `/employees` | Đọc/ghi danh sách | Đầy đủ | Xóa = chấm dứt (soft) |
-| Locations | `/locations` | Đọc/ghi | Đầy đủ | `GET/PUT /locations/{id}/scheduling-policy` quản lý luật chi nhánh (`location-scheduling-policy.v3`: 5 luật F&B về giới hạn ca nhân viên và đăng ký ca). |
+| Locations | `/locations` | Đọc/ghi | Đầy đủ | `GET/PUT /locations/{id}/scheduling-policy` quản lý luật chi nhánh (`location-scheduling-policy.v5`: luật solver tối thiểu; trần ca/tuần từ `SchedulingSolverDefaults`). |
 | Departments | `/departments` | Đọc/ghi | Đầy đủ | |
 
 ## Lập lịch (Scheduling)

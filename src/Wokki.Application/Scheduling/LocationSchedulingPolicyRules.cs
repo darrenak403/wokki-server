@@ -6,87 +6,133 @@ namespace Wokki.Application.Scheduling;
 
 public static class LocationSchedulingPolicyRules
 {
-    public const string SchemaVersion = "location-scheduling-policy.v3";
+    public const string SchemaVersion = "location-scheduling-policy.v5";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
+    /// <summary>Removed from UI — ignored on read/upsert. See <see cref="SchedulingSolverDefaults"/>.</summary>
+    private static readonly HashSet<string> DeprecatedRuleKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "max_hours_per_day",
+        "max_hours_per_week",
+        "max_shifts_per_day",
+        "max_shifts_per_week",
+        "max_consecutive_work_days",
+        "default_max_staff_per_shift",
+        "weekly_rest_days_required",
+        "break_required_after_minutes",
+        "break_minutes",
+        "coverage_by_role_required",
+        "require_department_membership",
+        "require_active_employee",
+        "allow_terminated_employees",
+        "preferred_weight",
+        "available_weight",
+        "missing_preference_penalty",
+        "role_balance_weight",
+        "balance_shift_count",
+        "balance_weekend_shifts",
+        "avoid_same_employee_always_same_shift",
+        "fairness_weight",
+        "avoid_overtime",
+        "overtime_penalty_weight",
+        "prefer_lower_cost_when_equal",
+        "require_manager_review_before_apply",
+        "auto_apply_suggestions",
+        "allow_partial_apply",
+    };
+
     /// <summary>
-    /// Core F&amp;B branch rules read by the heuristic scheduler. Custom branch rules may be appended.
+    /// Minimal branch policy for solvers (CP-SAT / heuristic). Other behavior is fixed in <see cref="SchedulingSolverDefaults"/>.
+    /// Weekly max shifts per employee: <see cref="SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek"/>.
     /// </summary>
     private static readonly IReadOnlyList<LocationSchedulingRuleDto> DefaultRules =
     [
-        Number(
-            "max_shifts_per_week",
-            "employeeLimits",
-            "Giới hạn số ca một nhân viên được xếp trong tuần lịch chính thức. Vượt mức này, hệ thống sẽ không gợi ý thêm ca cho người đó.",
-            "Tối đa bao nhiêu ca / tuần?",
-            6,
-            true,
-            10),
-        Number(
-            "max_shifts_per_day",
-            "employeeLimits",
-            "Một nhân viên không được xếp quá số ca này trong cùng một ngày — phù hợp quy định F&amp;B tránh xếp liên tục quá nhiều ca.",
-            "Tối đa bao nhiêu ca / ngày?",
-            1,
-            true,
-            20),
-        Bool(
-            "require_role_match",
-            "employeeLimits",
-            "Bật nếu ca thu ngân chỉ xếp nhân viên thu ngân, ca bếp chỉ xếp nhân viên bếp. Tắt nếu chi nhánh cho phép xếp chéo vai trò khi thiếu người.",
-            "Chỉ xếp nhân viên đúng vai trò ca",
-            true,
-            true,
-            30),
-
         Bool(
             "require_submitted_preferences",
             "preferenceRules",
-            "Manager chỉ nên chạy gợi ý lịch sau khi nhân viên đã gửi bảng đăng ký ca (mong muốn / có thể làm). Tắt nếu muốn gợi ý ngay cả khi chưa có đăng ký.",
-            "Bắt buộc có bảng đăng ký ca trước khi gợi ý",
+            "Manager chỉ chạy gợi ý sau khi nhân viên đã gửi bảng đăng ký ca.",
+            "Bắt buộc có đăng ký ca trước khi gợi ý",
             true,
             true,
-            110),
+            10),
         Bool(
             "unavailable_is_hard_block",
             "preferenceRules",
-            "Nếu nhân viên đánh dấu không làm được ca đó trên bảng đăng ký, hệ thống sẽ không xếp vào lịch chính thức — kể cả khi ca còn thiếu người.",
+            "Không xếp ca nhân viên đã báo bận trên bảng đăng ký.",
             "Không xếp ca nhân viên đã báo bận",
             true,
             true,
+            20),
+
+        Bool(
+            "require_full_coverage",
+            "coverageRules",
+            "Gợi ý lịch nên lấp đủ số người tối thiểu theo capacity ca.",
+            "Yêu cầu đủ người",
+            true,
+            false,
+            110),
+        Bool(
+            "allow_understaffed_suggestions",
+            "coverageRules",
+            "Cho phép trả gợi ý thiếu người khi không đủ nhân sự hoặc đăng ký ca.",
+            "Cho phép gợi ý thiếu người",
+            false,
+            false,
             120),
         Number(
-            "role_balance_weight",
-            "employeeLimits",
-            "Hệ số cân bằng vị trí: mỗi ca cùng vị trí đã xếp trong tuần sẽ bị trừ số điểm này. Tăng giá trị để phân bổ đều nhân viên cùng vị trí ra các ca khác nhau.",
-            "Hệ số cân bằng vị trí (điểm trừ/ca cùng vị trí)",
-            5,
-            true,
-            40),
-        Number(
-            "preferred_weight",
-            "preferenceRules",
-            "Điểm thưởng cộng thêm khi nhân viên đăng ký 'Mong muốn làm' ca này. Điểm càng cao, hệ thống càng ưu tiên xếp nhân viên đó vào ca họ muốn.",
-            "Điểm ưu tiên cho ca 'Mong muốn'",
-            30,
-            true,
+            "default_min_staff_per_shift",
+            "coverageRules",
+            "Số người tối thiểu mặc định khi ca không khai báo riêng.",
+            "Số người tối thiểu / ca",
+            1,
+            false,
             130),
-        Number(
-            "available_weight",
-            "preferenceRules",
-            "Điểm thưởng nhỏ khi nhân viên đăng ký 'Có thể làm' ca này. Thấp hơn điểm 'Mong muốn' nhưng vẫn tăng xác suất được xếp.",
-            "Điểm ưu tiên cho ca 'Có thể làm'",
-            5,
+
+        Bool(
+            "require_role_match",
+            "employeeEligibilityRules",
+            "Ca thu ngân chỉ xếp thu ngân, ca bếp chỉ xếp bếp. Tắt nếu cho phép xếp chéo khi thiếu người.",
+            "Chỉ xếp nhân viên đúng vai trò ca",
             true,
-            140)
+            false,
+            210),
+
+        Number(
+            "min_shifts_per_week",
+            "workHourLimits",
+            "Mục tiêu số ca tối thiểu mỗi nhân viên cần được xếp trong tuần. Solver ưu tiên người chưa đạt mức này.",
+            "Ca tối thiểu / tuần",
+            0,
+            false,
+            310),
+        Bool(
+            "allow_overtime",
+            "workHourLimits",
+            "Cho phép gợi ý vượt chuẩn khi thiếu người (vẫn tuân trần ca/tuần của phòng ban).",
+            "Cho phép tăng ca",
+            false,
+            false,
+            320),
+
+        Number(
+            "min_rest_minutes_between_shifts",
+            "restRules",
+            "Khoảng nghỉ tối thiểu giữa hai ca liên tiếp của cùng nhân viên.",
+            "Phút nghỉ giữa ca",
+            660,
+            true,
+            410),
     ];
 
     public static IReadOnlyList<LocationSchedulingRuleDto> GetDefaultRules() => DefaultRules;
 
     public static IReadOnlyList<LocationSchedulingRuleDto> GetEffectiveRules(LocationSchedulingPolicy policy)
     {
-        var stored = Deserialize(policy.RulesJson);
+        var stored = Deserialize(policy.RulesJson)
+            .Where(rule => !IsDeprecatedKey(rule.Key))
+            .ToList();
         var storedByKey = stored.ToDictionary(rule => rule.Key, StringComparer.OrdinalIgnoreCase);
         var defaultKeys = DefaultRules.Select(rule => rule.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -128,7 +174,7 @@ public static class LocationSchedulingPolicyRules
     {
         var defaultsByKey = DefaultRules.ToDictionary(rule => rule.Key, StringComparer.OrdinalIgnoreCase);
         var incomingByKey = rules
-            .Where(rule => !string.IsNullOrWhiteSpace(rule.Key))
+            .Where(rule => !string.IsNullOrWhiteSpace(rule.Key) && !IsDeprecatedKey(rule.Key!))
             .GroupBy(rule => NormalizeKey(rule.Key!), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
@@ -149,7 +195,8 @@ public static class LocationSchedulingPolicyRules
 
         var customRules = rules
             .Where(rule => !string.IsNullOrWhiteSpace(rule.Key)
-                && !defaultsByKey.ContainsKey(NormalizeKey(rule.Key!)))
+                && !defaultsByKey.ContainsKey(NormalizeKey(rule.Key!))
+                && !IsDeprecatedKey(rule.Key!))
             .Select((rule, index) => NormalizeCustomRule(rule, index, defaultsByKey))
             .Where(rule => rule is not null)
             .Cast<LocationSchedulingRuleDto>()
@@ -197,6 +244,8 @@ public static class LocationSchedulingPolicyRules
         return rule is not null;
     }
 
+    private static bool IsDeprecatedKey(string key) => DeprecatedRuleKeys.Contains(NormalizeKey(key));
+
     private static LocationSchedulingRuleDto? NormalizeCustomRule(
         LocationSchedulingRuleUpsertDto rule,
         int index,
@@ -206,7 +255,7 @@ public static class LocationSchedulingPolicyRules
             return null;
 
         var key = NormalizeKey(rule.Key);
-        if (defaultsByKey.ContainsKey(key))
+        if (defaultsByKey.ContainsKey(key) || IsDeprecatedKey(key))
             return null;
 
         var valueType = NormalizeValueType(rule.ValueType, "text");

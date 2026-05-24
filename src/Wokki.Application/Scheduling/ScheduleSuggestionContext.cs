@@ -14,5 +14,4 @@ public sealed class ScheduleSuggestionContext
     public required IReadOnlyList<SubmittedPreferenceChoice> SubmittedPreferences { get; init; }
     public required IReadOnlyList<JobPosition> JobPositions { get; init; }
     public LocationSchedulingPolicy? LocationSchedulingPolicy { get; init; }
-    public DepartmentSchedulingPolicy? SchedulingPolicy { get; init; }
 }

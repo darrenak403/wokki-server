@@ -150,9 +150,6 @@ public static class AppMessages
 
     public static class SchedulingConfig
     {
-        public static readonly AppMessage PolicyFound = new("SCHEDULING_POLICY_FOUND", "Department scheduling policy found.", StatusCodes.Status200OK);
-        public static readonly AppMessage PolicyUpdated = new("SCHEDULING_POLICY_UPDATED", "Department scheduling policy updated.", StatusCodes.Status200OK);
-        public static readonly AppMessage InvalidWeeklyCap = new("SCHEDULING_INVALID_WEEKLY_CAP", "Max shifts per employee per week must be between 1 and 168.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage JobPositionsListed = new("JOB_POSITIONS_LISTED", "Job positions listed.", StatusCodes.Status200OK);
         public static readonly AppMessage JobPositionCreated = new("JOB_POSITION_CREATED", "Job position created.", StatusCodes.Status201Created);
         public static readonly AppMessage JobPositionUpdated = new("JOB_POSITION_UPDATED", "Job position updated.", StatusCodes.Status200OK);

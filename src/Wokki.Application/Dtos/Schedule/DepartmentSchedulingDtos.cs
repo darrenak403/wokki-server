@@ -1,12 +1,5 @@
 namespace Wokki.Application.Dtos.Schedule;
 
-public sealed record DepartmentSchedulingPolicyResponse(
-    Guid DepartmentId,
-    int MaxShiftsPerEmployeePerWeek);
-
-public sealed record UpsertDepartmentSchedulingPolicyRequest(
-    int MaxShiftsPerEmployeePerWeek);
-
 public sealed record JobPositionResponse(
     Guid Id,
     Guid DepartmentId,

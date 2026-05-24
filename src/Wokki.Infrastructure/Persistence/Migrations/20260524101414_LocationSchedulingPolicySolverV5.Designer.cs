@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Wokki.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using Wokki.Infrastructure.Persistence;
 namespace Wokki.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260524101414_LocationSchedulingPolicySolverV5")]
+    partial class LocationSchedulingPolicySolverV5
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -196,6 +199,22 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasIndex("LocationId");
 
                     b.ToTable("departments", (string)null);
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.DepartmentSchedulingPolicy", b =>
+                {
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MaxShiftsPerEmployeePerWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("DepartmentId");
+
+                    b.ToTable("department_scheduling_policies", (string)null);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Employee", b =>
@@ -876,6 +895,15 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("LocationId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.DepartmentSchedulingPolicy", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Department", null)
+                        .WithOne()
+                        .HasForeignKey("Wokki.Domain.Entities.DepartmentSchedulingPolicy", "DepartmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 

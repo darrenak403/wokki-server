@@ -7,11 +7,13 @@ namespace Wokki.Application.Scheduling;
 public static class SchedulingAssignmentRules
 {
     public static int MaxShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
-        context.SchedulingPolicy?.MaxShiftsPerEmployeePerWeek
-        ?? LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_week", 6);
+        SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek;
 
     public static int MaxShiftsPerEmployeePerDay(ScheduleSuggestionContext context) =>
-        LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "max_shifts_per_day", 1);
+        SchedulingSolverDefaults.MaxShiftsPerEmployeePerDaySafetyCap;
+
+    public static int MinShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
+        LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "min_shifts_per_week", 0);
 
     public static bool MeetsWeeklyCap(
         Guid employeeId,
@@ -47,12 +49,11 @@ public static class SchedulingAssignmentRules
         if (line is null)
             return 0;
 
-        var preferredWeight = LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "preferred_weight", 30);
         return line.PreferenceType switch
         {
-            PreferenceType.Preferred => preferredWeight,
-            PreferenceType.Available => LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "available_weight", 5),
-            PreferenceType.Unavailable => -preferredWeight,
+            PreferenceType.Preferred => SchedulingSolverDefaults.PreferencePreferredScore,
+            PreferenceType.Available => SchedulingSolverDefaults.PreferenceAvailableScore,
+            PreferenceType.Unavailable => SchedulingSolverDefaults.PreferenceUnavailablePenalty,
             _ => 0
         };
     }

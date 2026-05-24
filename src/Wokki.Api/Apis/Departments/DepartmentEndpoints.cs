@@ -54,25 +54,6 @@ public static class DepartmentEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
-        group.MapGet("/{id:guid}/scheduling-policy", GetSchedulingPolicyAsync)
-            .WithName("GetDepartmentSchedulingPolicy")
-            .WithDescription("Luật lịch phòng ban (tối đa ca/tuần/nhân viên).")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
-            .Produces<ApiResponse<DepartmentSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
-        group.MapPut("/{id:guid}/scheduling-policy", UpsertSchedulingPolicyAsync)
-            .WithName("UpsertDepartmentSchedulingPolicy")
-            .WithDescription("Cập nhật luật lịch phòng ban.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
-            .Produces<ApiResponse<DepartmentSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
         group.MapGet("/{id:guid}/job-positions", ListJobPositionsAsync)
             .WithName("ListDepartmentJobPositions")
             .WithDescription("Danh sách vị trí làm việc (số lượng mục tiêu).")
@@ -147,25 +128,6 @@ public static class DepartmentEndpoints
             return validationResult!;
 
         var response = await service.UpdateAsync(id, request, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> GetSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromServices] IDepartmentSchedulingConfigService service,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await service.GetPolicyAsync(id, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> UpsertSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromBody] UpsertDepartmentSchedulingPolicyRequest request,
-        [FromServices] IDepartmentSchedulingConfigService service,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await service.UpsertPolicyAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 

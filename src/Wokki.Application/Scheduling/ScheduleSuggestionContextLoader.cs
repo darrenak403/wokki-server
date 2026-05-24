@@ -67,9 +67,6 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             activeOnly: true,
             cancellationToken);
 
-        var policy = await unitOfWork.DepartmentSchedulingPolicies.GetByDepartmentIdAsync(
-            schedule.DepartmentId,
-            cancellationToken);
         var locationPolicy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
             department.LocationId,
             cancellationToken: cancellationToken);
@@ -85,8 +82,7 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
             JobPositions = jobPositions,
-            LocationSchedulingPolicy = locationPolicy,
-            SchedulingPolicy = policy
+            LocationSchedulingPolicy = locationPolicy
         }, null);
     }
 }

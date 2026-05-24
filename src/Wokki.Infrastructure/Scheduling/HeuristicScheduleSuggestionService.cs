@@ -25,11 +25,9 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts");
 
-        if (LocationSchedulingPolicyRules.GetBool(
-                context.LocationSchedulingPolicy,
-                "require_submitted_preferences",
-                true)
-            && context.SubmittedPreferences.Count == 0)
+        var solverPolicy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
+
+        if (solverPolicy.RequireSubmittedPreferences && context.SubmittedPreferences.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "missing_preferences");
 
         var planned = new List<ShiftAssignmentEntity>(context.ExistingAssignments);
@@ -86,21 +84,15 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
         Dictionary<Guid, ShiftDefinition> shiftMap)
     {
         (Guid EmployeeId, int Score)? best = null;
+        var solverPolicy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
 
         foreach (var employee in context.Employees)
         {
-            if (LocationSchedulingPolicyRules.GetBool(
-                    context.LocationSchedulingPolicy,
-                    "unavailable_is_hard_block",
-                    true)
+            if (solverPolicy.UnavailableIsHardBlock
                 && SchedulingAssignmentRules.IsUnavailableByPreference(employee.Id, shift.Id, date, context))
                 continue;
 
-            if (LocationSchedulingPolicyRules.GetBool(
-                    context.LocationSchedulingPolicy,
-                    "require_role_match",
-                    true)
-                && !RoleMatches(employee, shift, context))
+            if (solverPolicy.RequireRoleMatch && !RoleMatches(employee, shift, context))
                 continue;
 
             if (!SchedulingAssignmentRules.MeetsWeeklyCap(employee.Id, planned, context))
@@ -125,6 +117,14 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
             var weeklyLoad = planned.Count(a => a.EmployeeId == employee.Id);
             score -= weeklyLoad * 2;
 
+            if (solverPolicy.MinShiftsPerWeekEnabled
+                && solverPolicy.MinShiftsPerWeek > 0
+                && weeklyLoad < solverPolicy.MinShiftsPerWeek)
+            {
+                score += (solverPolicy.MinShiftsPerWeek - weeklyLoad)
+                    * SchedulingSolverDefaults.MinShiftsPerWeekBoostPerMissingShift;
+            }
+
             var position = SchedulingAssignmentRules.ResolveJobPosition(employee, context);
             if (position is not null)
             {
@@ -134,9 +134,7 @@ public sealed class HeuristicScheduleSuggestionService(ScheduleSuggestionContext
                     return emp is not null
                            && SchedulingAssignmentRules.ResolveJobPosition(emp, context)?.Id == position.Id;
                 });
-                var roleBalanceWeight = LocationSchedulingPolicyRules.GetInt(
-                    context.LocationSchedulingPolicy, "role_balance_weight", 5);
-                score -= roleLoad * roleBalanceWeight;
+                score -= roleLoad * SchedulingSolverDefaults.RoleBalancePenaltyPerShift;
             }
 
             if (best is null || score > best.Value.Score

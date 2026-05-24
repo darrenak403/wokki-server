@@ -8,57 +8,6 @@ namespace Wokki.Application.Services.Schedule.Implementations;
 
 public sealed class DepartmentSchedulingConfigService(IUnitOfWork unitOfWork) : IDepartmentSchedulingConfigService
 {
-    public async Task<ApiResponse<DepartmentSchedulingPolicyResponse>> GetPolicyAsync(
-        Guid departmentId,
-        CancellationToken cancellationToken = default)
-    {
-        if (!await DepartmentExistsAsync(departmentId, cancellationToken))
-            return ApiResponse<DepartmentSchedulingPolicyResponse>.FailureResponse(AppMessages.Department.NotFound);
-
-        var policy = await unitOfWork.DepartmentSchedulingPolicies.GetByDepartmentIdAsync(departmentId, cancellationToken);
-        return ApiResponse<DepartmentSchedulingPolicyResponse>.SuccessResponse(
-            new DepartmentSchedulingPolicyResponse(
-                departmentId,
-                policy?.MaxShiftsPerEmployeePerWeek ?? 20),
-            AppMessages.SchedulingConfig.PolicyFound);
-    }
-
-    public async Task<ApiResponse<DepartmentSchedulingPolicyResponse>> UpsertPolicyAsync(
-        Guid departmentId,
-        UpsertDepartmentSchedulingPolicyRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (!await DepartmentExistsAsync(departmentId, cancellationToken))
-            return ApiResponse<DepartmentSchedulingPolicyResponse>.FailureResponse(AppMessages.Department.NotFound);
-
-        if (request.MaxShiftsPerEmployeePerWeek < 1 || request.MaxShiftsPerEmployeePerWeek > 168)
-            return ApiResponse<DepartmentSchedulingPolicyResponse>.FailureResponse(AppMessages.SchedulingConfig.InvalidWeeklyCap);
-
-        var policy = await unitOfWork.DepartmentSchedulingPolicies.GetByDepartmentIdAsync(departmentId, cancellationToken);
-        if (policy is null)
-        {
-            policy = new DepartmentSchedulingPolicy
-            {
-                DepartmentId = departmentId,
-                MaxShiftsPerEmployeePerWeek = request.MaxShiftsPerEmployeePerWeek,
-                UpdatedAt = DateTime.UtcNow
-            };
-            await unitOfWork.DepartmentSchedulingPolicies.AddAsync(policy, cancellationToken);
-        }
-        else
-        {
-            policy.MaxShiftsPerEmployeePerWeek = request.MaxShiftsPerEmployeePerWeek;
-            policy.UpdatedAt = DateTime.UtcNow;
-            unitOfWork.DepartmentSchedulingPolicies.Update(policy);
-        }
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return ApiResponse<DepartmentSchedulingPolicyResponse>.SuccessResponse(
-            new DepartmentSchedulingPolicyResponse(departmentId, policy.MaxShiftsPerEmployeePerWeek),
-            AppMessages.SchedulingConfig.PolicyUpdated);
-    }
-
     public async Task<ApiResponse<IReadOnlyList<JobPositionResponse>>> ListJobPositionsAsync(
         Guid departmentId,
         CancellationToken cancellationToken = default)

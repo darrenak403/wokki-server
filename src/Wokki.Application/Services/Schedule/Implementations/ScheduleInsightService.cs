@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Wokki.Application.Dtos.Bedrock;
 using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Bedrock.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
@@ -60,9 +61,6 @@ public sealed class ScheduleInsightService(
             includeLines: true,
             status: SchedulePreferenceStatus.Submitted,
             cancellationToken);
-        var policy = await unitOfWork.DepartmentSchedulingPolicies.GetByDepartmentIdAsync(
-            schedule.DepartmentId,
-            cancellationToken);
         var jobPositions = await unitOfWork.JobPositions.ListByDepartmentAsync(
             schedule.DepartmentId,
             activeOnly: true,
@@ -76,7 +74,6 @@ public sealed class ScheduleInsightService(
             shifts,
             existingAssignments,
             submittedPreferences,
-            policy,
             jobPositions,
             suggestions,
             request);
@@ -194,7 +191,6 @@ public sealed class ScheduleInsightService(
         IReadOnlyList<ShiftDefinition> shifts,
         IReadOnlyList<ShiftAssignment> existingAssignments,
         IReadOnlyList<SchedulePreferenceSubmission> submittedPreferences,
-        DepartmentSchedulingPolicy? policy,
         IReadOnlyList<JobPosition> jobPositions,
         IReadOnlyList<ScheduleInsightSuggestionInput> suggestions,
         GenerateScheduleInsightContextRequest request)
@@ -247,7 +243,7 @@ public sealed class ScheduleInsightService(
             .OrderBy(x => x.EmployeeName)
             .ToList();
 
-        var maxWeekly = policy?.MaxShiftsPerEmployeePerWeek ?? 20;
+        var maxWeekly = SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek;
         var minLoad = loads.Count == 0 ? 0 : loads.Min(x => x.ShiftCount);
         var maxLoad = loads.Count == 0 ? 0 : loads.Max(x => x.ShiftCount);
         var averageLoad = loads.Count == 0 ? 0 : loads.Average(x => x.ShiftCount);
