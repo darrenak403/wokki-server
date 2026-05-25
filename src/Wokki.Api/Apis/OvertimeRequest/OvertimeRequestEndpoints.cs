@@ -58,7 +58,7 @@ public static class OvertimeRequestEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
         // Manager / Admin endpoints
-        group.MapGet("/", ListPendingAsync)
+        group.MapGet("/pending", ListPendingAsync)
             .WithName("ListPendingOvertimeRequests")
             .WithDescription("Danh sách OT request chờ duyệt (Manager/Admin).")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
