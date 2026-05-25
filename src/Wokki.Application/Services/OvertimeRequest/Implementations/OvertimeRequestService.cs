@@ -98,9 +98,6 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         if (employee is null)
             return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
 
-        page = page < 1 ? 1 : page;
-        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
-
         var (items, total) = await unitOfWork.OvertimeRequests.ListByEmployeeAsync(
             employee.Id, shiftAssignmentId, page, pageSize, ct);
 
@@ -118,9 +115,6 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         int pageSize,
         CancellationToken ct = default)
     {
-        page = page < 1 ? 1 : page;
-        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
-
         IReadOnlyList<Guid>? allowedEmployeeIds = null;
         if (!isAdmin)
         {

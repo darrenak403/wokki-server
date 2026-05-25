@@ -123,29 +123,41 @@ public static class OvertimeRequestEndpoints
     }
 
     private static async Task<IResult> ListMyAsync(
-        [FromQuery] Guid? shiftAssignmentId,
-        [FromQuery] int page,
-        [FromQuery] int pageSize,
         [FromServices] IOvertimeRequestService service,
         [FromServices] ICurrentUserService currentUser,
+        [FromQuery] Guid? shiftAssignmentId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
         if (currentUser.UserId is null)
             return Results.Json(ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (pageSize < 1 || pageSize > 100)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPageSize), statusCode: 400);
+
+        if (page < 1)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPage), statusCode: 400);
 
         return (await service.ListMyAsync(currentUser.UserId.Value, shiftAssignmentId, page, pageSize, ct)).ToHttpResult();
     }
 
     private static async Task<IResult> ListPendingAsync(
-        [FromQuery] Guid? departmentId,
-        [FromQuery] int page,
-        [FromQuery] int pageSize,
         [FromServices] IOvertimeRequestService service,
         [FromServices] ICurrentUserService currentUser,
+        [FromQuery] Guid? departmentId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
         if (currentUser.UserId is null)
             return Results.Json(ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (pageSize < 1 || pageSize > 100)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPageSize), statusCode: 400);
+
+        if (page < 1)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPage), statusCode: 400);
 
         var isAdmin = currentUser.Role == RoleConstants.Admin;
         return (await service.ListPendingAsync(currentUser.UserId.Value, isAdmin, departmentId, page, pageSize, ct)).ToHttpResult();

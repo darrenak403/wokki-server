@@ -254,6 +254,8 @@ public static class AppMessages
     public static class Validation
     {
         public static readonly AppMessage Failed = new("VALIDATION_FAILED", "Validation failed.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidPageSize = new("VALIDATION_INVALID_PAGE_SIZE", "pageSize must be between 1 and 100.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidPage = new("VALIDATION_INVALID_PAGE", "page must be greater than or equal to 1.", StatusCodes.Status400BadRequest);
     }
 
     public static class Internal
