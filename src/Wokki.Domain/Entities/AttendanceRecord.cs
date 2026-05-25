@@ -8,6 +8,8 @@ public class AttendanceRecord
     public DateTimeOffset ClockIn { get; set; }
     public DateTimeOffset? ClockOut { get; set; }
     public int WorkedMinutes { get; set; }
+    public bool AutoClosed { get; set; } = false;
+    public int ApprovedOvertimeMinutes { get; set; } = 0;
     public Guid? AdjustedBy { get; set; }
     public string? AdjustmentNote { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

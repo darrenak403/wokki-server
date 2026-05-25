@@ -26,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SchedulePreferenceLine> SchedulePreferenceLines => Set<SchedulePreferenceLine>();
     public DbSet<ScheduleInsightContext> ScheduleInsightContexts => Set<ScheduleInsightContext>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OvertimeRequest> OvertimeRequests => Set<OvertimeRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

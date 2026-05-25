@@ -232,6 +232,25 @@ public static class AppMessages
         public static readonly AppMessage NotLoggedIn = new("AUTH_NOT_LOGGED_IN", "Not authenticated.", StatusCodes.Status401Unauthorized);
     }
 
+    public static class OvertimeRequest
+    {
+        public static readonly AppMessage Submitted = new("OT_SUBMITTED", "Overtime request submitted.", StatusCodes.Status201Created);
+        public static readonly AppMessage ClockedOut = new("OT_CLOCKED_OUT", "Overtime clock-out recorded.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("OT_LISTED", "Overtime requests listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Approved = new("OT_APPROVED", "Overtime request approved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Rejected = new("OT_REJECTED", "Overtime request rejected.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("OT_NOT_FOUND", "Overtime request not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("OT_FORBIDDEN", "You are not allowed to perform this action on the overtime request.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage NoEmployeeProfile = new("OT_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage AssignmentNotFound = new("OT_ASSIGNMENT_NOT_FOUND", "Shift assignment not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ScheduleNotPublished = new("OT_SCHEDULE_NOT_PUBLISHED", "Schedule must be published before submitting OT.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ShiftNotEnded = new("OT_SHIFT_NOT_ENDED", "Shift must end before submitting an OT request.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ActiveOTExists = new("OT_ACTIVE_EXISTS", "An active overtime request already exists for this shift.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyClosed = new("OT_ALREADY_CLOSED", "Overtime session is not open.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage InvalidTransition = new("OT_INVALID_TRANSITION", "Overtime request is in an invalid state for this action.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage PeriodLocked = new("OT_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
+    }
+
     public static class Validation
     {
         public static readonly AppMessage Failed = new("VALIDATION_FAILED", "Validation failed.", StatusCodes.Status400BadRequest);

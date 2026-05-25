@@ -16,6 +16,7 @@ using Wokki.Infrastructure.Repositories;
 using Wokki.Infrastructure.Bedrock;
 using Wokki.Infrastructure.Scheduling;
 using Wokki.Infrastructure.Tenancy;
+using Wokki.Infrastructure.Workers;
 
 namespace Wokki.Infrastructure.DependencyInjection;
 
@@ -35,6 +36,7 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddHostedService<AutoCloseAttendanceWorker>();
         services.AddBedrock(configuration);
         services.AddScheduleSuggestions(configuration);
         services.AddScoped<IUserRepository, UserRepository>();

@@ -26,5 +26,11 @@ public sealed class AttendanceRecordConfiguration : IEntityTypeConfiguration<Att
             .WithMany()
             .HasForeignKey(x => x.AssignmentId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // PostgreSQL system column — throws DbUpdateConcurrencyException on concurrent write (lazy vs sweeper race)
+        builder.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .IsRowVersion();
     }
 }

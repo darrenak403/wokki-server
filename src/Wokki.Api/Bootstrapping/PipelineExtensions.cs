@@ -1,6 +1,7 @@
 using Serilog;
 using Scalar.AspNetCore;
 using Wokki.Api.Apis.Attendance;
+using Wokki.Api.Apis.OvertimeRequest;
 using Wokki.Api.Apis.Chat;
 using Wokki.Api.Apis.Bedrock;
 using Wokki.Api.Apis.Auth;
@@ -80,6 +81,7 @@ public static class PipelineExtensions
         app.MapAttendanceApi();
         app.MapPayrollApi();
         app.MapChannelApi();
+        app.MapOvertimeRequestApi();
 
         return app;
     }

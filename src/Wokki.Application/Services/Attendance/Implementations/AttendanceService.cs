@@ -14,7 +14,7 @@ using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.Attendance.Implementations;
 
-public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceService
+public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendanceService autoCloseService) : IAttendanceService
 {
     public async Task<ApiResponse<AttendanceResponse>> ClockInAsync(
         Guid userId,
@@ -27,7 +27,11 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
 
         var open = await unitOfWork.Attendance.GetOpenByEmployeeAsync(employee.Id, cancellationToken);
         if (open is not null)
-            return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.OpenRecordExists);
+        {
+            await autoCloseService.AutoCloseIfExpiredAsync(open, cancellationToken);
+            if (open.ClockOut is null)
+                return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.OpenRecordExists);
+        }
 
         var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId, cancellationToken);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone));
@@ -87,6 +91,13 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork) : IAttendanceServi
         var record = await unitOfWork.Attendance.GetOpenByEmployeeAsync(employee.Id, cancellationToken);
         if (record is null)
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NoOpenRecord);
+
+        await autoCloseService.AutoCloseIfExpiredAsync(record, cancellationToken);
+
+        if (record.ClockOut is not null)
+            return ApiResponse<AttendanceResponse>.SuccessResponse(
+                await BuildAttendanceResponseAsync(record, cancellationToken),
+                AppMessages.Attendance.ClockedOut);
 
         record.ClockOut = DateTimeOffset.UtcNow;
         record.WorkedMinutes = ComputeWorkedMinutes(record.ClockIn, record.ClockOut.Value);

@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Wokki.Application.Services.Attendance.Implementations;
+using Wokki.Application.Services.OvertimeRequest.Implementations;
+using Wokki.Application.Services.OvertimeRequest.Interfaces;
 using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.Chat.Implementations;
 using Wokki.Application.Services.Chat.Interfaces;
@@ -42,7 +44,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISchedulePreferenceService, SchedulePreferenceService>();
         services.AddScoped<IScheduleInsightService, ScheduleInsightService>();
         services.AddScoped<ISwapRequestService, SwapRequestService>();
+        services.AddScoped<IAutoCloseAttendanceService, AutoCloseAttendanceService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<IOvertimeRequestService, OvertimeRequestService>();
         services.AddScoped<IPayrollService, PayrollService>();
         services.AddScoped<IChannelService, ChannelService>();
 

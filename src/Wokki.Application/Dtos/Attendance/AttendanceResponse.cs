@@ -9,6 +9,7 @@ public sealed record AttendanceResponse(
     DateTimeOffset ClockIn,
     DateTimeOffset? ClockOut,
     int WorkedMinutes,
+    bool AutoClosed,
     AttendanceStatus Status,
     Guid? AdjustedBy,
     string? AdjustmentNote,

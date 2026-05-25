@@ -20,6 +20,7 @@ public static class AttendanceMapper
             record.ClockIn,
             record.ClockOut,
             record.WorkedMinutes,
+            record.AutoClosed,
             status ?? (record.ClockOut is null ? AttendanceStatus.Open : AttendanceStatus.OnTime),
             record.AdjustedBy,
             record.AdjustmentNote,

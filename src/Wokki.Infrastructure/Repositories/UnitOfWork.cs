@@ -24,6 +24,7 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IEmployeeDepartmentMembershipRepository? _employeeDepartmentMemberships;
     private ISchedulePreferenceRepository? _schedulePreferences;
     private IScheduleInsightContextRepository? _scheduleInsightContexts;
+    private IOvertimeRequestRepository? _overtimeRequests;
     private IDbContextTransaction? _transaction;
 
     public IUserRepository Users => _users ??= new UserRepository(context);
@@ -49,6 +50,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
         _schedulePreferences ??= new SchedulePreferenceRepository(context);
     public IScheduleInsightContextRepository ScheduleInsightContexts =>
         _scheduleInsightContexts ??= new ScheduleInsightContextRepository(context);
+    public IOvertimeRequestRepository OvertimeRequests =>
+        _overtimeRequests ??= new OvertimeRequestRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);
