@@ -144,6 +144,45 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
             AppMessages.OvertimeRequest.Listed);
     }
 
+    public async Task<ApiResponse<PagedResponse<OvertimeRequestResponse>>> ListAllAsync(
+        Guid reviewerUserId,
+        bool isAdmin,
+        Guid? departmentId,
+        int month,
+        int year,
+        int page,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<Guid>? allowedEmployeeIds = null;
+        if (!isAdmin)
+        {
+            var reviewer = await unitOfWork.Employees.GetByUserIdAsync(reviewerUserId, ct);
+            if (reviewer is null)
+                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
+
+            var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewer.Id, ct);
+            var reviewerDeptIds = reviewerMemberships
+                .Select(m => m.DepartmentId)
+                .Append(reviewer.DepartmentId)
+                .Distinct()
+                .ToList();
+
+            if (departmentId.HasValue && !reviewerDeptIds.Contains(departmentId.Value))
+                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
+
+            allowedEmployeeIds = await unitOfWork.Employees.GetIdsByDepartmentIdsAsync(reviewerDeptIds, ct);
+        }
+
+        var (items, total) = await unitOfWork.OvertimeRequests.ListAllByDepartmentAsync(
+            allowedEmployeeIds, departmentId, month, year, page, pageSize, ct);
+
+        return ApiResponse<PagedResponse<OvertimeRequestResponse>>.SuccessPagedResponse(
+            items.Select(x => x.Request.ToResponse(x.EmployeeFirstName, x.EmployeeLastName, x.ShiftName, x.ScheduledDate)).ToList(),
+            page, pageSize, total,
+            AppMessages.OvertimeRequest.Listed);
+    }
+
     public async Task<ApiResponse<OvertimeRequestResponse>> ApproveAsync(
         Guid id,
         Guid reviewerUserId,

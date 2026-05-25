@@ -74,6 +74,48 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
         return (items, total);
     }
 
+    public async Task<(IReadOnlyList<(OvertimeRequest Request, string EmployeeFirstName, string EmployeeLastName, string? ShiftName, DateOnly? ScheduledDate)> Items, int TotalCount)>
+        ListAllByDepartmentAsync(
+            IReadOnlyList<Guid>? allowedEmployeeIds,
+            Guid? departmentId,
+            int month,
+            int year,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+    {
+        var query = from r in context.OvertimeRequests
+                    join e in context.Employees on r.EmployeeId equals e.Id
+                    join sa in context.ShiftAssignments on r.ShiftAssignmentId equals sa.Id
+                    join sd in context.ShiftDefinitions on sa.ShiftDefinitionId equals sd.Id into sdGroup
+                    from sd in sdGroup.DefaultIfEmpty()
+                    select new { r, e, sa, sd };
+
+        query = query.Where(x => x.r.StartedAt.Month == month && x.r.StartedAt.Year == year);
+
+        if (allowedEmployeeIds is not null)
+            query = query.Where(x => allowedEmployeeIds.Contains(x.r.EmployeeId));
+
+        if (departmentId.HasValue)
+            query = query.Where(x => context.Schedules.Any(sc => sc.Id == x.sa.ScheduleId && sc.DepartmentId == departmentId.Value));
+
+        query = query.OrderByDescending(x => x.r.StartedAt);
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+
+        var items = rows
+            .Select(x => (
+                Request: x.r,
+                EmployeeFirstName: x.e.FirstName,
+                EmployeeLastName: x.e.LastName,
+                ShiftName: (string?)x.sd?.Name,
+                ScheduledDate: (DateOnly?)x.sa.Date))
+            .ToList();
+
+        return (items, total);
+    }
+
     public async Task<IReadOnlyList<OvertimeRequest>> GetExpiredPendingAsync(
         DateTimeOffset cutoff,
         CancellationToken cancellationToken = default) =>

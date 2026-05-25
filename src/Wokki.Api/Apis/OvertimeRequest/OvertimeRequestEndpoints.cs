@@ -58,6 +58,16 @@ public static class OvertimeRequestEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
         // Manager / Admin endpoints
+        group.MapGet("/", ListAllAsync)
+            .WithName("ListAllOvertimeRequests")
+            .WithDescription("Danh sách tất cả OT request theo tháng (Manager/Admin).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .RequireRateLimiting(RateLimitPolicies.Fixed)
+            .Produces<ApiResponse<PagedResponse<OvertimeRequestResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
         group.MapGet("/pending", ListPendingAsync)
             .WithName("ListPendingOvertimeRequests")
             .WithDescription("Danh sách OT request chờ duyệt (Manager/Admin).")
@@ -140,6 +150,38 @@ public static class OvertimeRequestEndpoints
             return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPage), statusCode: 400);
 
         return (await service.ListMyAsync(currentUser.UserId.Value, shiftAssignmentId, page, pageSize, ct)).ToHttpResult();
+    }
+
+    private static async Task<IResult> ListAllAsync(
+        [FromServices] IOvertimeRequestService service,
+        [FromServices] ICurrentUserService currentUser,
+        [FromQuery] Guid? departmentId,
+        [FromQuery] int? month,
+        [FromQuery] int? year,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var effectiveMonth = month ?? DateTimeOffset.UtcNow.Month;
+        var effectiveYear = year ?? DateTimeOffset.UtcNow.Year;
+
+        if (effectiveMonth < 1 || effectiveMonth > 12)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.Failed), statusCode: 400);
+
+        if (effectiveYear < 2020 || effectiveYear > 2100)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.Failed), statusCode: 400);
+
+        if (page < 1)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPage), statusCode: 400);
+
+        if (pageSize < 1 || pageSize > 100)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPageSize), statusCode: 400);
+
+        var isAdmin = currentUser.Role == RoleConstants.Admin;
+        return (await service.ListAllAsync(currentUser.UserId.Value, isAdmin, departmentId, effectiveMonth, effectiveYear, page, pageSize, ct)).ToHttpResult();
     }
 
     private static async Task<IResult> ListPendingAsync(

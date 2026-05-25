@@ -27,4 +27,35 @@ public static class OvertimeRequestMapper
             request.ReviewNote,
             request.CreatedAt);
     }
+
+    public static OvertimeRequestResponse ToResponse(
+        this OvertimeRequestEntity request,
+        string? employeeFirstName,
+        string? employeeLastName,
+        string? shiftName,
+        DateOnly? scheduledDate)
+    {
+        int? elapsed = null;
+        if (request.Status == OvertimeStatus.Pending && request.EndedAt is null)
+            elapsed = (int)(DateTimeOffset.UtcNow - request.StartedAt).TotalMinutes;
+
+        return new OvertimeRequestResponse(
+            request.Id,
+            request.ShiftAssignmentId,
+            request.EmployeeId,
+            request.Reason,
+            request.StartedAt,
+            request.EndedAt,
+            request.OvertimeMinutes,
+            elapsed,
+            request.Status,
+            request.ReviewedById,
+            request.ReviewedAt,
+            request.ReviewNote,
+            request.CreatedAt,
+            employeeFirstName,
+            employeeLastName,
+            shiftName,
+            scheduledDate);
+    }
 }

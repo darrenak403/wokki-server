@@ -19,6 +19,15 @@ public interface IOvertimeRequestRepository
         int page,
         int pageSize,
         CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<(OvertimeRequest Request, string EmployeeFirstName, string EmployeeLastName, string? ShiftName, DateOnly? ScheduledDate)> Items, int TotalCount)>
+        ListAllByDepartmentAsync(
+            IReadOnlyList<Guid>? allowedEmployeeIds,
+            Guid? departmentId,
+            int month,
+            int year,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OvertimeRequest>> GetExpiredPendingAsync(DateTimeOffset cutoff, CancellationToken cancellationToken = default);
     Task AddAsync(OvertimeRequest request, CancellationToken cancellationToken = default);
     void Update(OvertimeRequest request);

@@ -15,4 +15,8 @@ public sealed record OvertimeRequestResponse(
     Guid? ReviewedById,
     DateTimeOffset? ReviewedAt,
     string? ReviewNote,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? EmployeeFirstName = null,
+    string? EmployeeLastName = null,
+    string? ShiftName = null,
+    DateOnly? ScheduledDate = null);
