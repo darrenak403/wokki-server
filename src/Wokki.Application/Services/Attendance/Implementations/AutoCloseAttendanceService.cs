@@ -40,35 +40,35 @@ public sealed class AutoCloseAttendanceService(IUnitOfWork unitOfWork) : IAutoCl
 
     public async Task BulkAutoCloseExpiredAsync(CancellationToken ct = default)
     {
-        var openRecords = await unitOfWork.Attendance.GetAllOpenAsync(ct);
-        if (openRecords.Count == 0)
+        var details = await unitOfWork.Attendance.GetAllOpenWithShiftInfoAsync(ct);
+        if (details.Count == 0)
             return;
 
         var cutoff = DateTimeOffset.UtcNow - IAutoCloseAttendanceService.GracePeriod;
-        var hasChanges = false;
 
-        foreach (var record in openRecords)
+        // Compute shift-end per record (all in-memory, no extra queries)
+        var toClose = new Dictionary<Guid, DateTimeOffset>();
+        foreach (var detail in details)
         {
-            if (record.AssignmentId is null)
-                continue;
-
-            var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(record.AssignmentId.Value, cancellationToken: ct);
-            if (assignment is null)
-                continue;
-
-            var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(assignment.ShiftDefinitionId, cancellationToken: ct);
-            if (shift is null)
-                continue;
-
-            var schedule = await unitOfWork.Schedules.GetByIdAsync(assignment.ScheduleId, cancellationToken: ct);
-            var department = schedule is null ? null : await unitOfWork.Departments.GetByIdAsync(schedule.DepartmentId, cancellationToken: ct);
-            var location = department is null ? null : await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: ct);
-
-            var tz = ResolveTimeZone(location?.TimeZone ?? "UTC");
-            var shiftEndLocal = assignment.Date.ToDateTime(shift.EndTime, DateTimeKind.Unspecified);
+            var tz = ResolveTimeZone(detail.LocationTimeZone ?? "UTC");
+            var shiftEndLocal = detail.AssignmentDate.ToDateTime(detail.ShiftEndTime, DateTimeKind.Unspecified);
+            // Overnight shift: end time is before start time, so shift ends the next day
+            if (detail.ShiftEndTime < detail.ShiftStartTime)
+                shiftEndLocal = shiftEndLocal.AddDays(1);
             var shiftEndUtc = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(shiftEndLocal, tz));
+            if (shiftEndUtc < cutoff)
+                toClose[detail.RecordId] = shiftEndUtc;
+        }
 
-            if (shiftEndUtc >= cutoff)
+        if (toClose.Count == 0)
+            return;
+
+        // Batch-load only the records that need closing (single WHERE id IN (...) query)
+        var tracked = await unitOfWork.Attendance.GetManyByIdsAsync(toClose.Keys, track: true, cancellationToken: ct);
+        var hasChanges = false;
+        foreach (var record in tracked)
+        {
+            if (record.ClockOut is not null || !toClose.TryGetValue(record.Id, out var shiftEndUtc))
                 continue;
 
             record.ClockOut = shiftEndUtc;

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wokki.Domain.Entities;
+using Wokki.Domain.Models;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
 
@@ -129,6 +130,32 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         await context.AttendanceRecords
             .Where(ar => ar.ClockOut == null)
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<AttendanceRecord>> GetManyByIdsAsync(IEnumerable<Guid> ids, bool track = false, CancellationToken cancellationToken = default)
+    {
+        var idList = ids.ToList();
+        var query = track ? context.AttendanceRecords : context.AttendanceRecords.AsNoTracking();
+        return await query.Where(a => idList.Contains(a.Id)).ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<OpenAttendanceDetail>> GetAllOpenWithShiftInfoAsync(CancellationToken cancellationToken = default) =>
+        await (from ar in context.AttendanceRecords
+               where ar.ClockOut == null && ar.AssignmentId != null
+               join sa in context.ShiftAssignments on ar.AssignmentId equals sa.Id
+               join sd in context.ShiftDefinitions on sa.ShiftDefinitionId equals sd.Id
+               join sc in context.Schedules on sa.ScheduleId equals sc.Id
+               join dept in context.Departments on sc.DepartmentId equals dept.Id
+               join loc in context.Locations on dept.LocationId equals loc.Id
+               select new OpenAttendanceDetail(
+                   ar.Id,
+                   ar.EmployeeId,
+                   ar.ClockIn,
+                   sa.Date,
+                   sd.StartTime,
+                   sd.EndTime,
+                   loc.TimeZone))
+              .AsNoTracking()
+              .ToListAsync(cancellationToken);
 
     public async Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default) =>
         await context.AttendanceRecords.AddAsync(record, cancellationToken);

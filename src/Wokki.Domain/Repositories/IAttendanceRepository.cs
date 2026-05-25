@@ -1,4 +1,5 @@
 using Wokki.Domain.Entities;
+using Wokki.Domain.Models;
 
 namespace Wokki.Domain.Repositories;
 
@@ -29,6 +30,8 @@ public interface IAttendanceRepository
         DateOnly endDate,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AttendanceRecord>> GetAllOpenAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OpenAttendanceDetail>> GetAllOpenWithShiftInfoAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AttendanceRecord>> GetManyByIdsAsync(IEnumerable<Guid> ids, bool track = false, CancellationToken cancellationToken = default);
     Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default);
     void Update(AttendanceRecord record);
 }
