@@ -5,26 +5,22 @@ version: '3'
 vars:
   SLN: Wokki.slnx
   API_PROJECT: src/Wokki.Api
-  COMPOSE_DEV: docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local
-  COMPOSE_PROD: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env
   MIGRATION_PROJECT: src/Wokki.Infrastructure
-  STARTUP_PROJECT: src/Wokki.Api
   MIGRATIONS_DIR: Persistence/Migrations
+  COMPOSE: docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local
+  COMPOSE_PROD: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env
 
 tasks:
-  ls:
+  default:
     desc: List all available tasks
+    silent: true
     cmds:
       - task --list
-    silent: true
 
-  run:
-    desc: Run the API locally (.NET)
-    cmds:
-      - dotnet run --project {{.API_PROJECT}}
+  # ── Application ──────────────────────────────────────────────────────────────
 
   build:
-    desc: Build the solution (Only runs if code changes)
+    desc: Build the solution (incremental)
     sources:
       - 'src/**/*.cs'
       - 'src/**/*.csproj'
@@ -32,68 +28,79 @@ tasks:
     cmds:
       - dotnet build {{.SLN}}
 
+  run:
+    desc: Run the API locally (.NET)
+    cmds:
+      - dotnet run --project {{.API_PROJECT}}
+
   clean:
     desc: Clean all build artifacts
     cmds:
       - dotnet clean {{.SLN}}
 
+  # ── Migrations ───────────────────────────────────────────────────────────────
+
   'migration:add':
-    desc: 'Add an EF Core migration (usage: task migration:add -- <MigrationName>)'
+    desc: 'Add a migration (usage: task migration:add -- <Name>)'
     requires:
       vars: [CLI_ARGS]
-    preconditions:
-      - sh: 'if [ -z "{{.CLI_ARGS}}" ]; then exit 1; fi'
-        msg: '❌ Bạn phải truyền tên Migration. Ví dụ: task migration:add -- AddUserTable'
     cmds:
-      - dotnet ef migrations add {{.CLI_ARGS}} --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}} --output-dir {{.MIGRATIONS_DIR}}
+      - dotnet ef migrations add {{.CLI_ARGS}}
+          --project {{.MIGRATION_PROJECT}}
+          --startup-project {{.API_PROJECT}}
+          --output-dir {{.MIGRATIONS_DIR}}
 
   'migration:remove':
-    desc: Remove the last EF Core migration
+    desc: Remove the last migration
     cmds:
-      - dotnet ef migrations remove --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}}
+      - dotnet ef migrations remove
+          --project {{.MIGRATION_PROJECT}}
+          --startup-project {{.API_PROJECT}}
 
   'migration:update':
     desc: Apply pending migrations to the database
     cmds:
-      - dotnet ef database update --project {{.MIGRATION_PROJECT}} --startup-project {{.STARTUP_PROJECT}}
+      - dotnet ef database update
+          --project {{.MIGRATION_PROJECT}}
+          --startup-project {{.API_PROJECT}}
+
+  # ── Docker ───────────────────────────────────────────────────────────────────
 
   'docker:up':
-    desc: Start dev infrastructure (postgres + api)
+    desc: Start dev stack (Postgres + API)
     cmds:
-      - '{{.COMPOSE_DEV}} up -d'
+      - '{{.COMPOSE}} up -d'
 
   'docker:postgres':
-    desc: Start PostgreSQL only (for task run + local API)
+    desc: Start Postgres only (for task run)
     cmds:
-      - '{{.COMPOSE_DEV}} up -d postgres'
+      - '{{.COMPOSE}} up -d postgres'
 
   'docker:build':
-    desc: Build images and start dev containers
+    desc: Rebuild images and start dev stack
     cmds:
-      - '{{.COMPOSE_DEV}} up -d --build'
+      - '{{.COMPOSE}} up -d --build'
 
   'docker:down':
-    desc: Stop dev infrastructure (containers only, volumes preserved)
+    desc: Stop dev containers (volumes preserved)
     cmds:
-      - '{{.COMPOSE_DEV}} down'
+      - '{{.COMPOSE}} down'
 
   'docker:clear':
     desc: Stop dev containers and remove all volumes
     cmds:
-      - '{{.COMPOSE_DEV}} down -v'
+      - '{{.COMPOSE}} down -v'
 
   'docker:prod':
     desc: Build and start prod stack (requires docker/.env)
     cmds:
       - '{{.COMPOSE_PROD}} up -d --build'
 
+  # ── Git ──────────────────────────────────────────────────────────────────────
+
   pull:
-    desc: 'Pull latest changes (usage: task pull hoặc task pull br=<branch>)'
+    desc: 'Pull latest (usage: task pull  or  task pull br=<branch>)'
     vars:
       BRANCH: '{{default "" .br}}'
     cmds:
-      - defer: git pull # Luôn chạy lệnh pull cuối cùng
-      - |
-        {{if ne .BRANCH ""}}
-        git checkout {{.BRANCH}}
-        {{end}}
+      - '{{if .BRANCH}}git checkout {{.BRANCH}} && {{end}}git pull'
