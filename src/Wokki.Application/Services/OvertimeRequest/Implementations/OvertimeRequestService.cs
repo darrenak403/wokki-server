@@ -214,7 +214,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
             ?? await GetAttendanceRecordForAssignmentAsync(otRequest.ShiftAssignmentId, otRequest.EmployeeId, ct);
 
         otRequest.Status = OvertimeStatus.Approved;
-        otRequest.ReviewedById = reviewer.Id;
+        otRequest.ReviewedById = reviewerUserId;
         otRequest.ReviewedAt = DateTimeOffset.UtcNow;
         otRequest.ReviewNote = note;
         unitOfWork.OvertimeRequests.Update(otRequest);
@@ -257,7 +257,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.PeriodLocked);
 
         otRequest.Status = OvertimeStatus.Rejected;
-        otRequest.ReviewedById = reviewer.Id;
+        otRequest.ReviewedById = reviewerUserId;
         otRequest.ReviewedAt = DateTimeOffset.UtcNow;
         otRequest.ReviewNote = note;
         unitOfWork.OvertimeRequests.Update(otRequest);
