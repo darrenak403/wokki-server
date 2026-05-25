@@ -59,6 +59,14 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
         if (allowedEmployeeIds is not null)
             query = query.Where(r => allowedEmployeeIds.Contains(r.EmployeeId));
 
+        if (departmentId.HasValue)
+            query = query.Where(r =>
+                context.ShiftAssignments.Any(sa =>
+                    sa.Id == r.ShiftAssignmentId &&
+                    context.Schedules.Any(sc =>
+                        sc.Id == sa.ScheduleId &&
+                        sc.DepartmentId == departmentId.Value)));
+
         query = query.OrderByDescending(r => r.CreatedAt);
 
         var total = await query.CountAsync(cancellationToken);

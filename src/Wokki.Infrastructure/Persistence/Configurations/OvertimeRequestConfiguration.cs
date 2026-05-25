@@ -17,6 +17,8 @@ public sealed class OvertimeRequestConfiguration : IEntityTypeConfiguration<Over
         builder.HasIndex(x => x.Status);
 
         // Prevent duplicate active OT for same shift+employee (DB-level enforcement)
+        // The composite (ShiftAssignmentId, EmployeeId) index below also covers single-column
+        // lookups on ShiftAssignmentId via its leftmost-prefix, so no standalone index is needed.
         builder.HasIndex(x => new { x.ShiftAssignmentId, x.EmployeeId })
             .HasFilter("\"Status\" IN (0, 1)")
             .IsUnique()

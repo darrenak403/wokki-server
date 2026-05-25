@@ -14,6 +14,10 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         return await query.FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
+    public async Task<AttendanceRecord?> GetByAssignmentIdAsync(Guid assignmentId, CancellationToken cancellationToken = default) =>
+        await context.AttendanceRecords
+            .FirstOrDefaultAsync(a => a.AssignmentId == assignmentId, cancellationToken);
+
     public async Task<AttendanceRecord?> GetOpenByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default) =>
         await context.AttendanceRecords
             .FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.ClockOut == null, cancellationToken);

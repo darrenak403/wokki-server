@@ -6,6 +6,7 @@ namespace Wokki.Domain.Repositories;
 public interface IAttendanceRepository
 {
     Task<AttendanceRecord?> GetByIdAsync(Guid id, bool track = false, CancellationToken cancellationToken = default);
+    Task<AttendanceRecord?> GetByAssignmentIdAsync(Guid assignmentId, CancellationToken cancellationToken = default);
     Task<AttendanceRecord?> GetOpenByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default);
     Task<(IReadOnlyList<AttendanceRecord> Items, int TotalCount)> ListAsync(
         int page,

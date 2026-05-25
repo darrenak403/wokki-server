@@ -15,6 +15,8 @@ public interface IEmployeeRepository
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Employee>> GetByIdsAsync(
         IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Guid>> GetIdsByDepartmentIdsAsync(
+        IEnumerable<Guid> departmentIds, CancellationToken cancellationToken = default);
     Task<bool> IsMemberOfDepartmentAsync(Guid employeeId, Guid departmentId, CancellationToken cancellationToken = default);
     Task AddAsync(Employee employee, CancellationToken cancellationToken = default);
     void Update(Employee employee);

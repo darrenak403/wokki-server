@@ -19,6 +19,9 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         if (employee is null)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
 
+        if (employee.TerminatedAt is not null)
+            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.Employee.AlreadyTerminated);
+
         var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(dto.ShiftAssignmentId, cancellationToken: ct);
         if (assignment is null)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.AssignmentNotFound);
@@ -125,7 +128,17 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
             if (reviewer is null)
                 return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
 
-            allowedEmployeeIds = await GetEmployeeIdsInReviewerDepartmentsAsync(reviewer.Id, ct);
+            var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewer.Id, ct);
+            var reviewerDeptIds = reviewerMemberships
+                .Select(m => m.DepartmentId)
+                .Append(reviewer.DepartmentId)
+                .Distinct()
+                .ToList();
+
+            if (departmentId.HasValue && !reviewerDeptIds.Contains(departmentId.Value))
+                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
+
+            allowedEmployeeIds = await unitOfWork.Employees.GetIdsByDepartmentIdsAsync(reviewerDeptIds, ct);
         }
 
         var (items, total) = await unitOfWork.OvertimeRequests.ListPendingApprovalAsync(
@@ -237,28 +250,20 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
 
     private async Task<bool> IsReviewerAuthorizedAsync(Guid reviewerEmployeeId, Guid requestEmployeeId, CancellationToken ct)
     {
+        var reviewer = await unitOfWork.Employees.GetByIdAsync(reviewerEmployeeId, cancellationToken: ct);
+        if (reviewer is null)
+            return false;
+
         var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewerEmployeeId, ct);
-        foreach (var membership in reviewerMemberships)
-        {
-            if (await unitOfWork.Employees.IsMemberOfDepartmentAsync(requestEmployeeId, membership.DepartmentId, ct))
-                return true;
-        }
-        return false;
-    }
+        var reviewerDeptIds = reviewerMemberships
+            .Select(m => m.DepartmentId)
+            .Append(reviewer.DepartmentId)
+            .Distinct()
+            .ToList();
 
-    private async Task<IReadOnlyList<Guid>> GetEmployeeIdsInReviewerDepartmentsAsync(Guid reviewerEmployeeId, CancellationToken ct)
-    {
-        var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewerEmployeeId, ct);
-        var employeeIds = new HashSet<Guid>();
-
-        foreach (var membership in reviewerMemberships)
-        {
-            var (employees, _) = await unitOfWork.Employees.ListAsync(1, int.MaxValue, departmentId: membership.DepartmentId, cancellationToken: ct);
-            foreach (var emp in employees)
-                employeeIds.Add(emp.Id);
-        }
-
-        return employeeIds.ToList();
+        var employeeIdsInReviewerDepts = await unitOfWork.Employees
+            .GetIdsByDepartmentIdsAsync(reviewerDeptIds, cancellationToken: ct);
+        return employeeIdsInReviewerDepts.Contains(requestEmployeeId);
     }
 
     private async Task<bool> IsPayPeriodLockedAsync(Domain.Entities.OvertimeRequest request, CancellationToken ct)
@@ -275,11 +280,8 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         return period?.Status == PayPeriodStatus.Locked;
     }
 
-    private async Task<AttendanceRecord?> GetAttendanceRecordForAssignmentAsync(Guid assignmentId, Guid employeeId, CancellationToken ct)
-    {
-        var (records, _) = await unitOfWork.Attendance.ListAsync(1, 1, employeeId: employeeId, cancellationToken: ct);
-        return records.FirstOrDefault(r => r.AssignmentId == assignmentId);
-    }
+    private Task<AttendanceRecord?> GetAttendanceRecordForAssignmentAsync(Guid assignmentId, Guid employeeId, CancellationToken ct) =>
+        unitOfWork.Attendance.GetByAssignmentIdAsync(assignmentId, ct);
 
     private static TimeZoneInfo ResolveTimeZone(string timeZoneId)
     {

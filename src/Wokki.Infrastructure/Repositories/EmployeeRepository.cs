@@ -63,6 +63,23 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetIdsByDepartmentIdsAsync(
+        IEnumerable<Guid> departmentIds,
+        CancellationToken cancellationToken = default)
+    {
+        var deptList = departmentIds.ToList();
+        if (deptList.Count == 0) return [];
+        return await context.Employees.AsNoTracking()
+            .Where(e =>
+                e.TerminatedAt == null &&
+                (deptList.Contains(e.DepartmentId) ||
+                 context.EmployeeDepartmentMemberships.Any(m =>
+                     m.EmployeeId == e.Id && deptList.Contains(m.DepartmentId))))
+            .Select(e => e.Id)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<bool> IsMemberOfDepartmentAsync(
         Guid employeeId,
         Guid departmentId,
