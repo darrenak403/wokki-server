@@ -13,6 +13,7 @@ public sealed class PayrollLineConfiguration : IEntityTypeConfiguration<PayrollL
         builder.HasIndex(x => new { x.PayPeriodId, x.EmployeeId }).IsUnique();
         builder.Property(x => x.HourlyRate).HasPrecision(18, 2);
         builder.Property(x => x.GrossPay).HasPrecision(18, 2);
+        builder.Property(x => x.OvertimePay).HasPrecision(18, 2);
 
         builder.HasOne<PayPeriod>()
             .WithMany()

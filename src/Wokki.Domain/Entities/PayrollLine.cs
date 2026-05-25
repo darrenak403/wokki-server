@@ -8,5 +8,7 @@ public class PayrollLine
     public int TotalWorkedMinutes { get; set; }
     public decimal HourlyRate { get; set; }
     public decimal GrossPay { get; set; }
+    public int ApprovedOvertimeMinutes { get; set; } = 0;
+    public decimal OvertimePay { get; set; } = 0;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

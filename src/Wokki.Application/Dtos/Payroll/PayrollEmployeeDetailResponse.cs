@@ -10,6 +10,8 @@ public sealed record PayrollEmployeeDetailResponse(
     int TotalWorkedMinutes,
     decimal HourlyRate,
     decimal GrossPay,
+    int ApprovedOvertimeMinutes,
+    decimal OvertimePay,
     IReadOnlyList<PayrollAttendanceItemResponse> AttendanceItems);
 
 public sealed record PayrollAttendanceItemResponse(

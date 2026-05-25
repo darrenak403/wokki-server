@@ -17,4 +17,6 @@ public sealed record PayrollEmployeeLineResponse(
     string LastName,
     int TotalWorkedMinutes,
     decimal HourlyRate,
-    decimal GrossPay);
+    decimal GrossPay,
+    int ApprovedOvertimeMinutes,
+    decimal OvertimePay);

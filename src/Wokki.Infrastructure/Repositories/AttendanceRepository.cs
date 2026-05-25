@@ -98,6 +98,38 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         return rows.ToDictionary(x => x.Key, x => x.Total);
     }
 
+    public async Task<Dictionary<Guid, int>> SumApprovedOvertimeByEmployeeAsync(
+        IEnumerable<Guid> employeeIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = employeeIds.ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, int>();
+
+        var from = new DateTimeOffset(startDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        var to = new DateTimeOffset(endDate.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
+
+        var rows = await context.AttendanceRecords.AsNoTracking()
+            .Where(a => ids.Contains(a.EmployeeId)
+                        && a.ClockOut != null
+                        && a.AssignmentId != null
+                        && a.ClockIn >= from
+                        && a.ClockIn <= to
+                        && a.ApprovedOvertimeMinutes > 0)
+            .GroupBy(a => a.EmployeeId)
+            .Select(g => new { g.Key, Total = g.Sum(x => x.ApprovedOvertimeMinutes) })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.Key, x => x.Total);
+    }
+
+    public async Task<IReadOnlyList<AttendanceRecord>> GetAllOpenAsync(CancellationToken cancellationToken = default) =>
+        await context.AttendanceRecords
+            .Where(ar => ar.ClockOut == null)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default) =>
         await context.AttendanceRecords.AddAsync(record, cancellationToken);
 

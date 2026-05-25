@@ -23,6 +23,12 @@ public interface IAttendanceRepository
         DateOnly startDate,
         DateOnly endDate,
         CancellationToken cancellationToken = default);
+    Task<Dictionary<Guid, int>> SumApprovedOvertimeByEmployeeAsync(
+        IEnumerable<Guid> employeeIds,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AttendanceRecord>> GetAllOpenAsync(CancellationToken cancellationToken = default);
     Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default);
     void Update(AttendanceRecord record);
 }

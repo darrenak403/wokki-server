@@ -61,22 +61,27 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
                     0,
                     employee.HourlyRate,
                     0,
+                    0,
+                    0m,
                     []),
                 AppMessages.Payroll.EmployeeSummary);
         }
 
-        var attendance = await unitOfWork.Attendance.ListAsync(
-            1,
-            500,
-            employeeId,
-            request.StartDate,
-            request.EndDate,
-            cancellationToken);
+        // For locked periods return no live attendance — snapshot totals are authoritative
+        IReadOnlyList<PayrollAttendanceItemResponse> items = [];
+        if (period!.Status != PayPeriodStatus.Locked)
+        {
+            var attendance = await unitOfWork.Attendance.ListByEmployeeAsync(
+                employeeId,
+                request.StartDate,
+                request.EndDate,
+                cancellationToken);
 
-        var items = attendance.Items
-            .Where(a => a.ClockOut is not null && a.AssignmentId is not null)
-            .Select(a => new PayrollAttendanceItemResponse(a.Id, a.ClockIn, a.ClockOut, a.WorkedMinutes))
-            .ToList();
+            items = attendance
+                .Where(a => a.ClockOut is not null && a.AssignmentId is not null)
+                .Select(a => new PayrollAttendanceItemResponse(a.Id, a.ClockIn, a.ClockOut, a.WorkedMinutes))
+                .ToList();
+        }
 
         return ApiResponse<PayrollEmployeeDetailResponse>.SuccessResponse(
             new PayrollEmployeeDetailResponse(
@@ -89,6 +94,8 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
                 line.TotalWorkedMinutes,
                 line.HourlyRate,
                 line.GrossPay,
+                line.ApprovedOvertimeMinutes,
+                line.OvertimePay,
                 items),
             AppMessages.Payroll.EmployeeSummary);
     }
@@ -169,7 +176,9 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
                         emp.LastName,
                         l.TotalWorkedMinutes,
                         l.HourlyRate,
-                        l.GrossPay);
+                        l.GrossPay,
+                        l.ApprovedOvertimeMinutes,
+                        l.OvertimePay);
                 }).ToList();
                 return (period, snapshotLines, null);
             }
@@ -182,12 +191,20 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
             request.StartDate,
             request.EndDate,
             cancellationToken);
+        var otByEmployee = await unitOfWork.Attendance.SumApprovedOvertimeByEmployeeAsync(
+            employeeIds,
+            request.StartDate,
+            request.EndDate,
+            cancellationToken);
 
         var lines = new List<PayrollEmployeeLineResponse>();
         foreach (var employee in employeePage.Items)
         {
             minutesByEmployee.TryGetValue(employee.Id, out var minutes);
+            otByEmployee.TryGetValue(employee.Id, out var otMinutes);
             var hourlyRate = employee.HourlyRate;
+            var otPay = Math.Round((otMinutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
+            // otMinutes is already contained in minutes (same clock-in/out window); do not add twice
             var gross = Math.Round((minutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
             lines.Add(new PayrollEmployeeLineResponse(
                 employee.Id,
@@ -195,7 +212,9 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
                 employee.LastName,
                 minutes,
                 hourlyRate,
-                gross));
+                gross,
+                otMinutes,
+                otPay));
         }
 
         return (period, lines, null);
@@ -219,7 +238,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
     private static string BuildCsv(IReadOnlyList<PayrollEmployeeLineResponse> lines)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,TotalHours,HourlyRate,GrossPay");
+        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,TotalHours,HourlyRate,ApprovedOvertimeMinutes,OvertimePay,GrossPay");
         foreach (var line in lines)
         {
             var hours = Math.Round(line.TotalWorkedMinutes / 60m, 2);
@@ -230,6 +249,8 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
                 line.TotalWorkedMinutes.ToString(CultureInfo.InvariantCulture),
                 hours.ToString(CultureInfo.InvariantCulture),
                 line.HourlyRate.ToString(CultureInfo.InvariantCulture),
+                line.ApprovedOvertimeMinutes.ToString(CultureInfo.InvariantCulture),
+                line.OvertimePay.ToString(CultureInfo.InvariantCulture),
                 line.GrossPay.ToString(CultureInfo.InvariantCulture)));
         }
 
