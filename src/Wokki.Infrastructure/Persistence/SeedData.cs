@@ -5,15 +5,15 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
+using Wokki.Infrastructure.Persistence.Seed;
 
 namespace Wokki.Infrastructure.Persistence;
 
 public static class SeedData
 {
-    public static readonly Guid DefaultLocationId = CoffeeShopSeedIds.LocationId;
-    public static readonly Guid DefaultDepartmentId = CoffeeShopSeedIds.DepartmentBarId;
-    /// <summary>Transient holder for atomic swap of two assignments (never scheduled on a shift).</summary>
-    public static readonly Guid SwapHoldEmployeeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+    public static readonly Guid DefaultLocationId = DevSeedData.LocationId;
+    public static readonly Guid DefaultDepartmentId = DevSeedData.DepartmentBarId;
+    public static readonly Guid SwapHoldEmployeeId = DevSeedData.SwapHoldEmployeeId;
 
     public static async Task InitializeAsync(IServiceProvider services)
     {
@@ -24,32 +24,24 @@ public static class SeedData
 
         if (await context.Users.AnyAsync())
         {
-            logger.LogInformation("Users already exist. Skip seeding Wokki Coffê demo data.");
+            logger.LogInformation("Users already exist. Skip dev seed.");
         }
         else
         {
-            logger.LogInformation("Seeding Wokki Coffê demo data...");
-            await CoffeeShopSeedBuilder.SeedAsync(context, passwordHasher, logger);
+            logger.LogInformation("Applying dev seed from {Table}...", nameof(DevSeedData));
+            await DevSeedApplicator.ApplyAsync(context, passwordHasher, logger);
         }
 
-        // After seed (or on existing DB): SwapHold is required for assignment swaps (FK-safe three-step update).
         await EnsureSwapHoldEmployeeAsync(context, logger);
-
-        // Seed Active memberships for all existing employees (idempotent migration).
         await EnsureLocationMembershipsAsync(context, logger);
     }
 
-    private static async Task EnsureSwapHoldEmployeeAsync(
-        AppDbContext context,
-        ILogger logger)
+    private static async Task EnsureSwapHoldEmployeeAsync(AppDbContext context, ILogger logger)
     {
         if (await context.Employees.AnyAsync(e => e.Id == SwapHoldEmployeeId))
             return;
 
-        var departmentId = await context.Departments
-            .Select(d => d.Id)
-            .FirstOrDefaultAsync();
-
+        var departmentId = await context.Departments.Select(d => d.Id).FirstOrDefaultAsync();
         if (departmentId == Guid.Empty)
         {
             logger.LogWarning("Swap hold employee not created: no department in database.");
@@ -122,8 +114,7 @@ public static class SeedData
                 LocationId = locationId,
                 Status = LocationMembershipStatus.Active,
                 RequestedAt = now,
-                ReviewedAt = now,
-                ReviewedById = null
+                ReviewedAt = now
             });
             inserted++;
         }

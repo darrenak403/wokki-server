@@ -34,7 +34,7 @@ task run
 
 ## Default seed (Wokki Coffê demo)
 
-Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs) → [`CoffeeShopSeedBuilder.cs`](src/Wokki.Infrastructure/Persistence/CoffeeShopSeedBuilder.cs)). Dates use **`Asia/Ho_Chi_Minh`**.
+Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs) → [`DevSeedData.cs`](src/Wokki.Infrastructure/Persistence/Seed/DevSeedData.cs)). Dates use **`Asia/Ho_Chi_Minh`**.
 
 **Password (all accounts):** `12345@Abc`
 
@@ -45,7 +45,7 @@ Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.In
 | user@gmail.com | User (barista demo) |
 | barista1@gmail.com … barista5@gmail.com | User |
 
-**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, shift definitions, **published weekly schedule**, attendance (closed), pay period, pending swap, chat channels.
+**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, location/department memberships, scheduling policy, shift definitions, **published weekly schedule**, attendance (closed), pay period, pending swap, **OT chờ duyệt** (barista1), chat channels.
 
 **Reset demo data:** `task docker:clear` then `task docker:build`.
 
