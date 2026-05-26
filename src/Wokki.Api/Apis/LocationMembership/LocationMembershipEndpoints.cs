@@ -19,6 +19,15 @@ public static class LocationMembershipEndpoints
         var membershipGroup = builder.MapGroup("/api/v1/location-memberships")
             .WithTags("LocationMembership");
 
+        membershipGroup.MapGet("/my", GetMyStatusAsync)
+            .WithName("GetMyLocationMembership")
+            .WithDescription("Get the current user's active or pending location membership.")
+            .RequireAuthorization()
+            .RequireRateLimiting(RateLimitPolicies.Fixed)
+            .Produces<ApiResponse<LocationMembershipResponse?>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         membershipGroup.MapPost("/request", RequestAsync)
             .WithName("RequestLocationMembership")
             .WithDescription("Submit a join request for a location.")
@@ -57,6 +66,17 @@ public static class LocationMembershipEndpoints
         return builder;
     }
 
+    private static async Task<IResult> GetMyStatusAsync(
+        [FromServices] ILocationMembershipService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken ct = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<LocationMembershipResponse?>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        return (await service.GetMyStatusAsync(currentUser.UserId.Value, ct)).ToHttpResult();
+    }
+
     private static async Task<IResult> RequestAsync(
         [FromBody] LocationMembershipRequestDto dto,
         [FromServices] ILocationMembershipService service,
@@ -65,11 +85,11 @@ public static class LocationMembershipEndpoints
         [FromServices] IUnitOfWork unitOfWork,
         CancellationToken ct = default)
     {
-        if (!dto.ValidateRequest(validator, out var validationResult))
-            return validationResult!;
-
         if (currentUser.UserId is null)
             return Results.Json(ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!dto.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
 
         var employee = await unitOfWork.Employees.GetByUserIdAsync(currentUser.UserId.Value, ct);
         if (employee is null)

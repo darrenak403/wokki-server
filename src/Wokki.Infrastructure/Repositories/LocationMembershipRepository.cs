@@ -24,6 +24,15 @@ public sealed class LocationMembershipRepository(AppDbContext context) : ILocati
             .Include(m => m.Employee)
             .FirstOrDefaultAsync(m => m.EmployeeId == employeeId && m.Status == LocationMembershipStatus.Active, cancellationToken);
 
+    public async Task<LocationMembership?> GetLatestPendingByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default) =>
+        await context.LocationMemberships
+            .AsNoTracking()
+            .Include(m => m.Location)
+            .Include(m => m.Employee)
+            .Where(m => m.EmployeeId == employeeId && m.Status == LocationMembershipStatus.Pending)
+            .OrderByDescending(m => m.RequestedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<bool> HasPendingOrActiveAsync(Guid employeeId, Guid locationId, CancellationToken cancellationToken = default) =>
         await context.LocationMemberships
             .AnyAsync(m =>

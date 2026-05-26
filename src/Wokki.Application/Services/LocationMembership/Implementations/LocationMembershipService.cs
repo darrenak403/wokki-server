@@ -101,9 +101,14 @@ public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocatio
         return ApiResponse<IReadOnlyList<LocationMembershipResponse>>.SuccessResponse(responses, AppMessages.LocationMembership.Listed);
     }
 
-    public async Task<ApiResponse<LocationMembershipResponse?>> GetMyStatusAsync(Guid employeeId, CancellationToken ct = default)
+    public async Task<ApiResponse<LocationMembershipResponse?>> GetMyStatusAsync(Guid userId, CancellationToken ct = default)
     {
-        var membership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employeeId, ct);
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, ct);
+        if (employee is null)
+            return ApiResponse<LocationMembershipResponse?>.FailureResponse(AppMessages.LocationMembership.NoEmployeeProfile);
+
+        var membership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, ct)
+            ?? await unitOfWork.LocationMemberships.GetLatestPendingByEmployeeAsync(employee.Id, ct);
         return ApiResponse<LocationMembershipResponse?>.SuccessResponse(
             membership is null ? null : MapResponse(membership),
             AppMessages.LocationMembership.Found);
