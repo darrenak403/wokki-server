@@ -7,4 +7,5 @@ public interface IJwtTokenService
     string GenerateAccessToken(User user);
     string GenerateRefreshToken(User user);
     Guid? ValidateRefreshToken(string refreshToken);
+    void RevokeRefreshToken(Guid userId);
 }

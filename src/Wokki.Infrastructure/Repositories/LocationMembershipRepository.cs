@@ -17,12 +17,17 @@ public sealed class LocationMembershipRepository(AppDbContext context) : ILocati
             .FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
     }
 
-    public async Task<LocationMembership?> GetActiveByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default) =>
-        await context.LocationMemberships
-            .AsNoTracking()
+    public async Task<LocationMembership?> GetActiveByEmployeeAsync(
+        Guid employeeId,
+        bool track = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = track ? context.LocationMemberships : context.LocationMemberships.AsNoTracking();
+        return await query
             .Include(m => m.Location)
             .Include(m => m.Employee)
             .FirstOrDefaultAsync(m => m.EmployeeId == employeeId && m.Status == LocationMembershipStatus.Active, cancellationToken);
+    }
 
     public async Task<LocationMembership?> GetLatestPendingByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default) =>
         await context.LocationMemberships
@@ -40,6 +45,22 @@ public sealed class LocationMembershipRepository(AppDbContext context) : ILocati
                 m.LocationId == locationId &&
                 (m.Status == LocationMembershipStatus.Pending || m.Status == LocationMembershipStatus.Active),
                 cancellationToken);
+
+    public async Task<IReadOnlyList<LocationMembership>> ListPendingAsync(
+        IReadOnlySet<Guid>? locationIds,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.LocationMemberships
+            .AsNoTracking()
+            .Include(m => m.Location)
+            .Include(m => m.Employee)
+            .Where(m => m.Status == LocationMembershipStatus.Pending);
+
+        if (locationIds is not null)
+            query = query.Where(m => locationIds.Contains(m.LocationId));
+
+        return await query.OrderByDescending(m => m.RequestedAt).ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyList<LocationMembership>> ListByLocationAsync(
         Guid locationId,

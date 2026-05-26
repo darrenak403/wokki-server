@@ -9,10 +9,16 @@ namespace Wokki.Application.Services.LocationMembership.Implementations;
 public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocationMembershipService
 {
     public async Task<ApiResponse<LocationMembershipResponse>> RequestAsync(
-        Guid employeeId,
+        Guid userId,
         LocationMembershipRequestDto dto,
         CancellationToken ct = default)
     {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, ct);
+        if (employee is null)
+            return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.LocationMembership.NoEmployeeProfile);
+
+        var employeeId = employee.Id;
+
         var location = await unitOfWork.Locations.GetByIdAsync(dto.LocationId, cancellationToken: ct);
         if (location is null)
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.LocationMembership.LocationNotFound);
@@ -61,7 +67,7 @@ public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocatio
         // FR-03: when approving, verify employee doesn't already have an active membership elsewhere
         if (dto.Status == LocationMembershipStatus.Active)
         {
-            var existingActive = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(membership.EmployeeId, ct);
+            var existingActive = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(membership.EmployeeId, cancellationToken: ct);
             if (existingActive is not null && existingActive.Id != membershipId)
                 return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.LocationMembership.ActiveMembershipConflict);
         }
@@ -101,13 +107,30 @@ public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocatio
         return ApiResponse<IReadOnlyList<LocationMembershipResponse>>.SuccessResponse(responses, AppMessages.LocationMembership.Listed);
     }
 
+    public async Task<ApiResponse<IReadOnlyList<LocationMembershipResponse>>> ListAllPendingAsync(
+        Guid callerId,
+        bool isAdmin,
+        CancellationToken ct = default)
+    {
+        IReadOnlySet<Guid>? locationIds = null;
+        if (!isAdmin)
+        {
+            var managedLocations = await unitOfWork.LocationManagers.GetByUserAsync(callerId, ct);
+            locationIds = managedLocations.Select(m => m.LocationId).ToHashSet();
+        }
+
+        var memberships = await unitOfWork.LocationMemberships.ListPendingAsync(locationIds, ct);
+        var responses = memberships.Select(MapResponse).ToList();
+        return ApiResponse<IReadOnlyList<LocationMembershipResponse>>.SuccessResponse(responses, AppMessages.LocationMembership.Listed);
+    }
+
     public async Task<ApiResponse<LocationMembershipResponse?>> GetMyStatusAsync(Guid userId, CancellationToken ct = default)
     {
         var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, ct);
         if (employee is null)
             return ApiResponse<LocationMembershipResponse?>.FailureResponse(AppMessages.LocationMembership.NoEmployeeProfile);
 
-        var membership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, ct)
+        var membership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, cancellationToken: ct)
             ?? await unitOfWork.LocationMemberships.GetLatestPendingByEmployeeAsync(employee.Id, ct);
         return ApiResponse<LocationMembershipResponse?>.SuccessResponse(
             membership is null ? null : MapResponse(membership),

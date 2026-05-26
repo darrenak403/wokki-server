@@ -278,6 +278,17 @@ public static class AppMessages
         public static readonly AppMessage UserNotFound = new("LMG_USER_NOT_FOUND", "User not found.", StatusCodes.Status404NotFound);
     }
 
+    public static class Workspace
+    {
+        public static readonly AppMessage RoleChanged = new("WS_ROLE_CHANGED", "User role updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage CannotModifyAdmin = new("WS_CANNOT_MODIFY_ADMIN", "Admin accounts cannot be modified.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage LocationTransferred = new("WS_LOCATION_TRANSFERRED", "Employee transferred to new location.", StatusCodes.Status200OK);
+        public static readonly AppMessage DepartmentTransferred = new("WS_DEPT_TRANSFERRED", "Employee transferred to new department.", StatusCodes.Status200OK);
+        public static readonly AppMessage TransferForbidden = new("WS_TRANSFER_FORBIDDEN", "You are not authorized to manage this employee.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage AlreadyAtLocation = new("WS_ALREADY_AT_LOCATION", "Employee already has an active membership at this location.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyInDepartment = new("WS_ALREADY_IN_DEPT", "Employee is already in this department.", StatusCodes.Status409Conflict);
+    }
+
     public static class Validation
     {
         public static readonly AppMessage Failed = new("VALIDATION_FAILED", "Validation failed.", StatusCodes.Status400BadRequest);

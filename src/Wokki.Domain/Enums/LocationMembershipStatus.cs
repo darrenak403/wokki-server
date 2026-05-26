@@ -6,4 +6,5 @@ public enum LocationMembershipStatus
     Active = 1,
     Rejected = 2,
     Left = 3,
+    Transferred = 4,
 }

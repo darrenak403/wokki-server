@@ -30,6 +30,8 @@ using Wokki.Application.Services.Shift.Implementations;
 using Wokki.Application.Services.Shift.Interfaces;
 using Wokki.Application.Services.User.Implementations;
 using Wokki.Application.Services.User.Interfaces;
+using Wokki.Application.Services.Workspace.Implementations;
+using Wokki.Application.Services.Workspace.Interfaces;
 using Wokki.Application.Validators.User;
 
 namespace Wokki.Application.DependencyInjection;
@@ -58,6 +60,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationMembershipService, LocationMembershipService>();
         services.AddScoped<ILocationManagerService, LocationManagerService>();
         services.AddScoped<ILocationScopeService, LocationScopeService>();
+        services.AddScoped<IWorkspaceService, WorkspaceService>();
 
         return services;
     }

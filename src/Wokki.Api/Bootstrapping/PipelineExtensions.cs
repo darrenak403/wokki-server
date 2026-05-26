@@ -18,6 +18,7 @@ using Wokki.Api.Apis.Schedules;
 using Wokki.Api.Apis.Shifts;
 using Wokki.Api.Apis.SwapRequests;
 using Wokki.Api.Apis.Users;
+using Wokki.Api.Apis.Workspace;
 
 namespace Wokki.Api.Bootstrapping;
 
@@ -86,6 +87,7 @@ public static class PipelineExtensions
         app.MapOvertimeRequestApi();
         app.MapLocationMembershipApi();
         app.MapLocationManagerApi();
+        app.MapWorkspaceApi();
 
         return app;
     }

@@ -13,6 +13,20 @@ public interface IEmployeeDepartmentMembershipRepository
         Guid departmentId,
         CancellationToken cancellationToken = default);
 
+    Task<EmployeeDepartmentMembership?> GetByEmployeeAndDepartmentAsync(
+        Guid employeeId,
+        Guid departmentId,
+        bool track = false,
+        CancellationToken cancellationToken = default);
+
+    Task<EmployeeDepartmentMembership?> GetActivePrimaryByEmployeeAsync(
+        Guid employeeId,
+        bool track = false,
+        CancellationToken cancellationToken = default);
+
+    Task AddAsync(EmployeeDepartmentMembership membership, CancellationToken cancellationToken = default);
+    void Update(EmployeeDepartmentMembership membership);
+
     Task ReplaceForEmployeeAsync(
         Guid employeeId,
         IReadOnlyList<Guid> departmentIds,

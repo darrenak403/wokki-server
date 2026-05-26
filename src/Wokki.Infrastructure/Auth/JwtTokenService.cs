@@ -11,7 +11,8 @@ namespace Wokki.Infrastructure.Auth;
 public sealed class JwtTokenService(IOptions<JwtSettings> options) : IJwtTokenService
 {
     private readonly JwtSettings _settings = options.Value;
-    private static readonly Dictionary<string, Guid> RefreshTokens = new();
+    // In-process only — tokens are lost on process restart and not shared across instances (single-instance MVP deployment).
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Guid> RefreshTokens = new();
 
     public string GenerateAccessToken(User user)
     {
@@ -45,4 +46,12 @@ public sealed class JwtTokenService(IOptions<JwtSettings> options) : IJwtTokenSe
 
     public Guid? ValidateRefreshToken(string refreshToken) =>
         RefreshTokens.TryGetValue(refreshToken, out var userId) ? userId : null;
+
+    // Access tokens remain valid until natural expiry after revocation — acceptable window for internal HR tool.
+    public void RevokeRefreshToken(Guid userId)
+    {
+        var keys = RefreshTokens.Where(kv => kv.Value == userId).Select(kv => kv.Key).ToList();
+        foreach (var key in keys)
+            RefreshTokens.TryRemove(key, out _);
+    }
 }
