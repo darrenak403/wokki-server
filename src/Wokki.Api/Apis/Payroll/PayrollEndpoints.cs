@@ -2,7 +2,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Payroll;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.Payroll.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
@@ -57,14 +59,28 @@ public static class PayrollEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> GetSummaryAsync(
         [AsParameters] PayrollPeriodRequest request,
         [FromServices] IPayrollService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<PayrollPeriodRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PayrollSummaryResponse>();
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (!await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId, cancellationToken))
+            return Forbidden();
 
         var response = await service.GetSummaryAsync(request, cancellationToken);
         return response.ToHttpResult();
@@ -74,11 +90,19 @@ public static class PayrollEndpoints
         [FromRoute] Guid employeeId,
         [AsParameters] PayrollPeriodRequest request,
         [FromServices] IPayrollService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<PayrollPeriodRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PayrollEmployeeDetailResponse>();
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, employeeId, cancellationToken))
+            return Forbidden();
 
         var response = await service.GetEmployeeDetailAsync(employeeId, request, cancellationToken);
         return response.ToHttpResult();

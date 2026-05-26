@@ -4,6 +4,7 @@ using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.SwapRequest;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.SwapRequest.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
@@ -110,6 +111,12 @@ public static class SwapRequestEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> CreateAsync(
         [FromBody] CreateSwapRequestRequest request,
         [FromServices] ISwapRequestService service,
@@ -130,8 +137,18 @@ public static class SwapRequestEndpoints
     private static async Task<IResult> ListAsync(
         [AsParameters] SwapRequestListRequest request,
         [FromServices] ISwapRequestService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<SwapRequestResponse>>();
+
+        if (request.DepartmentId.HasValue &&
+            !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
+            return Forbidden();
+
+        // No departmentId provided — unscoped list is a known scope gap.
         var response = await service.ListAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
@@ -195,11 +212,15 @@ public static class SwapRequestEndpoints
         [FromRoute] Guid id,
         [FromBody] SwapActionRequest? request,
         [FromServices] ISwapRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<SwapRequestResponse>();
+
+        if (!await scopeService.CanManageSwapRequestAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.OverrideApproveAsync(id, currentUser.UserId.Value, request, cancellationToken);
         return response.ToHttpResult();
@@ -209,11 +230,15 @@ public static class SwapRequestEndpoints
         [FromRoute] Guid id,
         [FromBody] SwapActionRequest? request,
         [FromServices] ISwapRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<SwapRequestResponse>();
+
+        if (!await scopeService.CanManageSwapRequestAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.OverrideRejectAsync(id, currentUser.UserId.Value, request, cancellationToken);
         return response.ToHttpResult();

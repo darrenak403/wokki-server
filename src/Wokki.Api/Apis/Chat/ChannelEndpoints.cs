@@ -91,12 +91,13 @@ public static class ChannelEndpoints
         [FromServices] IValidator<CreateChannelRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
-
+        // Known scope gap: CreateChannelRequest has no locationId — cannot scope by location.
         var response = await service.CreateAsync(request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
     }

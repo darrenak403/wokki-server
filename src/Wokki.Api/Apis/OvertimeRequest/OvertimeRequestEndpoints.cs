@@ -4,6 +4,7 @@ using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.OvertimeRequest;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.OvertimeRequest.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
@@ -104,6 +105,12 @@ public static class OvertimeRequestEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> SubmitAsync(
         [FromBody] SubmitOvertimeRequestDto dto,
         [FromServices] IOvertimeRequestService service,
@@ -154,6 +161,7 @@ public static class OvertimeRequestEndpoints
 
     private static async Task<IResult> ListAllAsync(
         [FromServices] IOvertimeRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromQuery] Guid? departmentId,
         [FromQuery] int? month,
@@ -162,8 +170,8 @@ public static class OvertimeRequestEndpoints
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<OvertimeRequestResponse>>();
 
         var effectiveMonth = month ?? DateTimeOffset.UtcNow.Month;
         var effectiveYear = year ?? DateTimeOffset.UtcNow.Year;
@@ -180,20 +188,26 @@ public static class OvertimeRequestEndpoints
         if (pageSize < 1 || pageSize > 100)
             return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPageSize), statusCode: 400);
 
+        if (departmentId.HasValue &&
+            !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, departmentId.Value, ct))
+            return Forbidden();
+
+        // No departmentId provided — unscoped list is a known scope gap.
         var isAdmin = currentUser.Role == RoleConstants.Admin;
         return (await service.ListAllAsync(currentUser.UserId.Value, isAdmin, departmentId, effectiveMonth, effectiveYear, page, pageSize, ct)).ToHttpResult();
     }
 
     private static async Task<IResult> ListPendingAsync(
         [FromServices] IOvertimeRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromQuery] Guid? departmentId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<OvertimeRequestResponse>>();
 
         if (pageSize < 1 || pageSize > 100)
             return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPageSize), statusCode: 400);
@@ -201,6 +215,11 @@ public static class OvertimeRequestEndpoints
         if (page < 1)
             return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Validation.InvalidPage), statusCode: 400);
 
+        if (departmentId.HasValue &&
+            !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, departmentId.Value, ct))
+            return Forbidden();
+
+        // No departmentId provided — unscoped list is a known scope gap.
         var isAdmin = currentUser.Role == RoleConstants.Admin;
         return (await service.ListPendingAsync(currentUser.UserId.Value, isAdmin, departmentId, page, pageSize, ct)).ToHttpResult();
     }
@@ -209,11 +228,15 @@ public static class OvertimeRequestEndpoints
         [FromRoute] Guid id,
         [FromBody] ReviewNoteRequest? request,
         [FromServices] IOvertimeRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken ct = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<OvertimeRequestResponse>();
+
+        if (!await scopeService.CanManageOvertimeRequestAsync(currentUser.UserId.Value, currentUser.Role, id, ct))
+            return Forbidden();
 
         var isAdmin = currentUser.Role == RoleConstants.Admin;
         return (await service.ApproveAsync(id, currentUser.UserId.Value, isAdmin, request?.Note, ct)).ToHttpResult();
@@ -223,11 +246,15 @@ public static class OvertimeRequestEndpoints
         [FromRoute] Guid id,
         [FromBody] ReviewNoteRequest? request,
         [FromServices] IOvertimeRequestService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken ct = default)
     {
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<OvertimeRequestResponse>();
+
+        if (!await scopeService.CanManageOvertimeRequestAsync(currentUser.UserId.Value, currentUser.Role, id, ct))
+            return Forbidden();
 
         var isAdmin = currentUser.Role == RoleConstants.Admin;
         return (await service.RejectAsync(id, currentUser.UserId.Value, isAdmin, request?.Note, ct)).ToHttpResult();
