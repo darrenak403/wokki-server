@@ -21,6 +21,17 @@ public sealed class UserRepository(AppDbContext context) : IUserRepository
         return (items, total);
     }
 
+    public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListWithoutEmployeeAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = context.Users
+            .AsNoTracking()
+            .Where(u => !context.Employees.Any(e => e.UserId == u.Id))
+            .OrderByDescending(u => u.CreatedAt);
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default) =>
         await context.Users.AddAsync(user, cancellationToken);
 

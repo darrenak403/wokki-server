@@ -18,12 +18,15 @@ public sealed class UserService(IUnitOfWork unitOfWork, IPasswordHasher password
         return ApiResponse<UserResponse>.SuccessResponse(user.ToResponse(), AppMessages.User.Found);
     }
 
-    public async Task<ApiResponse<PagedResponse<UserResponse>>> ListAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<PagedResponse<UserResponse>>> ListAsync(int page, int pageSize, bool withoutEmployee = false, CancellationToken cancellationToken = default)
     {
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        var (items, total) = await unitOfWork.Users.ListAsync(page, pageSize, cancellationToken);
+        var (items, total) = withoutEmployee
+            ? await unitOfWork.Users.ListWithoutEmployeeAsync(page, pageSize, cancellationToken)
+            : await unitOfWork.Users.ListAsync(page, pageSize, cancellationToken);
+
         return ApiResponse<PagedResponse<UserResponse>>.SuccessPagedResponse(
             items.Select(u => u.ToResponse()),
             page,
