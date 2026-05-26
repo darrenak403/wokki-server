@@ -1,7 +1,5 @@
 # Development Mode
 
-> **Wokki:** Product, `BR-xxx`, and codebase map → [wokki.md](./wokki.md). Entry point: [CLAUDE.md](../../CLAUDE.md).
-
 Behavioral context for active coding sessions. Prioritize action over analysis.
 
 ## Principles

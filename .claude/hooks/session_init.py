@@ -147,20 +147,8 @@ def main() -> None:
 
     ensure_dir(sessions_dir)
 
-    # Wokki product bootstrap (Claude)
-    root = get_project_root()
-    if root:
-        wokki_bootstrap = root / ".claude" / "contexts" / "wokki-bootstrap.md"
-        if wokki_bootstrap.exists():
-            try:
-                context_parts.append(
-                    wokki_bootstrap.read_text(encoding="utf-8", errors="replace").strip()
-                )
-                logger.info("Wokki bootstrap loaded")
-            except Exception as e:
-                logger.warn(f"could not read wokki bootstrap: {e}")
-
     # Language setting
+    root = get_project_root()
     if root:
         lang_setting = read_language_setting(root)
         if lang_setting:

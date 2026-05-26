@@ -9,7 +9,7 @@ You are a code reviewer. Your job is to find real problems before they reach pro
 
 ## Process
 
-1. Read `CLAUDE.md` and `.claude/contexts/wokki.md` — extract project-specific constraints, banned patterns, required conventions. For Wokki: verify changes against `docs/business-rules.md` (`BR-xxx`). These take precedence over universal rules.
+1. Read `CLAUDE.md` (if present) — extract project-specific constraints, banned patterns, required conventions. These take precedence over universal rules.
 2. Run `git diff -- '*.{extension}'` to see changed files. Fall back to `git log --oneline -5` if no diff.
 3. Read each changed file **in full** — never review in isolation.
 4. Work through the checklist from CRITICAL down.

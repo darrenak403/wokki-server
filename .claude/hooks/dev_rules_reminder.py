@@ -32,7 +32,6 @@ COMMAND_CONTEXT_MAP: dict[str, str] = {
     "/ck:cook": "dev",
     "/ck:fix": "dev",
     "/ck:docs-fe": "dev",
-    "/ck:wokki": "research",
     "/ck:init": "dev",
     "/ck:brainstorm": "research",
     "/ck:plan": "research",
@@ -69,10 +68,9 @@ def get_session_header() -> str:
 
 
 def load_context_file(root: Path, mode: str) -> str | None:
-    for kit in (".claude", ".cursor"):
-        ctx_file = root / kit / "contexts" / f"{mode}.md"
-        if ctx_file.exists():
-            return ctx_file.read_text(encoding="utf-8", errors="replace").strip()
+    ctx_file = root / ".claude" / "contexts" / f"{mode}.md"
+    if ctx_file.exists():
+        return ctx_file.read_text(encoding="utf-8", errors="replace").strip()
     return None
 
 
