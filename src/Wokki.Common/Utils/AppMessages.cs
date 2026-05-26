@@ -266,6 +266,18 @@ public static class AppMessages
         public static readonly AppMessage InvalidReviewStatus = new("LM_INVALID_STATUS", "Membership is not in Pending status and cannot be reviewed.", StatusCodes.Status409Conflict);
     }
 
+    public static class LocationManager
+    {
+        public static readonly AppMessage Assigned = new("LMG_ASSIGNED", "Manager assigned to location.", StatusCodes.Status201Created);
+        public static readonly AppMessage Removed = new("LMG_REMOVED", "Manager removed from location.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("LMG_LISTED", "Location managers listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage MyLocationsListed = new("LMG_MY_LOCATIONS", "Assigned locations listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("LMG_NOT_FOUND", "Manager assignment not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage AlreadyAssigned = new("LMG_ALREADY_ASSIGNED", "User is already a manager of this location.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage LocationNotFound = new("LMG_LOCATION_NOT_FOUND", "Location not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage UserNotFound = new("LMG_USER_NOT_FOUND", "User not found.", StatusCodes.Status404NotFound);
+    }
+
     public static class Validation
     {
         public static readonly AppMessage Failed = new("VALIDATION_FAILED", "Validation failed.", StatusCodes.Status400BadRequest);

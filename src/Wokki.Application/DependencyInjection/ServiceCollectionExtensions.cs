@@ -3,6 +3,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Wokki.Application.Services.Attendance.Implementations;
 using Wokki.Application.Services.LocationMembership.Implementations;
 using Wokki.Application.Services.LocationMembership.Interfaces;
+using Wokki.Application.Services.LocationManager.Implementations;
+using Wokki.Application.Services.LocationManager.Interfaces;
 using Wokki.Application.Services.OvertimeRequest.Implementations;
 using Wokki.Application.Services.OvertimeRequest.Interfaces;
 using Wokki.Application.Services.Attendance.Interfaces;
@@ -52,6 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPayrollService, PayrollService>();
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<ILocationMembershipService, LocationMembershipService>();
+        services.AddScoped<ILocationManagerService, LocationManagerService>();
 
         return services;
     }
