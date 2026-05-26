@@ -21,6 +21,8 @@ public interface IUnitOfWork : IAsyncDisposable
     ISchedulePreferenceRepository SchedulePreferences { get; }
     IScheduleInsightContextRepository ScheduleInsightContexts { get; }
     IOvertimeRequestRepository OvertimeRequests { get; }
+    ILocationMembershipRepository LocationMemberships { get; }
+    ILocationManagerRepository LocationManagers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

@@ -251,6 +251,21 @@ public static class AppMessages
         public static readonly AppMessage PeriodLocked = new("OT_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
     }
 
+    public static class LocationMembership
+    {
+        public static readonly AppMessage Requested = new("LM_REQUESTED", "Join request submitted.", StatusCodes.Status201Created);
+        public static readonly AppMessage Reviewed = new("LM_REVIEWED", "Membership reviewed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("LM_LISTED", "Memberships listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Found = new("LM_FOUND", "Membership found.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("LM_NOT_FOUND", "Membership not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage NoEmployeeProfile = new("LM_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("LM_FORBIDDEN", "You are not authorized to manage memberships for this location.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage LocationNotFound = new("LM_LOCATION_NOT_FOUND", "Location not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DuplicateRequest = new("LM_DUPLICATE", "A pending or active membership for this location already exists.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ActiveMembershipConflict = new("LM_ACTIVE_CONFLICT", "Employee already has an active membership at another location.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage InvalidReviewStatus = new("LM_INVALID_STATUS", "Membership is not in Pending status and cannot be reviewed.", StatusCodes.Status409Conflict);
+    }
+
     public static class Validation
     {
         public static readonly AppMessage Failed = new("VALIDATION_FAILED", "Validation failed.", StatusCodes.Status400BadRequest);
