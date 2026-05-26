@@ -28,9 +28,10 @@ public static class UserEndpoints
         group.MapGet("/{id:guid}", GetByIdAsync)
             .WithName("GetUserById")
             .WithDescription("Lấy thông tin user theo id.")
-            .RequireAuthorization()
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
             .Produces<ApiResponse<UserResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
         group.MapGet("/", GetPagedAsync)
@@ -65,10 +66,11 @@ public static class UserEndpoints
 
     private static async Task<IResult> GetPagedAsync(
         [AsParameters] PaginationRequest pagination,
+        [FromQuery] bool? withoutEmployee,
         [FromServices] IUserService service,
         CancellationToken cancellationToken = default)
     {
-        var response = await service.ListAsync(pagination.Page, pagination.PageSize, cancellationToken);
+        var response = await service.ListAsync(pagination.Page, pagination.PageSize, withoutEmployee == true, cancellationToken);
         return response.ToHttpResult();
     }
 
