@@ -17,6 +17,13 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
         return ApiResponse<IReadOnlyList<LocationResponse>>.SuccessResponse(responses, AppMessages.Location.Listed);
     }
 
+    public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListActiveAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await unitOfWork.Locations.ListAsync(activeOnly: true, cancellationToken);
+        var responses = items.Select(l => l.ToResponse()).ToList();
+        return ApiResponse<IReadOnlyList<LocationResponse>>.SuccessResponse(responses, AppMessages.Location.Listed);
+    }
+
     public async Task<ApiResponse<LocationResponse>> CreateAsync(
         CreateLocationRequest request,
         CancellationToken cancellationToken = default)

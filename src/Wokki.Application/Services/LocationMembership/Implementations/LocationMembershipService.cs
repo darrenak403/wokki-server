@@ -131,7 +131,7 @@ public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocatio
             return ApiResponse<LocationMembershipResponse?>.FailureResponse(AppMessages.LocationMembership.NoEmployeeProfile);
 
         var membership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, cancellationToken: ct)
-            ?? await unitOfWork.LocationMemberships.GetLatestPendingByEmployeeAsync(employee.Id, ct);
+            ?? await unitOfWork.LocationMemberships.GetLatestByEmployeeAsync(employee.Id, ct);
         return ApiResponse<LocationMembershipResponse?>.SuccessResponse(
             membership is null ? null : MapResponse(membership),
             AppMessages.LocationMembership.Found);

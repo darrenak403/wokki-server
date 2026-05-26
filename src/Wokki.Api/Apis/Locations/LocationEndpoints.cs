@@ -32,6 +32,13 @@ public static class LocationEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/available", ListAvailableAsync)
+            .WithName("ListAvailableLocations")
+            .WithDescription("Danh sách chi nhánh đang hoạt động (dành cho người dùng đăng ký tham gia).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<LocationResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized);
+
         group.MapPost("/", CreateAsync)
             .WithName("CreateLocation")
             .WithDescription("Tạo địa điểm mới.")
@@ -80,6 +87,14 @@ public static class LocationEndpoints
         CancellationToken cancellationToken = default)
     {
         var response = await service.ListAsync(cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListAvailableAsync(
+        [FromServices] ILocationService service,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await service.ListActiveAsync(cancellationToken);
         return response.ToHttpResult();
     }
 
