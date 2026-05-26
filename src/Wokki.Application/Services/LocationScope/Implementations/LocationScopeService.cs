@@ -73,4 +73,35 @@ public sealed class LocationScopeService(IUnitOfWork unitOfWork) : ILocationScop
         if (assignment is null) return true; // 404 handled by service
         return await CanManageScheduleAsync(userId, role, assignment.ScheduleId, ct);
     }
+
+    public async Task<bool> CanManageOvertimeRequestAsync(Guid userId, string role, Guid overtimeRequestId, CancellationToken ct = default)
+    {
+        if (role == RoleConstants.Admin) return true;
+        if (role != RoleConstants.Manager) return false;
+        var ot = await unitOfWork.OvertimeRequests.GetByIdAsync(overtimeRequestId, cancellationToken: ct);
+        if (ot is null) return true; // 404 handled by service
+        var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(ot.ShiftAssignmentId, cancellationToken: ct);
+        if (assignment is null) return true; // 404 handled by service
+        return await CanManageScheduleAsync(userId, role, assignment.ScheduleId, ct);
+    }
+
+    public async Task<bool> CanManageSwapRequestAsync(Guid userId, string role, Guid swapRequestId, CancellationToken ct = default)
+    {
+        if (role == RoleConstants.Admin) return true;
+        if (role != RoleConstants.Manager) return false;
+        var swap = await unitOfWork.SwapRequests.GetByIdAsync(swapRequestId, cancellationToken: ct);
+        if (swap is null) return true; // 404 handled by service
+        var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(swap.RequesterAssignmentId, cancellationToken: ct);
+        if (assignment is null) return true; // 404 handled by service
+        return await CanManageScheduleAsync(userId, role, assignment.ScheduleId, ct);
+    }
+
+    public async Task<bool> CanManageShiftAsync(Guid userId, string role, Guid shiftDefinitionId, CancellationToken ct = default)
+    {
+        if (role == RoleConstants.Admin) return true;
+        if (role != RoleConstants.Manager) return false;
+        var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(shiftDefinitionId, cancellationToken: ct);
+        if (shift is null) return true; // 404 handled by service
+        return await CanManageLocationAsync(userId, role, shift.LocationId, ct);
+    }
 }

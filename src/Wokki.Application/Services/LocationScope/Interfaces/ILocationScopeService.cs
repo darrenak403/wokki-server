@@ -21,4 +21,13 @@ public interface ILocationScopeService
     // Resolves: AttendanceRecord → AssignmentId → ShiftAssignment → ScheduleId → Schedule → DepartmentId → Department → LocationId
     // Returns true when AssignmentId is null (ad-hoc clock-in — no location to scope against).
     Task<bool> CanManageAttendanceAsync(Guid userId, string role, Guid attendanceId, CancellationToken ct = default);
+
+    // Resolves: OvertimeRequest → ShiftAssignmentId → ShiftAssignment → ScheduleId → Schedule → DepartmentId → Department → LocationId
+    Task<bool> CanManageOvertimeRequestAsync(Guid userId, string role, Guid overtimeRequestId, CancellationToken ct = default);
+
+    // Resolves: SwapRequest → RequesterAssignmentId → ShiftAssignment → ScheduleId → Schedule → DepartmentId → Department → LocationId
+    Task<bool> CanManageSwapRequestAsync(Guid userId, string role, Guid swapRequestId, CancellationToken ct = default);
+
+    // Resolves: ShiftDefinition → LocationId
+    Task<bool> CanManageShiftAsync(Guid userId, string role, Guid shiftDefinitionId, CancellationToken ct = default);
 }
