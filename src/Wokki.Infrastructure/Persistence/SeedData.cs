@@ -32,43 +32,52 @@ public static class SeedData
             await DevSeedApplicator.ApplyAsync(context, passwordHasher, logger);
         }
 
-        await EnsureSwapHoldEmployeeAsync(context, logger);
+        await EnsureSwapHoldEmployeeAsync(context, passwordHasher, logger);
         await EnsureLocationMembershipsAsync(context, logger);
     }
 
-    private static async Task EnsureSwapHoldEmployeeAsync(AppDbContext context, ILogger logger)
+    private static async Task EnsureSwapHoldEmployeeAsync(
+        AppDbContext context,
+        IPasswordHasher passwordHasher,
+        ILogger logger)
     {
         if (await context.Employees.AnyAsync(e => e.Id == SwapHoldEmployeeId))
             return;
 
-        var departmentId = await context.Departments.Select(d => d.Id).FirstOrDefaultAsync();
+        var departmentId = await context.Departments
+            .OrderBy(d => d.Id)
+            .Select(d => d.Id)
+            .FirstOrDefaultAsync();
         if (departmentId == Guid.Empty)
         {
             logger.LogWarning("Swap hold employee not created: no department in database.");
             return;
         }
 
-        var adminUserId = await context.Users
-            .Where(u => u.Role == RoleConstants.Admin)
-            .Select(u => u.Id)
-            .FirstOrDefaultAsync();
-
-        if (adminUserId == Guid.Empty)
+        if (!await context.Users.AnyAsync(u => u.Id == DevSeedData.UserSwapHoldId))
         {
-            logger.LogWarning("Swap hold employee not created: no admin user.");
-            return;
+            context.Users.Add(new User
+            {
+                Id = DevSeedData.UserSwapHoldId,
+                Email = "swap-hold@system.local",
+                PasswordHash = passwordHasher.HashPassword(DevSeedData.DevPassword),
+                Role = RoleConstants.User,
+                CreatedAt = DateTime.UtcNow
+            });
         }
 
         context.Employees.Add(new Employee
         {
             Id = SwapHoldEmployeeId,
-            UserId = adminUserId,
+            UserId = DevSeedData.UserSwapHoldId,
             FirstName = "Swap",
             LastName = "Hold",
             Phone = "",
             Position = "System",
             HourlyRate = 0m,
-            DepartmentId = departmentId
+            DepartmentId = departmentId,
+            CreatedAt = DateTime.UtcNow,
+            EmployedAt = DateTime.UtcNow
         });
 
         await context.SaveChangesAsync();

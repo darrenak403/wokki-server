@@ -53,7 +53,8 @@ public static class DevSeedData
     public static readonly Guid OvertimePendingApprovalId = Guid.Parse("d1000001-0000-4000-8000-000000000001");
     public static readonly Guid LocationManagerId = Guid.Parse("e1000001-0000-4000-8000-000000000001");
 
-    /// <summary>Transient holder for atomic assignment swaps (never scheduled).</summary>
+    /// <summary>System user/employee for atomic assignment swaps (not used for login).</summary>
+    public static readonly Guid UserSwapHoldId = Guid.Parse("66666666-6666-6666-6666-666666666661");
     public static readonly Guid SwapHoldEmployeeId = Guid.Parse("66666666-6666-6666-6666-666666666666");
 
     // ── users ───────────────────────────────────────────────────────────────────
@@ -68,6 +69,7 @@ public static class DevSeedData
         new(UserBarista3Id, "barista3@gmail.com", RoleConstants.User),
         new(UserBarista4Id, "barista4@gmail.com", RoleConstants.User),
         new(UserBarista5Id, "barista5@gmail.com", RoleConstants.User),
+        new(UserSwapHoldId, "swap-hold@system.local", RoleConstants.User),
     ];
 
     // ── locations ───────────────────────────────────────────────────────────────
@@ -97,6 +99,7 @@ public static class DevSeedData
         new(EmployeeBarista3Id, UserBarista3Id, DepartmentBarId, "Vy", "Hoàng", "0901000006", "Barista", 27_500m),
         new(EmployeeBarista4Id, UserBarista4Id, DepartmentBarId, "An", "Đỗ", "0901000007", "Barista", 29_000m),
         new(EmployeeBrewLeadId, UserBarista5Id, DepartmentBrewId, "Bình", "Võ", "0901000008", "Trưởng pha chế", 32_000m),
+        new(SwapHoldEmployeeId, UserSwapHoldId, DepartmentBarId, "Swap", "Hold", "", "System", 0m),
     ];
 
     // ── location managers ───────────────────────────────────────────────────────

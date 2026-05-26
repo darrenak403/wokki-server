@@ -45,7 +45,7 @@ Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.In
 | user@gmail.com | User (barista demo) |
 | barista1@gmail.com … barista5@gmail.com | User |
 
-**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, location/department memberships, scheduling policy, shift definitions, **published weekly schedule**, attendance (closed), pay period, pending swap, **OT chờ duyệt** (barista1), chat channels.
+**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, memberships, scheduling policy, 3 shift types, published week schedule (+ today/yesterday fixed slots), sample attendance, pending OT, pending swap, chat.
 
 **Reset demo data:** `task docker:clear` then `task docker:build`.
 

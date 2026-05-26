@@ -36,9 +36,10 @@ public static class DevSeedApplicator
             ApplySchedulingPolicy(context, nowUtc);
             ApplyShiftDefinitions(context, nowUtc);
 
-            var weekAssignments = ApplyWeekSchedule(context, weekStart, today, nowUtc);
-            var fixedAssignments = ApplyFixedAssignments(context, today, nowUtc);
-            var allAssignments = weekAssignments.Concat(fixedAssignments).ToList();
+            var assignmentKeys = new HashSet<AssignmentKey>();
+            var fixedAssignments = ApplyFixedAssignments(context, today, nowUtc, assignmentKeys);
+            var weekAssignments = ApplyWeekSchedule(context, weekStart, today, nowUtc, assignmentKeys);
+            var allAssignments = fixedAssignments.Concat(weekAssignments).ToList();
 
             ApplyPayPeriod(context, weekStart, weekEnd, nowUtc);
             ApplyAttendance(context, allAssignments, today, tz, nowUtc);
@@ -227,7 +228,8 @@ public static class DevSeedApplicator
         AppDbContext context,
         DateOnly weekStart,
         DateOnly today,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        HashSet<AssignmentKey> assignmentKeys)
     {
         context.Schedules.Add(new Schedule
         {
@@ -251,6 +253,10 @@ public static class DevSeedApplicator
 
             var employeeId = DevSeedData.BarStaffRotation[dayOffset % DevSeedData.BarStaffRotation.Length];
             var shiftId = DevSeedData.WeekShiftRotation[dayOffset % DevSeedData.WeekShiftRotation.Length];
+            var key = new AssignmentKey(DevSeedData.ScheduleBarId, shiftId, employeeId, date);
+            if (!assignmentKeys.Add(key))
+                continue;
+
             var assignmentId = Guid.Parse($"a1000000-0000-4000-8000-{counter:D12}");
             counter++;
 
@@ -273,7 +279,8 @@ public static class DevSeedApplicator
     private static List<AssignmentSeed> ApplyFixedAssignments(
         AppDbContext context,
         DateOnly today,
-        DateTime nowUtc)
+        DateTime nowUtc,
+        HashSet<AssignmentKey> assignmentKeys)
     {
         var results = new List<AssignmentSeed>();
         var otSampleDate = today.AddDays(-1);
@@ -281,6 +288,9 @@ public static class DevSeedApplicator
         foreach (var row in DevSeedData.FixedAssignments)
         {
             var date = row.Id == DevSeedData.AssignmentOtSampleId ? otSampleDate : today;
+            var key = new AssignmentKey(DevSeedData.ScheduleBarId, row.ShiftDefinitionId, row.EmployeeId, date);
+            if (!assignmentKeys.Add(key))
+                continue;
 
             context.ShiftAssignments.Add(new ShiftAssignment
             {
@@ -458,4 +468,10 @@ public static class DevSeedApplicator
     }
 
     private sealed record AssignmentSeed(Guid AssignmentId, Guid EmployeeId, DateOnly Date, Guid ShiftDefinitionId);
+
+    private readonly record struct AssignmentKey(
+        Guid ScheduleId,
+        Guid ShiftDefinitionId,
+        Guid EmployeeId,
+        DateOnly Date);
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Serilog;
 using Microsoft.OpenApi;
 using Wokki.Api.Bootstrapping;
@@ -13,6 +14,11 @@ builder.Host.UseSerilog((context, services, configuration) =>
         .ReadFrom.Services(services)
         .Enrich.FromLogContext()
         .WriteTo.Console());
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
