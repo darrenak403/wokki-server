@@ -2,8 +2,10 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Department;
 using Wokki.Application.Services.Department.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -55,11 +57,27 @@ public static class DepartmentEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> ListAsync(
         [FromQuery] Guid? locationId,
         [FromServices] IDepartmentService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<IReadOnlyList<DepartmentResponse>>();
+
+        if (locationId.HasValue &&
+            !await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, locationId.Value, cancellationToken))
+            return Forbidden();
+
+        // No locationId provided — unscoped list is a known scope gap (same as Employee/Attendance ListAsync without filter param).
         var response = await service.ListAsync(locationId, cancellationToken);
         return response.ToHttpResult();
     }

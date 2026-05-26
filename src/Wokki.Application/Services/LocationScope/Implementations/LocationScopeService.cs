@@ -41,4 +41,36 @@ public sealed class LocationScopeService(IUnitOfWork unitOfWork) : ILocationScop
         if (dept is null) return true; // 404 handled by service
         return await CanManageLocationAsync(userId, role, dept.LocationId, ct);
     }
+
+    public async Task<bool> CanManageEmployeeAsync(Guid userId, string role, Guid employeeId, CancellationToken ct = default)
+    {
+        if (role == RoleConstants.Admin) return true;
+        if (role != RoleConstants.Manager) return false;
+        var employee = await unitOfWork.Employees.GetByIdAsync(employeeId, cancellationToken: ct);
+        if (employee is null) return true; // 404 handled by service
+        var managedIds = await GetManagedLocationIdsAsync(userId, role, ct);
+        if (managedIds is null || managedIds.Count == 0) return false;
+        // Collect all department IDs: primary + multi-department memberships (BR-074)
+        var deptIds = new HashSet<Guid> { employee.DepartmentId };
+        var memberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(employeeId, ct);
+        foreach (var m in memberships) deptIds.Add(m.DepartmentId);
+        foreach (var deptId in deptIds)
+        {
+            var dept = await unitOfWork.Departments.GetByIdAsync(deptId, cancellationToken: ct);
+            if (dept is not null && managedIds.Contains(dept.LocationId)) return true;
+        }
+        return false;
+    }
+
+    public async Task<bool> CanManageAttendanceAsync(Guid userId, string role, Guid attendanceId, CancellationToken ct = default)
+    {
+        if (role == RoleConstants.Admin) return true;
+        if (role != RoleConstants.Manager) return false;
+        var record = await unitOfWork.Attendance.GetByIdAsync(attendanceId, cancellationToken: ct);
+        if (record is null) return true; // 404 handled by service
+        if (record.AssignmentId is null) return true; // ad-hoc clock-in, no location to scope against
+        var assignment = await unitOfWork.ShiftAssignments.GetByIdAsync(record.AssignmentId.Value, cancellationToken: ct);
+        if (assignment is null) return true; // 404 handled by service
+        return await CanManageScheduleAsync(userId, role, assignment.ScheduleId, ct);
+    }
 }

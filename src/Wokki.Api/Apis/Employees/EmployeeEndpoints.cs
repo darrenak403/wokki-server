@@ -2,8 +2,10 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Services.Employee.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -75,11 +77,31 @@ public static class EmployeeEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> ListAsync(
         [AsParameters] EmployeeListRequest request,
         [FromServices] IEmployeeService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<EmployeeResponse>>();
+
+        if (request.LocationId.HasValue &&
+            !await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, request.LocationId.Value, cancellationToken))
+            return Forbidden();
+
+        if (request.DepartmentId.HasValue &&
+            !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
+            return Forbidden();
+
+        // No filter provided — unscoped list is a known scope gap (same as Attendance/Schedule ListAsync without filter param).
         var response = await service.ListAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
@@ -87,8 +109,16 @@ public static class EmployeeEndpoints
     private static async Task<IResult> GetByIdAsync(
         [FromRoute] Guid id,
         [FromServices] IEmployeeService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<EmployeeResponse>();
+
+        if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.GetByIdAsync(id, cancellationToken);
         return response.ToHttpResult();
     }

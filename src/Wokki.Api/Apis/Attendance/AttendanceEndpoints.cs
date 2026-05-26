@@ -5,6 +5,7 @@ using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -68,6 +69,12 @@ public static class AttendanceEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> ClockInAsync(
         [FromBody] ClockInRequest? request,
         [FromServices] IAttendanceService service,
@@ -96,8 +103,13 @@ public static class AttendanceEndpoints
     private static async Task<IResult> ListAsync(
         [AsParameters] AttendanceListRequest request,
         [FromServices] IAttendanceService service,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<AttendanceResponse>>();
+
+        // No locationId filter in AttendanceListRequest — unfiltered list is a known scope gap.
         var response = await service.ListAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
@@ -106,15 +118,19 @@ public static class AttendanceEndpoints
         [FromRoute] Guid id,
         [FromBody] AdjustAttendanceRequest request,
         [FromServices] IAttendanceService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] IValidator<AdjustAttendanceRequest> validator,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<AttendanceResponse>();
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (!await scopeService.CanManageAttendanceAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.AdjustAsync(id, request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
