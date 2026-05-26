@@ -4,6 +4,7 @@ using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
@@ -195,11 +196,26 @@ public static class ScheduleEndpoints
         return group;
     }
 
+    private static IResult Forbidden() =>
+        Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
+    private static IResult Unauthorized<T>() =>
+        Results.Json(ApiResponse<T>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
     private static async Task<IResult> ListAsync(
         [AsParameters] ScheduleListRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PagedResponse<ScheduleResponse>>();
+
+        if (request.DepartmentId.HasValue &&
+            !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
+            return Forbidden();
+
         var response = await service.ListAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
@@ -207,6 +223,7 @@ public static class ScheduleEndpoints
     private static async Task<IResult> CreateAsync(
         [FromBody] CreateScheduleRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<CreateScheduleRequest> validator,
         CancellationToken cancellationToken = default)
@@ -214,8 +231,11 @@ public static class ScheduleEndpoints
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleResponse>();
+
+        if (!await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId, cancellationToken))
+            return Forbidden();
 
         var response = await service.CreateAsync(request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
@@ -224,8 +244,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> GetByIdAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleDetailResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.GetByIdAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -234,11 +262,19 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] UpdateScheduleRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<UpdateScheduleRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.UpdateAsync(id, request, cancellationToken);
         return response.ToHttpResult();
@@ -247,8 +283,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> DeleteAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<object>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.DeleteAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -256,8 +300,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> PublishAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.PublishAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -265,8 +317,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> UnpublishAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.UnpublishAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -275,6 +335,7 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] CopyScheduleRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<CopyScheduleRequest> validator,
         CancellationToken cancellationToken = default)
@@ -282,8 +343,11 @@ public static class ScheduleEndpoints
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.CopyAsync(id, request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
@@ -292,8 +356,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> ListAssignmentsAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<IReadOnlyList<ShiftAssignmentResponse>>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.ListAssignmentsAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -302,11 +374,19 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] CreateShiftAssignmentRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<CreateShiftAssignmentRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ShiftAssignmentResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.CreateAssignmentAsync(id, request, cancellationToken);
         return response.ToHttpResult();
@@ -316,8 +396,16 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromRoute] Guid assignmentId,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<object>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.DeleteAssignmentAsync(id, assignmentId, cancellationToken);
         return response.ToHttpResult();
     }
@@ -325,8 +413,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> GetPreferenceBoardAsync(
         [FromRoute] Guid id,
         [FromServices] ISchedulePreferenceService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<SchedulePreferenceBoardResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.GetBoardAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -335,8 +431,16 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] SuggestScheduleRequest? request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleSuggestionsResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.SuggestAsync(id, request ?? new SuggestScheduleRequest(), cancellationToken);
         return response.ToHttpResult();
     }
@@ -345,11 +449,19 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] ApplyScheduleSuggestionsRequest request,
         [FromServices] IScheduleService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<ApplyScheduleSuggestionsRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<IReadOnlyList<ShiftAssignmentResponse>>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.ApplySuggestionsAsync(id, request, cancellationToken);
         return response.ToHttpResult();
@@ -359,8 +471,16 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] GenerateScheduleInsightContextRequest? request,
         [FromServices] IScheduleInsightService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleInsightContextResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.GenerateContextAsync(
             id,
             request ?? new GenerateScheduleInsightContextRequest(),
@@ -371,8 +491,16 @@ public static class ScheduleEndpoints
     private static async Task<IResult> GetInsightContextAsync(
         [FromRoute] Guid id,
         [FromServices] IScheduleInsightService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleInsightContextResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         var response = await service.GetContextAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
@@ -381,11 +509,19 @@ public static class ScheduleEndpoints
         [FromRoute] Guid id,
         [FromBody] ScheduleInsightChatRequest request,
         [FromServices] IScheduleInsightService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<ScheduleInsightChatRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
+
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<ScheduleInsightChatResponse>();
+
+        if (!await scopeService.CanManageScheduleAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
 
         var response = await service.ChatAsync(id, request, cancellationToken);
         return response.ToHttpResult();
