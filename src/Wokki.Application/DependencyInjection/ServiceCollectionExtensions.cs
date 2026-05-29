@@ -53,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+        services.AddScoped<IEmployeeSelfProfileService, EmployeeSelfProfileService>();
         services.AddScoped<ILocationService, LocationService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();

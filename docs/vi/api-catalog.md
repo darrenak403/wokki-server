@@ -77,6 +77,8 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 | GET    | `/self/schedule`      | Lịch ca của mình (28 ngày, published) |
 | GET    | `/self/swap-requests` | Yêu cầu đổi ca gửi/nhận               |
 | GET    | `/self/attendance`    | Lịch sử chấm công                     |
+| GET    | `/self/profile`       | Hồ sơ nhân viên của user đang đăng nhập |
+| PUT    | `/self/profile`       | Cập nhật `firstName`, `lastName`, `phone` (cần Employee liên kết; 404 `SELF_NO_EMPLOYEE`) |
 
 ## Đổi ca (`/api/v1/swap-requests`)
 

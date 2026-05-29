@@ -52,6 +52,13 @@ public static class EmployeeMapper
         employee.DepartmentId = request.DepartmentId;
     }
 
+    public static void ApplyMyProfileUpdate(this Employee employee, UpdateMyProfileRequest request)
+    {
+        employee.FirstName = request.FirstName.Trim();
+        employee.LastName = request.LastName.Trim();
+        employee.Phone = request.Phone?.Trim() ?? string.Empty;
+    }
+
     /// <summary>Scheduling solver reads Position — kept in sync with primary department name.</summary>
     public static void SyncPositionFromDepartment(Employee employee, Department department) =>
         employee.Position = department.Name.Trim();

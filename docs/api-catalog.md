@@ -77,6 +77,8 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | GET    | `/self/schedule`      | Own upcoming published assignments (28 days) |
 | GET    | `/self/swap-requests` | Swap requests sent/received                  |
 | GET    | `/self/attendance`    | Own attendance history                       |
+| GET    | `/self/profile`       | Own employee profile (name, phone, org context) |
+| PUT    | `/self/profile`       | Update own `firstName`, `lastName`, `phone` (requires linked Employee; 404 `SELF_NO_EMPLOYEE`) |
 
 ## Swap requests (`/api/v1/swap-requests`)
 

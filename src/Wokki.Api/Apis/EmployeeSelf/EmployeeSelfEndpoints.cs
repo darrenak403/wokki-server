@@ -1,13 +1,17 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Attendance;
+using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Dtos.SwapRequest;
 using Wokki.Application.Services.Attendance.Interfaces;
+using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Application.Services.SwapRequest.Interfaces;
+using Wokki.Application.Validators.Employee;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 
@@ -101,6 +105,23 @@ public static class EmployeeSelfEndpoints
             .WithDescription("Lịch sử chấm công của nhân viên đang đăng nhập.")
             .RequireAuthorization()
             .Produces<ApiResponse<IReadOnlyList<AttendanceResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/profile", GetMyProfileAsync)
+            .WithName("GetMyProfile")
+            .WithDescription("Hồ sơ cá nhân của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<EmployeeResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPut("/profile", UpdateMyProfileAsync)
+            .WithName("UpdateMyProfile")
+            .WithDescription("Cập nhật họ tên và số điện thoại của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<EmployeeResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
@@ -220,6 +241,35 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<IReadOnlyList<AttendanceResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.ListMineAsync(currentUser.UserId.Value, fromDate, toDate, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyProfileAsync(
+        [FromServices] IEmployeeSelfProfileService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetMineAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> UpdateMyProfileAsync(
+        [FromBody] UpdateMyProfileRequest request,
+        [FromServices] IEmployeeSelfProfileService service,
+        [FromServices] ICurrentUserService currentUser,
+        IValidator<UpdateMyProfileRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.UpdateMineAsync(currentUser.UserId.Value, request, cancellationToken);
         return response.ToHttpResult();
     }
 }

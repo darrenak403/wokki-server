@@ -63,6 +63,13 @@ public static class AppMessages
         public static readonly AppMessage DepartmentMembershipsListed = new("EMPLOYEE_DEPT_MEMBERSHIPS_LISTED", "Employee department membership history listed.", StatusCodes.Status200OK);
     }
 
+    public static class Self
+    {
+        public static readonly AppMessage ProfileFound = new("SELF_PROFILE_FOUND", "Personal profile found.", StatusCodes.Status200OK);
+        public static readonly AppMessage ProfileUpdated = new("SELF_PROFILE_UPDATED", "Personal profile updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage NoEmployeeProfile = new("SELF_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+    }
+
     public static class Location
     {
         public static readonly AppMessage Found = new("LOCATION_FOUND", "Location found.", StatusCodes.Status200OK);
