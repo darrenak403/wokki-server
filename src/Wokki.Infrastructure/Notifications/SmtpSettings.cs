@@ -12,5 +12,8 @@ public sealed class SmtpSettings
     public string? Password { get; set; }
 
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(From);
+        !string.IsNullOrWhiteSpace(Host)
+        && !string.IsNullOrWhiteSpace(From)
+        && !string.IsNullOrWhiteSpace(Username)
+        && !string.IsNullOrWhiteSpace(Password);
 }

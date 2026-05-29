@@ -19,7 +19,7 @@ public sealed class LocationManagerService(IUnitOfWork unitOfWork, IOrganization
         if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<LocationManagerResponse>.FailureResponse(AppMessages.LocationManager.LocationNotFound);
 
-        var user = await unitOfWork.Users.GetByIdAsync(dto.UserId, ct);
+        var user = await unitOfWork.Users.GetByIdAsync(dto.UserId, cancellationToken: ct);
         if (user is null || user.OrganizationId != location.OrganizationId)
             return ApiResponse<LocationManagerResponse>.FailureResponse(AppMessages.LocationManager.UserNotFound);
 

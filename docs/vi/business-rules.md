@@ -137,6 +137,16 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 
 ---
 
+## Xác thực & mật khẩu
+
+| ID | Quy tắc | Thực thi |
+|----|---------|---------|
+| BR-083 | Org Admin tạo nhân viên với mật khẩu tạm → `User.MustChangePassword = true`. Nhân viên phải gọi `POST /auth/reset-password` (đã đăng nhập) với mật khẩu tạm là `currentPassword`. Login/refresh trả `mustChangePassword`. | `EmployeeService`, `AuthService.ResetPasswordAsync` |
+| BR-084 | Quên mật khẩu (anonymous) gồm 3 bước: gửi OTP → xác minh OTP → đặt mật khẩu mới. OTP hết hạn sau **1 phút**. Trong thời gian OTP còn hiệu lực, không cho gửi lại (`AUTH_OTP_RESEND_TOO_SOON`, 429). Trạng thái OTP lưu trong **Redis** (TTL 1 phút); OTP đã dùng xong bị xóa khi đặt lại mật khẩu thành công. | `AuthService`, `IAuthOtpStore`, `RedisAuthOtpStore`, `AuthOtpHelper` |
+| BR-085 | Giới hạn gửi OTP theo email trong Redis: tối đa **5** lần; lần thứ 6 khóa **30 phút** (`AUTH_OTP_SEND_LOCKED`, 429). Đếm reset sau khi đặt lại mật khẩu thành công. API gửi OTP luôn trả success chung (không lộ email tồn tại). | `IAuthOtpStore`, `AuthService.ForgotPasswordAsync` |
+
+---
+
 ## Thông báo & chung
 
 | ID | Quy tắc | Thực thi |

@@ -13,9 +13,10 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | POST   | `/refresh-token`   | Authenticated | Refresh JWT                                                                                                                              |
 | GET    | `/me`              | Authenticated | Current user                                                                                                                             |
 | POST   | `/logout`          | Authenticated | Logout                                                                                                                                   |
-| PUT    | `/change-password` | Authenticated | Change password                                                                                                                          |
-| POST   | `/forgot-password` | Anonymous     | Forgot password                                                                                                                          |
-| POST   | `/reset-password`  | Anonymous     | Reset password                                                                                                                           |
+| POST   | `/reset-password`  | Authenticated | Change password while logged in: `{ currentPassword, newPassword, confirmNewPassword }`; clears `mustChangePassword`                   |
+| POST   | `/forgot-password` | Anonymous     | Send 6-digit OTP email (1 min TTL). Blocked while live OTP exists (`AUTH_OTP_RESEND_TOO_SOON`, 429). Max 5 sends per email then 30 min lock (`AUTH_OTP_SEND_LOCKED`, 429) |
+| POST   | `/forgot-password/verify-otp` | Anonymous | Verify OTP: `{ email, otpCode }`                                                                                          |
+| POST   | `/forgot-password/complete`   | Anonymous | Set new password after verified OTP: `{ email, newPassword, confirmNewPassword }`                                         |
 
 ## Users (`/api/v1/users`) — Admin patterns
 

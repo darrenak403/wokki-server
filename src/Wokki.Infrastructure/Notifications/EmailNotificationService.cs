@@ -23,7 +23,7 @@ public sealed class EmailNotificationService(
         if (!settings.IsConfigured)
             return;
 
-        var user = await unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
+        var user = await unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.Email))
             return;
 
@@ -34,11 +34,10 @@ public sealed class EmailNotificationService(
         using var client = new SmtpClient(settings.Host, settings.Port)
         {
             EnableSsl = settings.UseSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(settings.Username, settings.Password),
         };
-
-        if (!string.IsNullOrWhiteSpace(settings.Username))
-            client.Credentials = new NetworkCredential(settings.Username, settings.Password);
 
         try
         {

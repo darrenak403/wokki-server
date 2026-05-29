@@ -37,7 +37,6 @@ public static class EmployeeMapper
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
             Phone = request.Phone?.Trim() ?? string.Empty,
-            Position = request.Position.Trim(),
             HourlyRate = request.HourlyRate,
             DepartmentId = request.DepartmentId,
             EmployedAt = DateTime.UtcNow,
@@ -49,8 +48,11 @@ public static class EmployeeMapper
         employee.FirstName = request.FirstName.Trim();
         employee.LastName = request.LastName.Trim();
         employee.Phone = request.Phone?.Trim() ?? string.Empty;
-        employee.Position = request.Position.Trim();
         employee.HourlyRate = request.HourlyRate;
         employee.DepartmentId = request.DepartmentId;
     }
+
+    /// <summary>Scheduling solver reads Position — kept in sync with primary department name.</summary>
+    public static void SyncPositionFromDepartment(Employee employee, Department department) =>
+        employee.Position = department.Name.Trim();
 }

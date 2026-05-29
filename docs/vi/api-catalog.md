@@ -13,9 +13,10 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | POST   | `/refresh-token`   | Đã đăng nhập | Làm mới JWT                                                                                                  |
 | GET    | `/me`              | Đã đăng nhập | User hiện tại                                                                                                |
 | POST   | `/logout`          | Đã đăng nhập | Đăng xuất                                                                                                    |
-| PUT    | `/change-password` | Đã đăng nhập | Đổi mật khẩu                                                                                                 |
-| POST   | `/forgot-password` | Anonymous    | Quên mật khẩu                                                                                                |
-| POST   | `/reset-password`  | Anonymous    | Đặt lại mật khẩu                                                                                             |
+| POST   | `/reset-password`  | Đã đăng nhập | Đổi mật khẩu khi đã login: `{ currentPassword, newPassword, confirmNewPassword }`; xóa `mustChangePassword` |
+| POST   | `/forgot-password` | Anonymous    | Gửi OTP 6 số qua email (hết hạn 1 phút). Chặn gửi lại khi OTP còn hiệu lực (`AUTH_OTP_RESEND_TOO_SOON`, 429). Tối đa 5 lần gửi/email, lần 6 khóa 30 phút (`AUTH_OTP_SEND_LOCKED`, 429) |
+| POST   | `/forgot-password/verify-otp` | Anonymous | Xác minh OTP: `{ email, otpCode }`                                                            |
+| POST   | `/forgot-password/complete`   | Anonymous | Đặt mật khẩu mới sau khi OTP đã xác minh: `{ email, newPassword, confirmNewPassword }`        |
 
 ## Users (`/api/v1/users`)
 

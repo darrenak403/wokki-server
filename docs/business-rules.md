@@ -139,6 +139,16 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 
 ---
 
+## Authentication & password
+
+| ID | Rule | Enforcement |
+|----|------|-------------|
+| BR-083 | Org Admin creates employee with generated temp password → `User.MustChangePassword = true`. Employee must call authenticated `POST /auth/reset-password` with temp password as `currentPassword` before normal use. Login/refresh responses expose `mustChangePassword`. | `EmployeeService`, `AuthService.ResetPasswordAsync` |
+| BR-084 | Forgot-password OTP flow is anonymous and three-step: `POST /auth/forgot-password` (send OTP) → `POST /auth/forgot-password/verify-otp` → `POST /auth/forgot-password/complete`. OTP expires in **1 minute**. While a live OTP exists, resend is blocked (`AUTH_OTP_RESEND_TOO_SOON`, 429). OTP state lives in **Redis** (TTL 1 min); consumed OTP is deleted on successful password reset. | `AuthService`, `IAuthOtpStore`, `RedisAuthOtpStore`, `AuthOtpHelper` |
+| BR-085 | Forgot-password send is rate-limited per email in Redis: at most **5** OTP sends; the 6th attempt locks the email for **30 minutes** (`AUTH_OTP_SEND_LOCKED`, 429). Counter resets after successful password reset. Response is always generic success on send (no email enumeration). | `IAuthOtpStore`, `AuthService.ForgotPasswordAsync` |
+
+---
+
 ## Notifications & cross-cutting
 
 | ID | Rule | Enforcement |

@@ -9,5 +9,6 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = RoleConstants.User;
     public Guid? OrganizationId { get; set; }
+    public bool MustChangePassword { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

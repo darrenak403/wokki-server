@@ -469,7 +469,7 @@ public sealed class SwapRequestService(
         if (employee is null)
             return;
 
-        var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken);
+        var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken: cancellationToken);
         if (user is null)
             return;
 

@@ -2,65 +2,71 @@
 
 ## Env files
 
-| File           | Môi trường              | Commit? | Dùng với                          |
-| -------------- | ----------------------- | ------- | --------------------------------- |
-| `.env.example` | Template                | Có      | `cp` → `.env.local` hoặc `.env`   |
-| `.env.local`   | Dev Docker              | Không   | `task docker:build`, `docker:up`  |
-| `.env`         | Production Docker       | Không   | `task docker:prod` hoặc compose prod |
-
-**Local API (`task run`):** chỉ **User Secrets** (`AWS:AccessKeyId`, `AWS:SecretAccessKey`, `AWS:Bedrock:*`). File `docker/.env.local` **không** được `dotnet run` đọc.
-
-**Dev Docker:** chỉ **`docker/.env.local`** → biến compose map sang `AWS__*`, `AWS__Bedrock__*`.
-
-**Prod Docker:** chỉ **`docker/.env`** (tạo khi deploy).
+| File           | Môi trường        | Dùng với                         |
+| -------------- | ----------------- | -------------------------------- |
+| `.env.example` | Template          | `cp` → `.env.local` hoặc `.env`  |
+| `.env.local`   | Dev Docker        | `task docker:build`, `docker:up` |
+| `.env`         | Production Docker | `task docker:prod`               |
 
 ```bash
-# Dev Docker — một lần
-cp docker/.env.example docker/.env.local
-# Sửa: JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BEDROCK_*
+cp docker/.env.example docker/.env.local   # dev
+cp docker/.env.example docker/.env         # prod
 ```
 
-## AWS / Bedrock (compose → app config)
+## Biến chính
 
-| Biến trong `.env` / `.env.local` | ASP.NET config key              |
-| -------------------------------- | ------------------------------- |
-| `AWS_REGION`                     | `AWS:Region`                    |
-| `AWS_ACCESS_KEY_ID`              | `AWS:AccessKeyId`               |
-| `AWS_SECRET_ACCESS_KEY`          | `AWS:SecretAccessKey`           |
-| `BEDROCK_REGION`                 | `AWS:Bedrock:Region`            |
-| `BEDROCK_MODEL_ID`               | `AWS:Bedrock:ModelId`           |
-| `BEDROCK_HEALTH_CHECK_MODEL_ID`  | `AWS:Bedrock:HealthCheckModelId` (tùy chọn) |
+| Nhóm | Biến |
+| ---- | ---- |
+| **AWS (Bedrock)** | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_MODEL_ID` |
+| **Brevo (SMTP)** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_SSL`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| **Redis** | `REDIS_PORT` (compose dùng `redis:6379` nội bộ) |
 
-Tune mặc định (`MaxTokens`, health tokens, …) trong `src/Wokki.Api/appsettings.json` → `AWS:Bedrock`.
+Compose chỉ **map** env → `Smtp__*` / `AWS__*`; không hardcode host SMTP.
 
-Health: `GET /api/v1/bedrock/health` — chi tiết [docs/fe/bedrock-health.md](../docs/fe/bedrock-health.md).
+### Lấy key
+
+- **AWS IAM:** [IAM Console](https://console.aws.amazon.com/iam) → Access key  
+- **Bedrock model:** [Bedrock Console](https://console.aws.amazon.com/bedrock) → Model access  
+- **Brevo SMTP:** [app.brevo.com](https://app.brevo.com) → SMTP & API → SMTP key  
+  - `SMTP_USERNAME` = email đăng ký Brevo  
+  - `SMTP_PASSWORD` = SMTP key (`xsmtpsib-...`)
+
+## Local API (`task run`)
+
+`.env.local` không được `dotnet run` đọc. User Secrets:
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Redis" "localhost:6379" --project src/Wokki.Api
+
+dotnet user-secrets set "AWS:Region" "us-west-2" --project src/Wokki.Api
+dotnet user-secrets set "AWS:AccessKeyId" "..." --project src/Wokki.Api
+dotnet user-secrets set "AWS:SecretAccessKey" "..." --project src/Wokki.Api
+dotnet user-secrets set "AWS:Bedrock:Region" "us-west-2" --project src/Wokki.Api
+dotnet user-secrets set "AWS:Bedrock:ModelId" "google.gemma-3-27b-it" --project src/Wokki.Api
+
+dotnet user-secrets set "Smtp:Host" "smtp-relay.brevo.com" --project src/Wokki.Api
+dotnet user-secrets set "Smtp:Port" "587" --project src/Wokki.Api
+dotnet user-secrets set "Smtp:UseSsl" "true" --project src/Wokki.Api
+dotnet user-secrets set "Smtp:From" "noreply@your-domain.com" --project src/Wokki.Api
+dotnet user-secrets set "Smtp:Username" "your-brevo-email" --project src/Wokki.Api
+dotnet user-secrets set "Smtp:Password" "YOUR_BREVO_SMTP_KEY" --project src/Wokki.Api
+```
+
+Chưa cấu hình SMTP → dev log OTP ra console.
 
 ## Dev stack
 
-From **repo root**:
-
 ```bash
-cp docker/.env.example docker/.env.local
 task docker:build
 ```
 
-- http://localhost:8386 — API
-- http://localhost:8386/scalar — docs
-- http://localhost:8888 — pgweb
+API http://localhost:8386 · Scalar http://localhost:8386/scalar · pgweb http://localhost:8888
 
-## Prod stack
-
-```bash
-cp docker/.env.example docker/.env
-# Sửa .env: DB, JWT, AWS_*, BEDROCK_*, DATABASE_AUTOMIGRATE=false, APIDOCS_ENABLED=false, DB_UI_*
-task docker:prod
-```
-
-pgAdmin: http://127.0.0.1:8081 (chỉ localhost)
-
-## Chỉ Postgres (API chạy local + User Secrets)
+## Postgres + Redis (API local)
 
 ```bash
 task docker:postgres
 task run
 ```
+
+Bedrock: `GET /api/v1/bedrock/health`

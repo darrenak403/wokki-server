@@ -7,7 +7,7 @@
 | **User** | Frontline employee: self-service (`/self/*`), clock in/out, swap peer actions. |
 | **Location** | Physical site with timezone (`TimeZone` IANA id). Parent of departments. |
 | **Department** | Org unit under a location; schedules and pay periods are department-scoped. |
-| **Employee** | Workforce profile linked 1:1 to a `User`; has `Position`, `HourlyRate`, `DepartmentId`. |
+| **Employee** | Workforce profile linked 1:1 to a `User`; `Position` mirrors primary department name (solver/scheduling); `HourlyRate`, `DepartmentId`. |
 | **Shift definition** | Reusable shift template: name, start/end time, `RequiredRole`, location/department scope. |
 | **Schedule** | Weekly plan for one department; `WeekStartDate` must be Monday. |
 | **Shift assignment** | One employee on one shift definition on one calendar date within a schedule. |

@@ -131,8 +131,10 @@ public sealed class EmployeeService(
 
         user.PasswordHash = passwordHasher.HashPassword(temporaryPassword);
         user.Role = request.Role;
+        user.MustChangePassword = string.IsNullOrWhiteSpace(request.Password);
 
         var employee = request.ToEntity(user.Id, organizationId);
+        EmployeeMapper.SyncPositionFromDepartment(employee, department);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
@@ -186,6 +188,7 @@ public sealed class EmployeeService(
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         employee.ApplyUpdate(request);
+        EmployeeMapper.SyncPositionFromDepartment(employee, department);
         unitOfWork.Employees.Update(employee);
         await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
             employee.Id,
@@ -222,7 +225,7 @@ public sealed class EmployeeService(
 
     private async Task<EmployeeResponse> BuildResponseAsync(EmployeeEntity employee, CancellationToken cancellationToken)
     {
-        var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken)
+        var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken: cancellationToken)
                    ?? throw new InvalidOperationException($"User {employee.UserId} not found for employee {employee.Id}.");
 
         var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);

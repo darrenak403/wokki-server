@@ -248,6 +248,15 @@ public static class AppMessages
         public static readonly AppMessage Me = new("AUTH_ME", "Current user profile.", StatusCodes.Status200OK);
         public static readonly AppMessage LogoutSuccess = new("AUTH_LOGOUT_SUCCESS", "Logged out.", StatusCodes.Status200OK);
         public static readonly AppMessage NotLoggedIn = new("AUTH_NOT_LOGGED_IN", "Not authenticated.", StatusCodes.Status401Unauthorized);
+        public static readonly AppMessage PasswordChanged = new("AUTH_PASSWORD_CHANGED", "Password updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpSent = new("AUTH_OTP_SENT", "If the email exists, a verification code was sent.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpVerified = new("AUTH_OTP_VERIFIED", "Verification code accepted.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpInvalid = new("AUTH_OTP_INVALID", "Invalid or expired verification code.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage OtpNotVerified = new("AUTH_OTP_NOT_VERIFIED", "Verify the email code before setting a new password.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage OtpResendTooSoon = new("AUTH_OTP_RESEND_TOO_SOON", "Please wait for the current code to expire before requesting a new one.", StatusCodes.Status429TooManyRequests);
+        public static readonly AppMessage OtpSendLocked = new("AUTH_OTP_SEND_LOCKED", "Too many verification requests. Try again in 30 minutes.", StatusCodes.Status429TooManyRequests);
+        public static readonly AppMessage PasswordConfirmMismatch = new("AUTH_PASSWORD_CONFIRM_MISMATCH", "New password and confirmation do not match.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PasswordResetSuccess = new("AUTH_PASSWORD_RESET", "Password reset successful.", StatusCodes.Status200OK);
     }
 
     public static class OvertimeRequest

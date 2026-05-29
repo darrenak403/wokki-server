@@ -7,8 +7,11 @@ namespace Wokki.Infrastructure.Repositories;
 
 public sealed class UserRepository(AppDbContext context) : IUserRepository
 {
-    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    public async Task<User?> GetByIdAsync(Guid id, bool track = false, CancellationToken cancellationToken = default)
+    {
+        var query = track ? context.Users : context.Users.AsNoTracking();
+        return await query.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+    }
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         await context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);

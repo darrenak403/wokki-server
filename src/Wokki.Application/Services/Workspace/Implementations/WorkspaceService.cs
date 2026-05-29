@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.LocationMembership;
 using Wokki.Application.Dtos.Workspace;
+using Wokki.Application.Mappings.Employees;
 using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Workspace.Interfaces;
@@ -26,7 +27,7 @@ public sealed class WorkspaceService(
         ChangeRoleRequest request,
         CancellationToken ct = default)
     {
-        var target = await unitOfWork.Users.GetByIdAsync(targetUserId, ct);
+        var target = await unitOfWork.Users.GetByIdAsync(targetUserId, cancellationToken: ct);
         if (target is null || target.OrganizationId is null || !organizationScope.IsSameOrganization(target.OrganizationId.Value))
             return ApiResponse<object>.FailureResponse(AppMessages.User.NotFound);
 
@@ -145,6 +146,7 @@ public sealed class WorkspaceService(
             ct);
 
         employee.DepartmentId = request.ToDepartmentId;
+        EmployeeMapper.SyncPositionFromDepartment(employee, department);
         unitOfWork.Employees.Update(employee);
 
         await unitOfWork.SaveChangesAsync(ct);

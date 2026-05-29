@@ -13,7 +13,7 @@ public sealed class UserService(
 {
     public async Task<ApiResponse<UserResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var user = await unitOfWork.Users.GetByIdAsync(id, cancellationToken);
+        var user = await unitOfWork.Users.GetByIdAsync(id, cancellationToken: cancellationToken);
         if (user is null || user.OrganizationId is null || !organizationScope.IsSameOrganization(user.OrganizationId.Value))
             return ApiResponse<UserResponse>.FailureResponse(AppMessages.User.NotFound);
 

@@ -40,7 +40,7 @@ Endpoints: `return (await service.Method(...)).ToHttpResult();`
 
 - `ITenantContext`, global query filter TODO in `AppDbContext` (`User.TenantId` retained as hook)
 
-## Cache (deferred Redis)
+## Cache & Redis
 
-- `ICacheService` — memory implementation; swap to Redis adapter later
-- Pattern: cache-aside + explicit invalidation on writes
+- **Auth OTP** — `IAuthOtpStore` / `RedisAuthOtpStore` (StackExchange.Redis). Keys: `wokki:auth:otp:{email}` (TTL 1 min, deleted on password reset), `wokki:auth:otp:send:{email}` (send-rate limit). Dev/prod: Redis 7 via Docker Compose.
+- **General cache** — `ICacheService` still uses in-memory; swap to Redis adapter later for app-wide cache-aside ([patterns/cache.md](./patterns/cache.md)).

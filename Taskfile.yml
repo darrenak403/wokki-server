@@ -72,9 +72,9 @@ tasks:
       - '{{.COMPOSE}} up -d'
 
   'docker:postgres':
-    desc: Start Postgres only (for task run)
+    desc: Start Postgres + Redis (for task run)
     cmds:
-      - '{{.COMPOSE}} up -d postgres'
+      - '{{.COMPOSE}} up -d postgres redis'
 
   'docker:build':
     desc: Rebuild images and start dev stack

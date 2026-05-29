@@ -7,7 +7,6 @@ public sealed record CreateEmployeeRequest(
     string FirstName,
     string LastName,
     string? Phone,
-    string Position,
     decimal HourlyRate,
     Guid DepartmentId,
     string Role = RoleConstants.User,

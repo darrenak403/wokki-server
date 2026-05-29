@@ -340,7 +340,6 @@ Authorization: Bearer {adminToken}
   "firstName": "Lan",
   "lastName": "Nguyen",
   "phone": "",
-  "position": "Barista",
   "hourlyRate": 35000,
   "departmentId": "{uuid}",
   "role": "User",
@@ -452,11 +451,11 @@ flowchart TB
     W0 --> W7[Wave7_Chat]
 ```
 
-| Wave    | Nội dung mới                                                                                                |
-| ------- | ----------------------------------------------------------------------------------------------------------- |
+| Wave    | Nội dung mới                                                                                                                    |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **0**   | Login + **Register** + JWT decode + route guard 2 shell (platform vs org) + package gate + User redirect theo Active membership |
-| **1**   | Onboarding empty org + **org stats** dashboard                                                              |
-| **2–7** | Giống [fe-integration-guide](../vi/fe-integration-guide.md) nhưng **không dùng seed**, Admin tạo data trước |
+| **1**   | Onboarding empty org + **org stats** dashboard                                                                                  |
+| **2–7** | Giống [fe-integration-guide](../vi/fe-integration-guide.md) nhưng **không dùng seed**, Admin tạo data trước                     |
 
 ---
 
@@ -471,16 +470,16 @@ flowchart TB
 }
 ```
 
-| Code                        | HTTP    | FE                                            |
-| --------------------------- | ------- | --------------------------------------------- |
-| `USER_EXISTS`               | 409     | Register: email đã có                         |
-| `USER_EMPLOYEE_PROFILE_REQUIRED` | 400 | Không tạo staff bằng `/users`; chuyển sang form **Thêm nhân viên** |
-| `STATS_FORBIDDEN`           | 403     | Sai role cho stats                            |
-| `LOCATION_NOT_FOUND`        | 404     | Id khác org hoặc không tồn tại                |
-| `EMPLOYEE_NOT_FOUND`        | 404     | Cross-tenant                                  |
-| `ORG_PACKAGE_NOT_ACTIVATED` | 403     | "Bạn chưa có gói sử dụng hệ thống."           |
-| `ORG_PACKAGE_EXPIRED`       | 402     | "Bạn phải gia hạn để tiếp tục dùng hệ thống." |
-| `ORG_*`                     | 403/404 | Thiếu org context hoặc scope sai              |
+| Code                             | HTTP    | FE                                                                 |
+| -------------------------------- | ------- | ------------------------------------------------------------------ |
+| `USER_EXISTS`                    | 409     | Register: email đã có                                              |
+| `USER_EMPLOYEE_PROFILE_REQUIRED` | 400     | Không tạo staff bằng `/users`; chuyển sang form **Thêm nhân viên** |
+| `STATS_FORBIDDEN`                | 403     | Sai role cho stats                                                 |
+| `LOCATION_NOT_FOUND`             | 404     | Id khác org hoặc không tồn tại                                     |
+| `EMPLOYEE_NOT_FOUND`             | 404     | Cross-tenant                                                       |
+| `ORG_PACKAGE_NOT_ACTIVATED`      | 403     | "Bạn chưa có gói sử dụng hệ thống."                                |
+| `ORG_PACKAGE_EXPIRED`            | 402     | "Bạn phải gia hạn để tiếp tục dùng hệ thống."                      |
+| `ORG_*`                          | 403/404 | Thiếu org context hoặc scope sai                                   |
 
 Luôn check `success` trước khi đọc `data`.
 
