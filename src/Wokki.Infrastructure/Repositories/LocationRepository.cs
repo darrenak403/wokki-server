@@ -16,11 +16,22 @@ public sealed class LocationRepository(AppDbContext context) : ILocationReposito
     public async Task<Location?> GetByNameAsync(string name, CancellationToken cancellationToken = default) =>
         await context.Locations.FirstOrDefaultAsync(l => l.Name == name, cancellationToken);
 
-    public async Task<IReadOnlyList<Location>> ListAsync(bool activeOnly = true, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Location>> ListAsync(
+        bool activeOnly = true,
+        IReadOnlySet<Guid>? locationIds = null,
+        CancellationToken cancellationToken = default)
     {
         var query = context.Locations.AsNoTracking().AsQueryable();
         if (activeOnly)
             query = query.Where(l => l.IsActive);
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(l => allowedLocationIds.Contains(l.Id));
+        }
 
         return await query.OrderBy(l => l.Name).ToListAsync(cancellationToken);
     }

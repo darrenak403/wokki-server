@@ -12,6 +12,7 @@ public interface IAttendanceService
     Task<ApiResponse<AttendanceResponse>> ClockOutAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<ApiResponse<PagedResponse<AttendanceResponse>>> ListAsync(
         AttendanceListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<ApiResponse<IReadOnlyList<AttendanceResponse>>> ListMineAsync(
         Guid userId,

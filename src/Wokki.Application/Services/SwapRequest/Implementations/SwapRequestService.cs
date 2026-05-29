@@ -72,6 +72,7 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
 
     public async Task<ApiResponse<PagedResponse<SwapRequestResponse>>> ListAsync(
         SwapRequestListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -83,6 +84,7 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
             request.Status,
             request.DepartmentId,
             request.WeekStartDate,
+            locationIds,
             cancellationToken);
 
         var responses = new List<SwapRequestResponse>(items.Count);

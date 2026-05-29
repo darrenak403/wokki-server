@@ -15,6 +15,10 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-003 | `Admin` may manage users, payroll export, and soft-delete any chat message. | `ChannelService`, `PayrollEndpoints` |
 | BR-004 | `Manager` may manage schedules, assignments, swap overrides, attendance adjust, and create chat channels. | Route authorization |
 | BR-005 | Every employee-facing action requires an `Employee` row linked to the authenticated `User`. | Services return `*_NO_EMPLOYEE` / 404 |
+| BR-006 | `Admin` has full branch scope and may list/manage all `Location` workspaces. | `LocationScopeService.GetManagedLocationIdsAsync` returns `null` |
+| BR-007 | `Manager` scope is only the locations assigned through `LocationManager`. Do not infer Manager access from role alone, user global role, or the Manager's own employee/department memberships. | `LocationScopeService`, scoped list queries |
+| BR-008 | A `User` with a linked `Employee` but no Active `LocationMembership` cannot enter protected employee app routes: no membership → `/join`; Pending/Rejected/Left/Transferred → `/pending`. | FE `MembershipGate`, `LocationMembershipService.GetMyStatusAsync` |
+| BR-009 | Branch join requests are reviewed only by `Admin` or a `Manager` assigned to the target location. Approval creates the employee's Active branch boundary; after that, Admin or that branch's Manager may place the employee into an appropriate department. | `LocationMembershipService.ReviewAsync`, `WorkspaceService.TransferDepartmentAsync` |
 
 ---
 
@@ -23,7 +27,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | ID | Rule | Enforcement |
 |----|------|-------------|
 | BR-010 | A `Department` belongs to exactly one `Location`. | EF FK |
-| BR-011 | `Employee.DepartmentId` must match the department of schedules they are assigned to. | `TryPrepareAssignmentAsync` |
+| BR-011 | Employees must have Active `LocationMembership` for the schedule's location and department membership for the schedule department before they can be assigned. `Employee.DepartmentId` remains the primary/backward-compatible department. | `TryPrepareAssignmentAsync`, `EmployeeDepartmentMembership` |
 | BR-012 | Terminated employees (`TerminatedAt` set) cannot receive new assignments or be swap targets. | `EmployeeService`, assignment validators |
 | BR-013 | `ShiftDefinition` must match schedule scope: same `LocationId`; if `DepartmentId` set, must equal schedule department. | `TryPrepareAssignmentAsync` |
 
@@ -120,7 +124,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-071 | Suggest/apply only on **`Draft`** schedules. | Services |
 | BR-072 | Auto-scheduling is scoped to one department/week and requires a saved location scheduling policy, active department employees, active shifts, and submitted preferences when the branch rule requires it. Branch policy (`location-scheduling-policy.v5`) exposes a **minimal solver surface** (9 system rules): preference preflight/hard block, coverage, `require_role_match`, `min_shifts_per_week`, `min_rest_minutes_between_shifts`, `allow_overtime`. Apply gợi ý is always explicit (review UI + Apply button), not branch-policy toggles. Fairness, scoring, department/active guards, and weekly max use `SchedulingSolverDefaults` only (no department policy). Typed mapping: `LocationSchedulingSolverPolicy`. Deprecated keys stripped on read/upsert. Missing input returns explicit `reason`. | `HeuristicScheduleSuggestionService`, `LocationSchedulingPolicyRules`, `LocationSchedulingSolverPolicy`, `SchedulingSolverDefaults` |
 | BR-073 | Suggestions must not double-book (in-memory overlap check for the target week). | `HasOverlapInPlan` |
-| BR-074 | Employee eligibility uses department membership. `Employee.DepartmentId` is only the primary/backward-compatible department; assignment guards must accept any active membership for the schedule department. | `EmployeeDepartmentMembership`, `TryPrepareAssignmentAsync` |
+| BR-074 | Auto-scheduling employee eligibility uses Active branch membership plus department membership. `Employee.DepartmentId` is only the primary/backward-compatible department; assignment guards must accept any active department membership for the schedule department. | `LocationMembership`, `EmployeeDepartmentMembership`, `TryPrepareAssignmentAsync` |
 | BR-075 | `apply-suggestions` validates **all** rows then commits in **one transaction** (all or none). | `ApplySuggestionsAsync` |
 | BR-076 | Schedule insight context is a DB-stored JSON snapshot for explanation only, keyed by schedule and carrying `LocationId`, `DepartmentId`, `WeekStartDate`, and `ExpiresAt`; it is not a source of truth and never replaces `ShiftAssignment`. | `ScheduleInsightService` |
 | BR-077 | Bedrock schedule insight chat is advisory only. It may summarize, explain, and suggest manager review actions, but it must not create, update, apply, or publish assignments. | `ScheduleInsightService.ChatAsync` |

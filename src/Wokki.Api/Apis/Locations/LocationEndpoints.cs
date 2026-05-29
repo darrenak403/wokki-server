@@ -2,8 +2,10 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Location;
 using Wokki.Application.Services.Location.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -84,9 +86,18 @@ public static class LocationEndpoints
 
     private static async Task<IResult> ListAsync(
         [FromServices] ILocationService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
-        var response = await service.ListAsync(cancellationToken);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<IReadOnlyList<LocationResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -128,8 +139,16 @@ public static class LocationEndpoints
     private static async Task<IResult> GetSchedulingPolicyAsync(
         [FromRoute] Guid id,
         [FromServices] ILocationService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
         var response = await service.GetSchedulingPolicyAsync(id, cancellationToken);
         return response.ToHttpResult();
     }

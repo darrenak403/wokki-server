@@ -29,9 +29,19 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 
 | Resource | Base | Manager | Admin | Notes |
 |----------|------|---------|-------|-------|
-| Employees | `/employees` | R/W list | Full | Soft delete = terminate |
-| Locations | `/locations` | R/W | Full | `GET/PUT /locations/{id}/scheduling-policy` manages branch scheduling rules (`location-scheduling-policy.v5`: minimal solver inputs; weekly max shifts from `SchedulingSolverDefaults`). |
-| Departments | `/departments` | R/W | Full | |
+| Employees | `/employees` | Scoped list/read | Full | Manager sees employees with Active membership in assigned branches. Soft delete = terminate |
+| Locations | `/locations` | Scoped read | Full | Manager sees assigned locations only. `GET/PUT /locations/{id}/scheduling-policy` manages branch scheduling rules (`location-scheduling-policy.v5`: minimal solver inputs; weekly max shifts from `SchedulingSolverDefaults`). |
+| Departments | `/departments` | Scoped read | Full | Manager sees departments in assigned locations only |
+
+## Branch membership (`/api/v1/location-memberships`)
+
+| Method | Path | Roles | Description |
+|--------|------|-------|-------------|
+| GET | `/my` | Authenticated | Current user's Active membership, latest non-active membership, or null |
+| POST | `/request` | User (+ employee profile) | Request to join a branch |
+| GET | `/pending` | Admin, Manager | Pending requests; Manager receives only assigned branches |
+| PATCH | `/{id}/review` | Admin, Manager | Approve/reject; Manager must manage the target branch |
+| GET | `/locations/{id}/memberships` | Admin, Manager | List memberships for a branch; Manager must manage that branch |
 
 ## Scheduling
 

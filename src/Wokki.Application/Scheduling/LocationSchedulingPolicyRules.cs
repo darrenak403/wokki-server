@@ -235,12 +235,20 @@ public static class LocationSchedulingPolicyRules
         policy is null ? fallback : TryGetRule(policy, key, out var rule) ? ReadInt(rule.Value, fallback) : fallback;
 
     public static bool GetBool(LocationSchedulingPolicy? policy, string key, bool fallback) =>
-        policy is null ? fallback : TryGetRule(policy, key, out var rule) ? ReadBool(rule.Value, fallback) : fallback;
+        policy is null ? fallback : TryGetRule(policy, key, out var rule, requireEnabled: false)
+            ? rule.Enabled && ReadBool(rule.Value, fallback)
+            : fallback;
 
-    private static bool TryGetRule(LocationSchedulingPolicy policy, string key, out LocationSchedulingRuleDto rule)
+    private static bool TryGetRule(
+        LocationSchedulingPolicy policy,
+        string key,
+        out LocationSchedulingRuleDto rule,
+        bool requireEnabled = true)
     {
         rule = GetEffectiveRules(policy)
-            .FirstOrDefault(item => item.Enabled && item.Key.Equals(key, StringComparison.OrdinalIgnoreCase))!;
+            .FirstOrDefault(item =>
+                (!requireEnabled || item.Enabled)
+                && item.Key.Equals(key, StringComparison.OrdinalIgnoreCase))!;
         return rule is not null;
     }
 

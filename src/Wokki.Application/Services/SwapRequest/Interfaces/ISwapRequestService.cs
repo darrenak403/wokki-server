@@ -11,6 +11,7 @@ public interface ISwapRequestService
         CancellationToken cancellationToken = default);
     Task<ApiResponse<PagedResponse<SwapRequestResponse>>> ListAsync(
         SwapRequestListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<ApiResponse<IReadOnlyList<SwapRequestResponse>>> ListMineAsync(
         Guid userId,

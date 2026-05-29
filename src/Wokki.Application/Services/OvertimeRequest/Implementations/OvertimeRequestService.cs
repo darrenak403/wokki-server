@@ -113,30 +113,15 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         Guid? departmentId,
         int page,
         int pageSize,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken ct = default)
     {
-        IReadOnlyList<Guid>? allowedEmployeeIds = null;
-        if (!isAdmin)
-        {
-            var reviewer = await unitOfWork.Employees.GetByUserIdAsync(reviewerUserId, ct);
-            if (reviewer is null)
-                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
-
-            var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewer.Id, ct);
-            var reviewerDeptIds = reviewerMemberships
-                .Select(m => m.DepartmentId)
-                .Append(reviewer.DepartmentId)
-                .Distinct()
-                .ToList();
-
-            if (departmentId.HasValue && !reviewerDeptIds.Contains(departmentId.Value))
-                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
-
-            allowedEmployeeIds = await unitOfWork.Employees.GetIdsByDepartmentIdsAsync(reviewerDeptIds, ct);
-        }
+        var scopedLocationIds = isAdmin ? null : locationIds ?? new HashSet<Guid>();
+        if (departmentId.HasValue && !await IsDepartmentInScopeAsync(departmentId.Value, scopedLocationIds, ct))
+            return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
 
         var (items, total) = await unitOfWork.OvertimeRequests.ListPendingApprovalAsync(
-            allowedEmployeeIds, departmentId, page, pageSize, ct);
+            null, departmentId, page, pageSize, scopedLocationIds, ct);
 
         return ApiResponse<PagedResponse<OvertimeRequestResponse>>.SuccessPagedResponse(
             items.Select(r => r.ToResponse()).ToList(),
@@ -152,30 +137,15 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         int year,
         int page,
         int pageSize,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken ct = default)
     {
-        IReadOnlyList<Guid>? allowedEmployeeIds = null;
-        if (!isAdmin)
-        {
-            var reviewer = await unitOfWork.Employees.GetByUserIdAsync(reviewerUserId, ct);
-            if (reviewer is null)
-                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
-
-            var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewer.Id, ct);
-            var reviewerDeptIds = reviewerMemberships
-                .Select(m => m.DepartmentId)
-                .Append(reviewer.DepartmentId)
-                .Distinct()
-                .ToList();
-
-            if (departmentId.HasValue && !reviewerDeptIds.Contains(departmentId.Value))
-                return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
-
-            allowedEmployeeIds = await unitOfWork.Employees.GetIdsByDepartmentIdsAsync(reviewerDeptIds, ct);
-        }
+        var scopedLocationIds = isAdmin ? null : locationIds ?? new HashSet<Guid>();
+        if (departmentId.HasValue && !await IsDepartmentInScopeAsync(departmentId.Value, scopedLocationIds, ct))
+            return ApiResponse<PagedResponse<OvertimeRequestResponse>>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
 
         var (items, total) = await unitOfWork.OvertimeRequests.ListAllByDepartmentAsync(
-            allowedEmployeeIds, departmentId, month, year, page, pageSize, ct);
+            null, departmentId, month, year, page, pageSize, scopedLocationIds, ct);
 
         return ApiResponse<PagedResponse<OvertimeRequestResponse>>.SuccessPagedResponse(
             items.Select(x => x.Request.ToResponse(x.EmployeeFirstName, x.EmployeeLastName, x.ShiftName, x.ScheduledDate)).ToList(),
@@ -199,13 +169,6 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
 
         if (otRequest.Status == OvertimeStatus.Approved)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.InvalidTransition);
-
-        var reviewer = await unitOfWork.Employees.GetByUserIdAsync(reviewerUserId, ct);
-        if (reviewer is null)
-            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
-
-        if (!isAdmin && !await IsReviewerAuthorizedAsync(reviewer.Id, otRequest.EmployeeId, ct))
-            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
 
         if (await IsPayPeriodLockedAsync(otRequest, ct))
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.PeriodLocked);
@@ -246,13 +209,6 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         if (otRequest.Status == OvertimeStatus.Rejected)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.InvalidTransition);
 
-        var reviewer = await unitOfWork.Employees.GetByUserIdAsync(reviewerUserId, ct);
-        if (reviewer is null)
-            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
-
-        if (!isAdmin && !await IsReviewerAuthorizedAsync(reviewer.Id, otRequest.EmployeeId, ct))
-            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
-
         if (await IsPayPeriodLockedAsync(otRequest, ct))
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.PeriodLocked);
 
@@ -281,22 +237,16 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         return new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(shiftEndLocal, tz));
     }
 
-    private async Task<bool> IsReviewerAuthorizedAsync(Guid reviewerEmployeeId, Guid requestEmployeeId, CancellationToken ct)
+    private async Task<bool> IsDepartmentInScopeAsync(
+        Guid departmentId,
+        IReadOnlySet<Guid>? locationIds,
+        CancellationToken ct)
     {
-        var reviewer = await unitOfWork.Employees.GetByIdAsync(reviewerEmployeeId, cancellationToken: ct);
-        if (reviewer is null)
-            return false;
+        if (locationIds is null)
+            return true;
 
-        var reviewerMemberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(reviewerEmployeeId, ct);
-        var reviewerDeptIds = reviewerMemberships
-            .Select(m => m.DepartmentId)
-            .Append(reviewer.DepartmentId)
-            .Distinct()
-            .ToList();
-
-        var employeeIdsInReviewerDepts = await unitOfWork.Employees
-            .GetIdsByDepartmentIdsAsync(reviewerDeptIds, cancellationToken: ct);
-        return employeeIdsInReviewerDepts.Contains(requestEmployeeId);
+        var department = await unitOfWork.Departments.GetByIdAsync(departmentId, cancellationToken: ct);
+        return department is null || locationIds.Contains(department.LocationId);
     }
 
     private async Task<bool> IsPayPeriodLockedAsync(Domain.Entities.OvertimeRequest request, CancellationToken ct)

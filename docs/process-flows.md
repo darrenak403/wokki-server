@@ -17,6 +17,34 @@ One company per environment. No shared multi-tenant database in MVP.
 
 ---
 
+## 1.1 Branch workspace access
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Wokki Client
+    participant API as LocationMembership API
+    participant R as Admin/Target Manager
+
+    U->>FE: Open protected app route
+    FE->>API: GET /location-memberships/my
+    alt No membership
+        FE-->>U: Redirect /join
+        U->>API: POST /location-memberships/request { locationId }
+        FE-->>U: Redirect /pending
+    else Pending / Rejected / Left / Transferred
+        FE-->>U: Redirect /pending
+    else Active
+        FE-->>U: Render workspace
+    end
+    R->>API: PATCH /location-memberships/{id}/review
+    API-->>R: Active or Rejected
+```
+
+Admin manages every branch. Manager scope is only `LocationManager` assignments; scoped list endpoints pass the caller's managed location IDs to repositories even when the FE does not provide a location filter. Employee management visibility is based on Active `LocationMembership`; department placement happens after branch approval.
+
+---
+
 ## 2. Schedule lifecycle (MVP)
 
 ```mermaid
@@ -57,9 +85,11 @@ sequenceDiagram
 flowchart TD
     A[Create assignment request] --> B{Schedule Draft?}
     B -->|no| X[400 Not Draft]
-    B -->|yes| C{Employee in dept?}
-    C -->|no| X2[400 Wrong dept]
-    C -->|yes| D{Shift in scope?}
+    B -->|yes| C{Employee active in location?}
+    C -->|no| X2[400 Wrong location]
+    C -->|yes| C2{Employee in dept?}
+    C2 -->|no| X5[400 Wrong dept]
+    C2 -->|yes| D{Shift in scope?}
     D -->|no| X3[400 Shift scope]
     D -->|yes| E{Overlap / duplicate?}
     E -->|yes| X4[409 Conflict]

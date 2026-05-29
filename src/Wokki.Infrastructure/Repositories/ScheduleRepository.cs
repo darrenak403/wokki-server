@@ -25,12 +25,22 @@ public sealed class ScheduleRepository(AppDbContext context) : IScheduleReposito
         int pageSize,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Schedules.AsNoTracking().AsQueryable();
 
         if (departmentId.HasValue)
             query = query.Where(s => s.DepartmentId == departmentId.Value);
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(s => context.Departments.Any(d =>
+                    d.Id == s.DepartmentId && allowedLocationIds.Contains(d.LocationId)));
+        }
 
         if (weekStartDate.HasValue)
             query = query.Where(s => s.WeekStartDate == weekStartDate.Value);

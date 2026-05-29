@@ -294,6 +294,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             1,
             500,
             schedule.DepartmentId,
+            locationIds: new HashSet<Guid> { department.LocationId },
             cancellationToken: cancellationToken);
         var employees = employeePage.Items.Where(e => e.TerminatedAt is null).ToList();
 

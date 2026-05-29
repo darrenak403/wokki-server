@@ -116,6 +116,7 @@ public static class AppMessages
         public static readonly AppMessage ShiftInactive = new("SCHEDULE_SHIFT_INACTIVE", "Shift definition is inactive.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage EmployeeNotFound = new("SCHEDULE_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage EmployeeWrongDepartment = new("SCHEDULE_EMPLOYEE_WRONG_DEPT", "Employee does not belong to this schedule department.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage EmployeeWrongLocation = new("SCHEDULE_EMPLOYEE_WRONG_LOCATION", "Employee does not have an active membership in this schedule location.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage ShiftWrongScope = new("SCHEDULE_SHIFT_WRONG_SCOPE", "Shift definition does not apply to this schedule.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MyScheduleListed = new("ME_SCHEDULE_LISTED", "Your schedule listed.", StatusCodes.Status200OK);
         public static readonly AppMessage NoEmployeeProfile = new("ME_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);

@@ -5,7 +5,10 @@ namespace Wokki.Application.Services.Department.Interfaces;
 
 public interface IDepartmentService
 {
-    Task<ApiResponse<IReadOnlyList<DepartmentResponse>>> ListAsync(Guid? locationId, CancellationToken cancellationToken = default);
+    Task<ApiResponse<IReadOnlyList<DepartmentResponse>>> ListAsync(
+        Guid? locationId,
+        IReadOnlySet<Guid>? locationIds = null,
+        CancellationToken cancellationToken = default);
     Task<ApiResponse<DepartmentResponse>> CreateAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default);
     Task<ApiResponse<DepartmentResponse>> UpdateAsync(Guid id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default);
 }

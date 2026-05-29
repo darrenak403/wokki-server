@@ -111,6 +111,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
 
     public async Task<ApiResponse<PagedResponse<AttendanceResponse>>> ListAsync(
         AttendanceListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -122,6 +123,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
             request.EmployeeId,
             request.FromDate,
             request.ToDate,
+            locationIds,
             cancellationToken);
 
         return ApiResponse<PagedResponse<AttendanceResponse>>.SuccessPagedResponse(

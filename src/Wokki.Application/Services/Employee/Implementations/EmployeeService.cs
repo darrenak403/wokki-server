@@ -24,6 +24,7 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
 
     public async Task<ApiResponse<PagedResponse<EmployeeResponse>>> ListAsync(
         EmployeeListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -35,6 +36,7 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
             request.DepartmentId,
             request.LocationId,
             request.IncludeTerminated,
+            locationIds,
             cancellationToken);
 
         var responses = new List<EmployeeResponse>(items.Count);

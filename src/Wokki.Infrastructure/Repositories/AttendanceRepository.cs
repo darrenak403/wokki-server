@@ -28,6 +28,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         Guid? employeeId = null,
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.AttendanceRecords.AsNoTracking().AsQueryable();
@@ -45,6 +46,21 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         {
             var to = new DateTimeOffset(toDate.Value.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
             query = query.Where(a => a.ClockIn <= to);
+        }
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(a =>
+                    a.AssignmentId != null &&
+                    context.ShiftAssignments.Any(sa =>
+                        sa.Id == a.AssignmentId.Value &&
+                        context.Schedules.Any(sc =>
+                            sc.Id == sa.ScheduleId &&
+                            context.Departments.Any(d =>
+                                d.Id == sc.DepartmentId && allowedLocationIds.Contains(d.LocationId)))));
         }
 
         query = query.OrderByDescending(a => a.ClockIn);

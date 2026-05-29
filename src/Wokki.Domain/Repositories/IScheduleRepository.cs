@@ -14,6 +14,7 @@ public interface IScheduleRepository
         int pageSize,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task AddAsync(Schedule schedule, CancellationToken cancellationToken = default);
     void Update(Schedule schedule);

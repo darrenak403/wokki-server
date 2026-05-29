@@ -216,7 +216,11 @@ public static class ScheduleEndpoints
             !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
             return Forbidden();
 
-        var response = await service.ListAsync(request, cancellationToken);
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(request, managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 

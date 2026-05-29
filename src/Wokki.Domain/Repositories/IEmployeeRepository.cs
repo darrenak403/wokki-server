@@ -12,6 +12,7 @@ public interface IEmployeeRepository
         Guid? departmentId = null,
         Guid? locationId = null,
         bool includeTerminated = false,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Employee>> GetByIdsAsync(
         IEnumerable<Guid> ids, CancellationToken cancellationToken = default);

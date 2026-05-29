@@ -184,7 +184,12 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
             }
         }
 
-        var employeePage = await unitOfWork.Employees.ListAsync(1, 1000, request.DepartmentId, cancellationToken: cancellationToken);
+        var employeePage = await unitOfWork.Employees.ListAsync(
+            1,
+            1000,
+            request.DepartmentId,
+            locationIds: new HashSet<Guid> { department.LocationId },
+            cancellationToken: cancellationToken);
         var employeeIds = employeePage.Items.Select(e => e.Id).ToList();
         var minutesByEmployee = await unitOfWork.Attendance.SumWorkedMinutesByEmployeeAsync(
             employeeIds,

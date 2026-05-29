@@ -10,9 +10,14 @@ public sealed class DepartmentService(IUnitOfWork unitOfWork) : IDepartmentServi
 {
     public async Task<ApiResponse<IReadOnlyList<DepartmentResponse>>> ListAsync(
         Guid? locationId,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
-        var items = await unitOfWork.Departments.ListAsync(locationId, activeOnly: false, cancellationToken);
+        var items = await unitOfWork.Departments.ListAsync(
+            locationId,
+            activeOnly: false,
+            locationIds: locationIds,
+            cancellationToken: cancellationToken);
         var responses = items.Select(d => d.ToResponse()).ToList();
         return ApiResponse<IReadOnlyList<DepartmentResponse>>.SuccessResponse(responses, AppMessages.Department.Listed);
     }

@@ -17,6 +17,34 @@ Một công ty một môi trường. Không chia sẻ database đa tenant trong 
 
 ---
 
+## 1.1 Quyền truy cập workspace chi nhánh
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Wokki Client
+    participant API as LocationMembership API
+    participant R as Admin/Manager chi nhánh
+
+    U->>FE: Mở route app được bảo vệ
+    FE->>API: GET /location-memberships/my
+    alt Chưa có membership
+        FE-->>U: Điều hướng /join
+        U->>API: POST /location-memberships/request { locationId }
+        FE-->>U: Điều hướng /pending
+    else Pending / Rejected / Left / Transferred
+        FE-->>U: Điều hướng /pending
+    else Active
+        FE-->>U: Hiển thị workspace
+    end
+    R->>API: PATCH /location-memberships/{id}/review
+    API-->>R: Active hoặc Rejected
+```
+
+Admin quản lý mọi chi nhánh. Manager chỉ có phạm vi các `LocationManager` được Admin gán; các endpoint list luôn truyền danh sách location được quản lý xuống repository ngay cả khi FE không gửi filter location. Việc hiển thị/quản lý nhân viên dựa trên Active `LocationMembership`; phân phòng ban được thực hiện sau khi nhân viên được duyệt vào chi nhánh.
+
+---
+
 ## 2. Vòng đời lịch (MVP)
 
 ```mermaid
@@ -57,9 +85,11 @@ sequenceDiagram
 flowchart TD
     A[Yêu cầu tạo phân ca] --> B{Lịch Draft?}
     B -->|không| X[400 Not Draft]
-    B -->|có| C{Nhân viên đúng department?}
-    C -->|không| X2[400 Sai department]
-    C -->|có| D{Mẫu ca đúng phạm vi?}
+    B -->|có| C{Nhân viên active ở location?}
+    C -->|không| X2[400 Sai location]
+    C -->|có| C2{Nhân viên đúng department?}
+    C2 -->|không| X5[400 Sai department]
+    C2 -->|có| D{Mẫu ca đúng phạm vi?}
     D -->|không| X3[400 Sai phạm vi ca]
     D -->|có| E{Trùng / chồng giờ?}
     E -->|có| X4[409 Conflict]

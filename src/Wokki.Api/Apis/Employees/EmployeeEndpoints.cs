@@ -101,8 +101,11 @@ public static class EmployeeEndpoints
             !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
             return Forbidden();
 
-        // No filter provided — unscoped list is a known scope gap (same as Attendance/Schedule ListAsync without filter param).
-        var response = await service.ListAsync(request, cancellationToken);
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(request, managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 

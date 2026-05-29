@@ -10,16 +10,23 @@ namespace Wokki.Application.Services.Location.Implementations;
 
 public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
 {
-    public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListAsync(
+        IReadOnlySet<Guid>? locationIds = null,
+        CancellationToken cancellationToken = default)
     {
-        var items = await unitOfWork.Locations.ListAsync(activeOnly: false, cancellationToken);
+        var items = await unitOfWork.Locations.ListAsync(
+            activeOnly: false,
+            locationIds: locationIds,
+            cancellationToken: cancellationToken);
         var responses = items.Select(l => l.ToResponse()).ToList();
         return ApiResponse<IReadOnlyList<LocationResponse>>.SuccessResponse(responses, AppMessages.Location.Listed);
     }
 
     public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListActiveAsync(CancellationToken cancellationToken = default)
     {
-        var items = await unitOfWork.Locations.ListAsync(activeOnly: true, cancellationToken);
+        var items = await unitOfWork.Locations.ListAsync(
+            activeOnly: true,
+            cancellationToken: cancellationToken);
         var responses = items.Select(l => l.ToResponse()).ToList();
         return ApiResponse<IReadOnlyList<LocationResponse>>.SuccessResponse(responses, AppMessages.Location.Listed);
     }

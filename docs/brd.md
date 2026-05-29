@@ -49,8 +49,8 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 
 | Stakeholder | Role | Interest | Primary capabilities |
 |-------------|------|----------|------------------------|
-| **System Admin** | IT / HR systems | Users, org data, payroll export, compliance | Admin APIs, user management, payroll CSV |
-| **Operations Manager** | Department lead | Build/publish schedules, approve swaps, review attendance | Schedules, assignments, swaps override, payroll view |
+| **System Admin** | IT / HR systems | Users, org data, payroll export, compliance | All branches, admin APIs, user management, payroll CSV |
+| **Operations Manager** | Branch/department lead | Build/publish schedules, approve swaps, review attendance inside assigned branches | Assigned branch workspace, schedules, assignments, swaps override, payroll view |
 | **Employee (User)** | Frontline staff | See own shifts, swap shifts, clock in/out | `/self/*`, swap peer actions, attendance clock |
 | **Payroll clerk** | Finance (may share Admin account) | Period totals, export | Payroll summary + export |
 | **Product owner** | Business sponsor | MVP scope, phased delivery | `plans/shift-ops-mvp/` |
@@ -87,6 +87,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 
 - Clients obtain JWT via `/api/v1/auth/login`.
 - Each `User` performing shift/attendance/chat actions has a linked `Employee`.
+- Admin manages all branches. Manager access is scoped to `LocationManager` assignments; an employee must have Active `LocationMembership` before protected workspace access.
 - Location `TimeZone` is valid IANA id for swap cutoff.
 - PostgreSQL is the system of record.
 - SMTP credentials are provided via configuration/secrets when email is required.
@@ -109,15 +110,16 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 |----|----------|-------------|
 | FR-101 | P1 | System shall support roles Admin, Manager, User. |
 | FR-102 | P1 | Admin shall CRUD users and employees (employee creates linked user). |
-| FR-103 | P1 | Admin/Manager shall manage locations and departments. |
+| FR-103 | P1 | Admin shall manage every location and department; Manager shall manage only locations assigned through `LocationManager`. |
 | FR-104 | P1 | Employee shall store position, hourly rate, department, termination date. |
+| FR-105 | P1 | Employee shall require an Active `LocationMembership` to access protected workspace routes; users without membership request a branch from `/join` and wait for Admin/target Manager review. |
 
 ### 5.2 Scheduling (Phase 2)
 
 | ID | Priority | Requirement |
 |----|----------|-------------|
 | FR-201 | P1 | Manager shall create weekly schedule per department (Monday week start). |
-| FR-202 | P1 | Manager shall assign employees to shift definitions on specific dates (Draft only). |
+| FR-202 | P1 | Manager shall assign only employees with Active membership in the schedule location and membership in the schedule department (Draft only). |
 | FR-203 | P1 | Manager shall publish/unpublish schedules. |
 | FR-204 | P1 | Manager shall copy a published/draft week to a new Draft week. |
 | FR-205 | P1 | Employee shall view own upcoming assignments via `/self/schedule`. |

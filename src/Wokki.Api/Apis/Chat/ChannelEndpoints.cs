@@ -5,6 +5,7 @@ using Wokki.Api.Extensions;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Chat;
 using Wokki.Application.Services.Chat.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -87,6 +88,7 @@ public static class ChannelEndpoints
     private static async Task<IResult> CreateAsync(
         [FromBody] CreateChannelRequest request,
         [FromServices] IChannelService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<CreateChannelRequest> validator,
         CancellationToken cancellationToken = default)
@@ -97,7 +99,12 @@ public static class ChannelEndpoints
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        // Known scope gap: CreateChannelRequest has no locationId — cannot scope by location.
+        foreach (var employeeId in request.MemberEmployeeIds.Distinct())
+        {
+            if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, employeeId, cancellationToken))
+                return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+        }
+
         var response = await service.CreateAsync(request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
     }

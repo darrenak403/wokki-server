@@ -29,9 +29,19 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 | Resource | Base | Manager | Admin | Ghi chú |
 |----------|------|---------|-------|---------|
-| Employees | `/employees` | Đọc/ghi danh sách | Đầy đủ | Xóa = chấm dứt (soft) |
-| Locations | `/locations` | Đọc/ghi | Đầy đủ | `GET/PUT /locations/{id}/scheduling-policy` quản lý luật chi nhánh (`location-scheduling-policy.v5`: luật solver tối thiểu; trần ca/tuần từ `SchedulingSolverDefaults`). |
-| Departments | `/departments` | Đọc/ghi | Đầy đủ | |
+| Employees | `/employees` | Đọc danh sách theo scope | Đầy đủ | Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft) |
+| Locations | `/locations` | Đọc theo scope | Đầy đủ | Manager chỉ thấy chi nhánh được gán. `GET/PUT /locations/{id}/scheduling-policy` quản lý luật chi nhánh (`location-scheduling-policy.v5`: luật solver tối thiểu; trần ca/tuần từ `SchedulingSolverDefaults`). |
+| Departments | `/departments` | Đọc theo scope | Đầy đủ | Manager chỉ thấy phòng ban thuộc chi nhánh được gán |
+
+## Membership chi nhánh (`/api/v1/location-memberships`)
+
+| Method | Path | Vai trò | Mô tả |
+|--------|------|---------|-------|
+| GET | `/my` | Đã đăng nhập | Membership Active hiện tại, membership gần nhất chưa active, hoặc null |
+| POST | `/request` | User (cần Employee) | Gửi yêu cầu tham gia chi nhánh |
+| GET | `/pending` | Admin, Manager | Yêu cầu chờ duyệt; Manager chỉ nhận chi nhánh được gán |
+| PATCH | `/{id}/review` | Admin, Manager | Duyệt/từ chối; Manager phải quản lý chi nhánh mục tiêu |
+| GET | `/locations/{id}/memberships` | Admin, Manager | Danh sách membership của chi nhánh; Manager phải quản lý chi nhánh đó |
 
 ## Lập lịch (Scheduling)
 

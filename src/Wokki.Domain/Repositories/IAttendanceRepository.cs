@@ -14,6 +14,7 @@ public interface IAttendanceRepository
         Guid? employeeId = null,
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AttendanceRecord>> ListByEmployeeAsync(
         Guid employeeId,

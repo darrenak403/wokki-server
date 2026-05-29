@@ -13,12 +13,24 @@ public sealed class DepartmentRepository(AppDbContext context) : IDepartmentRepo
         return await query.FirstOrDefaultAsync(d => d.Id == id, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Department>> ListAsync(Guid? locationId = null, bool activeOnly = true, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Department>> ListAsync(
+        Guid? locationId = null,
+        bool activeOnly = true,
+        IReadOnlySet<Guid>? locationIds = null,
+        CancellationToken cancellationToken = default)
     {
         var query = context.Departments.AsNoTracking().AsQueryable();
 
         if (locationId.HasValue)
             query = query.Where(d => d.LocationId == locationId.Value);
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(d => allowedLocationIds.Contains(d.LocationId));
+        }
 
         if (activeOnly)
             query = query.Where(d => d.IsActive);

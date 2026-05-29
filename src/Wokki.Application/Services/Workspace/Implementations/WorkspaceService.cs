@@ -52,6 +52,9 @@ public sealed class WorkspaceService(
         if (!canManage)
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Workspace.TransferForbidden);
 
+        if (!await locationScopeService.CanManageLocationAsync(callerId, callerRole, request.ToLocationId, ct))
+            return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Workspace.TransferForbidden);
+
         var employee = await unitOfWork.Employees.GetByIdAsync(request.EmployeeId, cancellationToken: ct);
         if (employee is null)
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Employee.NotFound);
@@ -112,6 +115,9 @@ public sealed class WorkspaceService(
         var department = await unitOfWork.Departments.GetByIdAsync(request.ToDepartmentId, cancellationToken: ct);
         if (department is null || !department.IsActive)
             return ApiResponse<object>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+
+        if (!await locationScopeService.CanManageDepartmentAsync(callerId, callerRole, request.ToDepartmentId, ct))
+            return ApiResponse<object>.FailureResponse(AppMessages.Workspace.TransferForbidden);
 
         var currentActive = await unitOfWork.EmployeeDepartmentMemberships.GetActivePrimaryByEmployeeAsync(
             request.EmployeeId, track: true, cancellationToken: ct);

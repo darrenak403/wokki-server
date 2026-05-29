@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wokki.Domain.Entities;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
 
@@ -22,6 +23,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         Guid? departmentId = null,
         Guid? locationId = null,
         bool includeTerminated = false,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Employees.AsNoTracking().AsQueryable();
@@ -40,10 +42,26 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         if (locationId.HasValue)
         {
             query = query.Where(e =>
+                context.LocationMemberships.Any(m =>
+                    m.EmployeeId == e.Id &&
+                    m.Status == LocationMembershipStatus.Active &&
+                    m.LocationId == locationId.Value) ||
                 context.Departments.Any(d => d.Id == e.DepartmentId && d.LocationId == locationId.Value) ||
                 context.EmployeeDepartmentMemberships.Any(m =>
                     m.EmployeeId == e.Id &&
                     context.Departments.Any(d => d.Id == m.DepartmentId && d.LocationId == locationId.Value)));
+        }
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(e =>
+                    context.LocationMemberships.Any(m =>
+                        m.EmployeeId == e.Id &&
+                        m.Status == LocationMembershipStatus.Active &&
+                        allowedLocationIds.Contains(m.LocationId)));
         }
 
         query = query.OrderByDescending(e => e.CreatedAt);

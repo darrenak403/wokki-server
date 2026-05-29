@@ -7,6 +7,7 @@ public interface IScheduleService
 {
     Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<ApiResponse<ScheduleDetailResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<ApiResponse<ScheduleResponse>> CreateAsync(

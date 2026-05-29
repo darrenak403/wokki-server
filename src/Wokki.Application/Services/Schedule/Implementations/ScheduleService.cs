@@ -23,6 +23,7 @@ public sealed class ScheduleService(
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -33,6 +34,7 @@ public sealed class ScheduleService(
             pageSize,
             request.DepartmentId,
             request.WeekStartDate,
+            locationIds,
             cancellationToken);
 
         return ApiResponse<PagedResponse<ScheduleResponse>>.SuccessPagedResponse(
@@ -548,6 +550,22 @@ public sealed class ScheduleService(
             if (prepared.Error is not null)
                 return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(prepared.Error);
 
+            if (preparedItems.Any(existing =>
+                    existing.Assignment.ShiftDefinitionId == prepared.Assignment!.ShiftDefinitionId
+                    && existing.Assignment.EmployeeId == prepared.Assignment.EmployeeId
+                    && existing.Assignment.Date == prepared.Assignment.Date))
+                return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.AssignmentDuplicate);
+
+            if (preparedItems.Any(existing =>
+                    existing.Assignment.EmployeeId == prepared.Assignment!.EmployeeId
+                    && existing.Assignment.Date == prepared.Assignment.Date
+                    && TimeRangesOverlap(
+                        existing.Shift.StartTime,
+                        existing.Shift.EndTime,
+                        prepared.Shift!.StartTime,
+                        prepared.Shift.EndTime)))
+                return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.AssignmentConflict);
+
             preparedItems.Add((prepared.Assignment!, prepared.Shift!));
         }
 
@@ -601,6 +619,10 @@ public sealed class ScheduleService(
         var employee = await unitOfWork.Employees.GetByIdAsync(request.EmployeeId, cancellationToken: cancellationToken);
         if (employee is null || employee.TerminatedAt is not null)
             return (null, null, AppMessages.Schedule.EmployeeNotFound);
+
+        var locationMembership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, cancellationToken: cancellationToken);
+        if (locationMembership?.LocationId != department.LocationId)
+            return (null, null, AppMessages.Schedule.EmployeeWrongLocation);
 
         if (!await unitOfWork.Employees.IsMemberOfDepartmentAsync(
                 employee.Id,
@@ -783,6 +805,9 @@ public sealed class ScheduleService(
             // Notifications must not roll back core workflow.
         }
     }
+
+    private static bool TimeRangesOverlap(TimeOnly leftStart, TimeOnly leftEnd, TimeOnly rightStart, TimeOnly rightEnd) =>
+        leftStart < rightEnd && leftEnd > rightStart;
 
     private static GenerateScheduleInsightContextRequest BuildInsightContextRequest(
         IReadOnlyList<ScheduleSuggestionItem> suggestions,
