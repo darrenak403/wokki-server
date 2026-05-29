@@ -67,8 +67,10 @@ Mọi màn vận hành org dùng **orgId** và (khi cần) **locationId** trên 
 
 | Loại route | Pattern | Ví dụ |
 |------------|---------|--------|
-| Branch-scoped | `/{orgId}/{locationId}/{Admin\|Manager\|User}/…` | `…/admin/schedule` |
-| Org-only | `/{orgId}/{Admin\|Manager\|User}/…` | `…/admin/onboarding`, `…/admin/workspace` |
+| Branch-scoped | `/{orgId}/{locationId}/{Admin\|Manager\|User}/…` | `…/admin/workspace`, `…/admin/schedule` |
+| Org-only | `/{orgId}/{Admin\|Manager\|User}/…` | `…/admin/onboarding`; `…/admin/workspace` only redirects/selects a branch |
+
+Sidebar and workspace actions must use the selected `locationId`. Do not render all org branches inside the branch workspace; a true all-branch Admin view must be a separate org-level feature.
 
 **Không** gửi `orgId` trong body API — BE vẫn scope bằng JWT.
 

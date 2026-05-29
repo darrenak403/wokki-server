@@ -10,6 +10,7 @@
 - Preferences ≠ official `ShiftAssignment` (advisory)
 - `/auth/me` ≠ `/self/*` (needs `Employee`)
 - Swaps only on **Published** schedules
+- Workspace/sidebar actions are selected-branch scoped; department transfer must target the employee's Active branch
 - Branch `LocationSchedulingPolicy` before suggest; membership not only `Employee.DepartmentId`
 - Bedrock = insight only; `suggest` / `apply-suggestions` never depend on Bedrock
 

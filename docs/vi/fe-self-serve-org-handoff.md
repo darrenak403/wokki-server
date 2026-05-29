@@ -19,6 +19,8 @@
 | `Manager` | `/app` |
 | `User` | `/app` (ca, đổi ca, chấm công) |
 
+Màn vận hành theo chi nhánh dùng `/{orgId}/{locationId}/{role}/...`. Sidebar và workspace thao tác theo chi nhánh đang chọn; `/{orgId}/{role}/workspace` chỉ redirect/chọn chi nhánh, không render toàn bộ chi nhánh của org.
+
 ## Tạo nhân viên
 
 Admin chọn **phòng ban** khi tạo → BE tự gán Active membership chi nhánh. Gửi `temporaryPassword` cho nhân viên login.

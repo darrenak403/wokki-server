@@ -42,6 +42,13 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 **Đã bỏ (2026-05-29):** luồng tự gửi yêu cầu tham gia — `POST /request`, `GET /pending`, `PATCH /{id}/review`.
 
+## Điều chuyển workspace (`/api/v1/workspace`)
+
+| Method | Path                   | Vai trò        | Mô tả |
+| ------ | ---------------------- | -------------- | ----- |
+| POST   | `/location/transfer`   | Admin, Manager | Chuyển nhân viên sang chi nhánh khác trong phạm vi được quản lý. |
+| POST   | `/department/transfer` | Admin, Manager | Chuyển nhân viên sang phòng ban thuộc chi nhánh Active hiện tại của nhân viên. Nếu phòng ban khác chi nhánh, trả `WS_EMPLOYEE_WRONG_LOCATION`; chuyển chi nhánh trước. |
+
 ## Lập lịch (Scheduling)
 
 | Method              | Path                                         | Vai trò        | Mô tả                                                           |

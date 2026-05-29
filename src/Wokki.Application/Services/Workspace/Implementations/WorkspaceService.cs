@@ -108,18 +108,24 @@ public sealed class WorkspaceService(
             return ApiResponse<object>.FailureResponse(AppMessages.Workspace.TransferForbidden);
 
         var employee = await unitOfWork.Employees.GetByIdAsync(request.EmployeeId, track: true, cancellationToken: ct);
-        if (employee is null)
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<object>.FailureResponse(AppMessages.Employee.NotFound);
 
         if (employee.TerminatedAt is not null)
             return ApiResponse<object>.FailureResponse(AppMessages.Employee.AlreadyTerminated);
 
         var department = await unitOfWork.Departments.GetByIdAsync(request.ToDepartmentId, cancellationToken: ct);
-        if (department is null || !department.IsActive)
+        if (department is null || !department.IsActive || !organizationScope.IsSameOrganization(department.OrganizationId))
             return ApiResponse<object>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         if (!await locationScopeService.CanManageDepartmentAsync(callerId, callerRole, request.ToDepartmentId, ct))
             return ApiResponse<object>.FailureResponse(AppMessages.Workspace.TransferForbidden);
+
+        var activeLocation = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(
+            request.EmployeeId,
+            cancellationToken: ct);
+        if (activeLocation is null || activeLocation.LocationId != department.LocationId)
+            return ApiResponse<object>.FailureResponse(AppMessages.Workspace.EmployeeWrongLocation);
 
         var currentPrimary = await unitOfWork.EmployeeDepartmentMemberships.GetActivePrimaryByEmployeeAsync(
             request.EmployeeId, track: false, cancellationToken: ct);

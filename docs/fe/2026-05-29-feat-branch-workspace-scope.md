@@ -303,6 +303,7 @@ New error code for assignment/apply:
 | 403 | `WS_TRANSFER_FORBIDDEN` | You are not authorized to manage this employee. |
 | 409 | `WS_ALREADY_AT_LOCATION` | Employee already has an active membership at this location. |
 | 409 | `WS_ALREADY_IN_DEPT` | Employee is already in this department. |
+| 400 | `WS_EMPLOYEE_WRONG_LOCATION` | Employee must have an active membership in the target department's location before department transfer. |
 | 400 | `SCHEDULE_EMPLOYEE_WRONG_LOCATION` | Employee does not have an active membership in this schedule location. |
 | 400 | `SCHEDULE_EMPLOYEE_WRONG_DEPT` | Employee does not belong to this schedule department. |
 
@@ -351,7 +352,9 @@ department:{departmentId} -> employee:{employeeId}
 location:{locationId} -> pending:{membershipId}
 ```
 
-- Admin graph can show all branches. Manager graph should use server-scoped `GET /locations` or `GET /managers/me/locations`; do not use `/locations/available` for Manager workspace data because it is for join flow and returns all active branches.
+- Current workspace UI is branch-scoped: `/{orgId}/{locationId}/{role}/workspace` must render only the selected branch, its departments, employees, and managers. `/{orgId}/{role}/workspace` is a redirect/branch selection fallback. A true all-branch Admin graph must be a separate explicit org-level view.
+- Operational modules (`schedule`, `payroll`, `employees`, `shifts`, `attendance`, `swap`, `chat`) must save/query data through the selected branch context. Admin has full scope inside the org; Manager scope is only the branches assigned by Org Admin through `LocationManager`.
+- Manager graph should use server-scoped `GET /locations` or `GET /managers/me/locations`; do not use `/locations/available` for Manager workspace data because it is for join flow and returns all active branches.
 - After approving a pending membership, show a second action: "Phân vào phòng ban" using `POST /department-memberships/transfer`.
 - If FE needs a real "trưởng ban theo phòng ban", backend does not have that entity yet. Do not represent branch Managers as department heads unless product accepts that approximation.
 - Membership enum may arrive as string or numeric enum. Normalize both:

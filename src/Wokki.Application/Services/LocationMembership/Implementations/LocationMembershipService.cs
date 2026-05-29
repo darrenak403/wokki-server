@@ -1,12 +1,15 @@
 using Wokki.Application.Dtos.LocationMembership;
 using Wokki.Application.Services.LocationMembership.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.LocationMembership.Implementations;
 
-public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocationMembershipService
+public sealed class LocationMembershipService(
+    IUnitOfWork unitOfWork,
+    IOrganizationScopeService organizationScope) : ILocationMembershipService
 {
     public async Task<ApiResponse<IReadOnlyList<LocationMembershipResponse>>> ListByLocationAsync(
         Guid locationId,
@@ -15,6 +18,10 @@ public sealed class LocationMembershipService(IUnitOfWork unitOfWork) : ILocatio
         bool isAdmin,
         CancellationToken ct = default)
     {
+        var location = await unitOfWork.Locations.GetByIdAsync(locationId, cancellationToken: ct);
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
+            return ApiResponse<IReadOnlyList<LocationMembershipResponse>>.FailureResponse(AppMessages.LocationMembership.LocationNotFound);
+
         if (!isAdmin)
         {
             var isManager = await unitOfWork.LocationManagers.IsManagerOfLocationAsync(callerId, locationId, ct);

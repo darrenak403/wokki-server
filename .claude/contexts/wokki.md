@@ -24,6 +24,10 @@ Use this file for **business meaning** and **where code lives**. Locked rules: `
 
 ## Core domain flows
 
+### Branch workspace
+
+Admin may manage every branch in the JWT organization; Manager scope is only `LocationManager` assignments. FE workspace/sidebar actions are selected-branch scoped (`/{orgId}/{locationId}/{role}/...`). Department transfer is branch-local: target department `LocationId` must match the employee's Active `LocationMembership`; use location transfer before cross-branch placement.
+
 ### Schedule lifecycle
 
 ```text

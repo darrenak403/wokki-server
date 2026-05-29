@@ -289,6 +289,7 @@ public static class AppMessages
         public static readonly AppMessage TransferForbidden = new("WS_TRANSFER_FORBIDDEN", "You are not authorized to manage this employee.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage AlreadyAtLocation = new("WS_ALREADY_AT_LOCATION", "Employee already has an active membership at this location.", StatusCodes.Status409Conflict);
         public static readonly AppMessage AlreadyInDepartment = new("WS_ALREADY_IN_DEPT", "Employee is already in this department.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage EmployeeWrongLocation = new("WS_EMPLOYEE_WRONG_LOCATION", "Employee must have an active membership in the target department's location before department transfer.", StatusCodes.Status400BadRequest);
     }
 
     public static class Stats

@@ -42,6 +42,13 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 
 **Removed (2026-05-29):** self-serve join flow — `POST /request`, `GET /pending`, `PATCH /{id}/review`. Org Admin creates employees; branch membership is provisioned automatically from `DepartmentId`.
 
+## Workspace transfer (`/api/v1/workspace`)
+
+| Method | Path                   | Roles          | Description |
+| ------ | ---------------------- | -------------- | ----------- |
+| POST   | `/location/transfer`   | Admin, Manager | Move an employee to another branch within caller scope. |
+| POST   | `/department/transfer` | Admin, Manager | Move an employee to a department in the employee's current Active branch. Cross-branch department placement returns `WS_EMPLOYEE_WRONG_LOCATION`; transfer location first. |
+
 ## Scheduling
 
 | Method              | Path                                         | Roles          | Description                                                            |

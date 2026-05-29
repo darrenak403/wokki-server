@@ -18,7 +18,7 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-006 | `Admin` có toàn quyền phạm vi chi nhánh **trong tổ chức của mình** và được xem/quản lý mọi workspace `Location` thuộc org đó. | `LocationScopeService`, `IOrganizationScopeService` |
 | BR-007 | Phạm vi `Manager` chỉ là các chi nhánh được gán qua `LocationManager`. Không suy quyền Manager từ role global, role claim đơn thuần, hoặc membership employee/department của chính Manager. | `LocationScopeService`, query list theo scope |
 | BR-008 | Org Admin tạo nhân viên kèm `DepartmentId`; hệ thống tự tạo **Active** `LocationMembership` tại chi nhánh của phòng ban đó. Nhân viên đăng nhập vào `/app` trực tiếp — không có luồng tự gửi yêu cầu tham gia hay màn `/pending`. | `EmployeeService.CreateAsync`, `EmployeeService.EnsureActiveLocationMembershipAsync` |
-| BR-009 | Đổi chi nhánh nhân viên hiện có dùng workspace transfer (`POST /api/v1/workspace/location/transfer`) bởi Admin/Manager — không qua join request. Phòng ban: `POST /api/v1/workspace/department/transfer`. | `WorkspaceService.TransferLocationAsync`, `WorkspaceService.TransferDepartmentAsync` |
+| BR-009 | Đổi chi nhánh nhân viên hiện có dùng workspace transfer (`POST /api/v1/workspace/location/transfer`) bởi Admin/Manager — không qua join request. Phòng ban: `POST /api/v1/workspace/department/transfer` và phải thuộc chi nhánh Active của nhân viên; muốn sang phòng ban chi nhánh khác phải chuyển chi nhánh trước. | `WorkspaceService.TransferLocationAsync`, `WorkspaceService.TransferDepartmentAsync` |
 
 ---
 
@@ -27,7 +27,7 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | ID | Quy tắc | Thực thi |
 |----|---------|---------|
 | BR-010 | `Department` thuộc đúng một `Location`. | EF FK |
-| BR-011 | Nhân viên phải có Active `LocationMembership` đúng chi nhánh và membership phòng ban Active trước khi được phân ca. `Employee.DepartmentId` là phòng ban chính hiện tại. Khi chuyển phòng ban: đóng dòng Active (`Status=Transferred`, ghi `LeftAt`); quay lại phòng ban cũ thì tạo dòng mới — không ghi đè lịch sử. Thời gian ở phòng ban đọc từ `JoinedAt`/`LeftAt` trên từng dòng `employee_department_memberships`. | `TryPrepareAssignmentAsync`, `WorkspaceService.TransferDepartmentAsync`, `GET /api/v1/employees/{id}/department-memberships` |
+| BR-011 | Nhân viên phải có Active `LocationMembership` đúng chi nhánh và membership phòng ban Active trước khi được phân ca. `Employee.DepartmentId` là phòng ban chính hiện tại. Chuyển phòng ban chỉ trong cùng chi nhánh: `LocationId` của phòng ban đích phải khớp Active `LocationMembership` của nhân viên. Khi chuyển phòng ban: đóng dòng Active (`Status=Transferred`, ghi `LeftAt`); quay lại phòng ban cũ thì tạo dòng mới — không ghi đè lịch sử. Thời gian ở phòng ban đọc từ `JoinedAt`/`LeftAt` trên từng dòng `employee_department_memberships`. | `TryPrepareAssignmentAsync`, `WorkspaceService.TransferDepartmentAsync`, `GET /api/v1/employees/{id}/department-memberships` |
 | BR-012 | Nhân viên đã chấm dứt (`TerminatedAt`) không được phân ca mới hoặc làm đối tác đổi ca. | `EmployeeService`, validator |
 | BR-013 | `ShiftDefinition` phải khớp phạm vi lịch: cùng `LocationId`; nếu có `DepartmentId` thì phải bằng department của lịch. | `TryPrepareAssignmentAsync` |
 | BR-014 | Tenant root là `Organization`. Dữ liệu nghiệp vụ có `OrganizationId`; user org phải có JWT claim `organization_id`. Không dùng `organizationId` từ body để authorize. | `OrganizationContextMiddleware`, `IOrganizationScopeService` |
