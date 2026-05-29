@@ -16,5 +16,7 @@ public sealed class SchedulePreferenceLineConfiguration : IEntityTypeConfigurati
             .WithMany()
             .HasForeignKey(x => x.ShiftDefinitionId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

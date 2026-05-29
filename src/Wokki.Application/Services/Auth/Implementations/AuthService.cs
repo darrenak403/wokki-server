@@ -37,25 +37,50 @@ public sealed class AuthService(
         return RefreshForUserAsync(userId.Value, cancellationToken);
     }
 
-    public async Task<ApiResponse<UserSimpleResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<LoginResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var existing = await unitOfWork.Users.GetByEmailAsync(normalizedEmail, cancellationToken);
         if (existing is not null)
-            return ApiResponse<UserSimpleResponse>.FailureResponse(AppMessages.User.Exists);
+            return ApiResponse<LoginResponse>.FailureResponse(AppMessages.User.Exists);
+
+        var organization = new Domain.Entities.Organization
+        {
+            Id = Guid.NewGuid(),
+            Name = request.OrganizationName.Trim(),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
 
         var user = new Domain.Entities.User
         {
+            Id = Guid.NewGuid(),
             Email = normalizedEmail,
             PasswordHash = _passwordHasher.HashPassword(request.Password),
-            Role = RoleConstants.User
+            Role = RoleConstants.Admin,
+            OrganizationId = organization.Id,
+            CreatedAt = DateTime.UtcNow
         };
 
-        await unitOfWork.Users.AddAsync(user, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.Organizations.AddAsync(organization, cancellationToken);
+            await unitOfWork.Users.AddAsync(user, cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
 
-        return ApiResponse<UserSimpleResponse>.SuccessResponse(
-            new UserSimpleResponse(user.Id, user.Email, user.Role),
+        var accessToken = jwtTokenService.GenerateAccessToken(user);
+        var refreshToken = jwtTokenService.GenerateRefreshToken(user);
+
+        return ApiResponse<LoginResponse>.SuccessResponse(
+            new LoginResponse(accessToken, refreshToken),
             AppMessages.User.Created);
     }
 

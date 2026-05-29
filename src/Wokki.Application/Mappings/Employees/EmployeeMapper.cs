@@ -28,10 +28,11 @@ public static class EmployeeMapper
             employee.TerminatedAt,
             employee.CreatedAt);
 
-    public static Employee ToEntity(this CreateEmployeeRequest request, Guid userId) =>
+    public static Employee ToEntity(this CreateEmployeeRequest request, Guid userId, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             UserId = userId,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),

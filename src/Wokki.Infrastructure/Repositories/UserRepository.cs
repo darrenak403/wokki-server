@@ -13,20 +13,33 @@ public sealed class UserRepository(AppDbContext context) : IUserRepository
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         await context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
-    public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListAsync(
+        int page,
+        int pageSize,
+        Guid? organizationId = null,
+        CancellationToken cancellationToken = default)
     {
-        var query = context.Users.AsNoTracking().OrderByDescending(u => u.CreatedAt);
+        var query = context.Users.AsNoTracking().AsQueryable();
+        if (organizationId.HasValue)
+            query = query.Where(u => u.OrganizationId == organizationId.Value);
+        query = query.OrderByDescending(u => u.CreatedAt);
         var total = await query.CountAsync(cancellationToken);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
         return (items, total);
     }
 
-    public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListWithoutEmployeeAsync(int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListWithoutEmployeeAsync(
+        int page,
+        int pageSize,
+        Guid? organizationId = null,
+        CancellationToken cancellationToken = default)
     {
         var query = context.Users
             .AsNoTracking()
-            .Where(u => !context.Employees.Any(e => e.UserId == u.Id))
-            .OrderByDescending(u => u.CreatedAt);
+            .Where(u => !context.Employees.Any(e => e.UserId == u.Id));
+        if (organizationId.HasValue)
+            query = query.Where(u => u.OrganizationId == organizationId.Value);
+        query = query.OrderByDescending(u => u.CreatedAt);
         var total = await query.CountAsync(cancellationToken);
         var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
         return (items, total);

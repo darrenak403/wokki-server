@@ -15,10 +15,11 @@ public static class ScheduleMapper
             schedule.PublishedAt,
             schedule.CreatedAt);
 
-    public static Schedule ToEntity(this CreateScheduleRequest request, Guid createdBy) =>
+    public static Schedule ToEntity(this CreateScheduleRequest request, Guid createdBy, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             DepartmentId = request.DepartmentId,
             WeekStartDate = request.WeekStartDate,
             CreatedBy = createdBy,
@@ -31,10 +32,11 @@ public static class ScheduleMapper
         schedule.WeekStartDate = request.WeekStartDate;
     }
 
-    public static ShiftAssignment ToAssignmentEntity(this CreateShiftAssignmentRequest request, Guid scheduleId) =>
+    public static ShiftAssignment ToAssignmentEntity(this CreateShiftAssignmentRequest request, Guid scheduleId, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             ScheduleId = scheduleId,
             ShiftDefinitionId = request.ShiftDefinitionId,
             EmployeeId = request.EmployeeId,

@@ -2,19 +2,21 @@ using Wokki.Application.Dtos.Location;
 using Wokki.Application.Mappings.Locations;
 using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Location.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Location.Implementations;
 
-public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
+public sealed class LocationService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : ILocationService
 {
     public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListAsync(
         IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var items = await unitOfWork.Locations.ListAsync(
+            organizationId: organizationScope.GetCurrentOrganizationId(),
             activeOnly: false,
             locationIds: locationIds,
             cancellationToken: cancellationToken);
@@ -25,6 +27,7 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
     public async Task<ApiResponse<IReadOnlyList<LocationResponse>>> ListActiveAsync(CancellationToken cancellationToken = default)
     {
         var items = await unitOfWork.Locations.ListAsync(
+            organizationId: organizationScope.GetCurrentOrganizationId(),
             activeOnly: true,
             cancellationToken: cancellationToken);
         var responses = items.Select(l => l.ToResponse()).ToList();
@@ -35,12 +38,13 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
         CreateLocationRequest request,
         CancellationToken cancellationToken = default)
     {
+        var organizationId = organizationScope.RequireOrganizationId();
         var name = request.Name.Trim();
-        var existing = await unitOfWork.Locations.GetByNameAsync(name, cancellationToken);
+        var existing = await unitOfWork.Locations.GetByNameAsync(name, organizationId, cancellationToken);
         if (existing is not null)
             return ApiResponse<LocationResponse>.FailureResponse(AppMessages.Location.Exists);
 
-        var entity = request.ToEntity();
+        var entity = request.ToEntity(organizationId);
         await unitOfWork.Locations.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -56,8 +60,10 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
         if (location is null)
             return ApiResponse<LocationResponse>.FailureResponse(AppMessages.Location.NotFound);
 
+        organizationScope.EnsureSameOrganization(location.OrganizationId);
+
         var name = request.Name.Trim();
-        var duplicate = await unitOfWork.Locations.GetByNameAsync(name, cancellationToken);
+        var duplicate = await unitOfWork.Locations.GetByNameAsync(name, location.OrganizationId, cancellationToken);
         if (duplicate is not null && duplicate.Id != id)
             return ApiResponse<LocationResponse>.FailureResponse(AppMessages.Location.Exists);
 
@@ -73,7 +79,7 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
         CancellationToken cancellationToken = default)
     {
         var location = await unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken);
-        if (location is null)
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Location.NotFound);
 
         var policy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(id, cancellationToken: cancellationToken);
@@ -93,7 +99,7 @@ public sealed class LocationService(IUnitOfWork unitOfWork) : ILocationService
         CancellationToken cancellationToken = default)
     {
         var location = await unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken);
-        if (location is null)
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Location.NotFound);
 
         if (!LocationSchedulingPolicyRules.TryValidate(request.Rules))

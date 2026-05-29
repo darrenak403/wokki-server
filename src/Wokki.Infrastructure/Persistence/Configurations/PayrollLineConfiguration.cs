@@ -24,5 +24,7 @@ public sealed class PayrollLineConfiguration : IEntityTypeConfiguration<PayrollL
             .WithMany()
             .HasForeignKey(x => x.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

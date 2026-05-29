@@ -16,5 +16,7 @@ public sealed class EmployeeAvailabilityConfiguration : IEntityTypeConfiguration
             .WithMany()
             .HasForeignKey(x => x.EmployeeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

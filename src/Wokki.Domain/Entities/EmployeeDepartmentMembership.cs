@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class EmployeeDepartmentMembership
 {
     public Guid EmployeeId { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid DepartmentId { get; set; }
     public bool IsPrimary { get; set; }
     public DepartmentMembershipStatus Status { get; set; } = DepartmentMembershipStatus.Active;

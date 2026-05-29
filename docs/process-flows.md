@@ -19,29 +19,23 @@ One company per environment. No shared multi-tenant database in MVP.
 
 ## 1.1 Branch workspace access
 
+Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** vào app — **không** có luồng `/join` hay duyệt yêu cầu tham gia.
+
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant FE as Wokki Client
-    participant API as LocationMembership API
-    participant R as Admin/Target Manager
+    participant A as Org Admin
+    participant API as Employee API
+    participant E as Employee
 
-    U->>FE: Open protected app route
-    FE->>API: GET /location-memberships/my
-    alt No membership
-        FE-->>U: Redirect /join
-        U->>API: POST /location-memberships/request { locationId }
-        FE-->>U: Redirect /pending
-    else Pending / Rejected / Left / Transferred
-        FE-->>U: Redirect /pending
-    else Active
-        FE-->>U: Render workspace
-    end
-    R->>API: PATCH /location-memberships/{id}/review
-    API-->>R: Active or Rejected
+    A->>API: POST /employees { email, departmentId, ... }
+    API-->>A: employeeId + temporaryPassword
+    A->>E: Gửi email + mật khẩu tạm
+    E->>API: POST /auth/login
+    E->>API: GET /location-memberships/my
+    Note over E,API: Active membership — vào /app ngay
 ```
 
-Admin manages every branch. Manager scope is only `LocationManager` assignments; scoped list endpoints pass the caller's managed location IDs to repositories even when the FE does not provide a location filter. Employee management visibility is based on Active `LocationMembership`; department placement happens after branch approval.
+Đổi chi nhánh sau này: Admin/Manager dùng `POST /api/v1/workspace/location/transfer`. Admin quản mọi chi nhánh trong org; Manager chỉ scope `LocationManager`.
 
 ---
 
@@ -258,12 +252,12 @@ sequenceDiagram
 
 ## 9. Agent decision tree (where to implement)
 
-| Change type | Layer |
-|-------------|--------|
-| New business rule / validation | `Wokki.Application` service |
-| New HTTP route | `Wokki.Api/Apis/{Feature}/*Endpoints.cs` |
-| New persistence query | `Wokki.Domain` repo interface + `Infrastructure` impl |
-| New user-visible message | `AppMessages` + service return |
-| New enum state | `Wokki.Domain.Enums` + service transitions |
+| Change type                    | Layer                                                 |
+| ------------------------------ | ----------------------------------------------------- |
+| New business rule / validation | `Wokki.Application` service                           |
+| New HTTP route                 | `Wokki.Api/Apis/{Feature}/*Endpoints.cs`              |
+| New persistence query          | `Wokki.Domain` repo interface + `Infrastructure` impl |
+| New user-visible message       | `AppMessages` + service return                        |
+| New enum state                 | `Wokki.Domain.Enums` + service transitions            |
 
 Never add EF or business rules in `Wokki.Api` handlers.

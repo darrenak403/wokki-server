@@ -25,6 +25,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
     public async Task<(IReadOnlyList<AttendanceRecord> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? employeeId = null,
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
@@ -32,6 +33,9 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         CancellationToken cancellationToken = default)
     {
         var query = context.AttendanceRecords.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(a => a.OrganizationId == organizationId.Value);
 
         if (employeeId.HasValue)
             query = query.Where(a => a.EmployeeId == employeeId.Value);

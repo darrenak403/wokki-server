@@ -38,10 +38,12 @@ public static class SwapRequestMapper
     public static Wokki.Domain.Entities.SwapRequest ToEntity(
         CreateSwapRequestRequest request,
         Guid requesterId,
-        Guid targetEmployeeId) =>
-        new Wokki.Domain.Entities.SwapRequest
+        Guid targetEmployeeId,
+        Guid organizationId) =>
+        new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             RequesterAssignmentId = request.RequesterAssignmentId,
             TargetAssignmentId = request.TargetAssignmentId,
             RequesterId = requesterId,

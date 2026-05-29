@@ -1,12 +1,13 @@
 using Wokki.Application.Dtos.Department;
 using Wokki.Application.Mappings.Departments;
 using Wokki.Application.Services.Department.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Department.Implementations;
 
-public sealed class DepartmentService(IUnitOfWork unitOfWork) : IDepartmentService
+public sealed class DepartmentService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : IDepartmentService
 {
     public async Task<ApiResponse<IReadOnlyList<DepartmentResponse>>> ListAsync(
         Guid? locationId,
@@ -14,6 +15,7 @@ public sealed class DepartmentService(IUnitOfWork unitOfWork) : IDepartmentServi
         CancellationToken cancellationToken = default)
     {
         var items = await unitOfWork.Departments.ListAsync(
+            organizationId: organizationScope.GetCurrentOrganizationId(),
             locationId,
             activeOnly: false,
             locationIds: locationIds,
@@ -26,11 +28,12 @@ public sealed class DepartmentService(IUnitOfWork unitOfWork) : IDepartmentServi
         CreateDepartmentRequest request,
         CancellationToken cancellationToken = default)
     {
+        var organizationId = organizationScope.RequireOrganizationId();
         var location = await unitOfWork.Locations.GetByIdAsync(request.LocationId, cancellationToken: cancellationToken);
-        if (location is null)
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<DepartmentResponse>.FailureResponse(AppMessages.Department.LocationNotFound);
 
-        var entity = request.ToEntity();
+        var entity = request.ToEntity(organizationId);
         await unitOfWork.Departments.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -43,7 +46,7 @@ public sealed class DepartmentService(IUnitOfWork unitOfWork) : IDepartmentServi
         CancellationToken cancellationToken = default)
     {
         var department = await unitOfWork.Departments.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (department is null)
+        if (department is null || !organizationScope.IsSameOrganization(department.OrganizationId))
             return ApiResponse<DepartmentResponse>.FailureResponse(AppMessages.Department.NotFound);
 
         department.ApplyUpdate(request);

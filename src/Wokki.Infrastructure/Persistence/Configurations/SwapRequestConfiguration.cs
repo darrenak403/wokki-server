@@ -33,5 +33,7 @@ public sealed class SwapRequestConfiguration : IEntityTypeConfiguration<SwapRequ
             .WithMany()
             .HasForeignKey(x => x.TargetAssignmentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

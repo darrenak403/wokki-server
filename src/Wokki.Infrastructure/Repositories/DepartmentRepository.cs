@@ -14,12 +14,16 @@ public sealed class DepartmentRepository(AppDbContext context) : IDepartmentRepo
     }
 
     public async Task<IReadOnlyList<Department>> ListAsync(
+        Guid? organizationId = null,
         Guid? locationId = null,
         bool activeOnly = true,
         IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Departments.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(d => d.OrganizationId == organizationId.Value);
 
         if (locationId.HasValue)
             query = query.Where(d => d.LocationId == locationId.Value);

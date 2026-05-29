@@ -11,6 +11,7 @@ public interface IAttendanceRepository
     Task<(IReadOnlyList<AttendanceRecord> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? employeeId = null,
         DateOnly? fromDate = null,
         DateOnly? toDate = null,

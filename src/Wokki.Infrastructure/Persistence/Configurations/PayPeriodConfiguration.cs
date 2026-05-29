@@ -16,5 +16,7 @@ public sealed class PayPeriodConfiguration : IEntityTypeConfiguration<PayPeriod>
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

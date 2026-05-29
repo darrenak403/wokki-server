@@ -33,6 +33,7 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
         var employeePage = await unitOfWork.Employees.ListAsync(
             1,
             500,
+            department.OrganizationId,
             schedule.DepartmentId,
             locationIds: new HashSet<Guid> { department.LocationId },
             cancellationToken: cancellationToken);

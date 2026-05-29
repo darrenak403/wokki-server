@@ -20,6 +20,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
     public async Task<(IReadOnlyList<Employee> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         Guid? locationId = null,
         bool includeTerminated = false,
@@ -27,6 +28,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         CancellationToken cancellationToken = default)
     {
         var query = context.Employees.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(e => e.OrganizationId == organizationId.Value);
 
         if (!includeTerminated)
             query = query.Where(e => e.TerminatedAt == null);
@@ -36,7 +40,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
             query = query.Where(e =>
                 e.DepartmentId == departmentId.Value ||
                 context.EmployeeDepartmentMemberships.Any(m =>
-                    m.EmployeeId == e.Id && m.DepartmentId == departmentId.Value));
+                    m.EmployeeId == e.Id &&
+                    m.DepartmentId == departmentId.Value &&
+                    m.Status == DepartmentMembershipStatus.Active));
         }
 
         if (locationId.HasValue)
@@ -49,6 +55,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
                 context.Departments.Any(d => d.Id == e.DepartmentId && d.LocationId == locationId.Value) ||
                 context.EmployeeDepartmentMemberships.Any(m =>
                     m.EmployeeId == e.Id &&
+                    m.Status == DepartmentMembershipStatus.Active &&
                     context.Departments.Any(d => d.Id == m.DepartmentId && d.LocationId == locationId.Value)));
         }
 
@@ -92,7 +99,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
                 e.TerminatedAt == null &&
                 (deptList.Contains(e.DepartmentId) ||
                  context.EmployeeDepartmentMemberships.Any(m =>
-                     m.EmployeeId == e.Id && deptList.Contains(m.DepartmentId))))
+                     m.EmployeeId == e.Id &&
+                     m.Status == DepartmentMembershipStatus.Active &&
+                     deptList.Contains(m.DepartmentId))))
             .Select(e => e.Id)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -107,7 +116,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
             return true;
 
         return await context.EmployeeDepartmentMemberships.AnyAsync(
-            m => m.EmployeeId == employeeId && m.DepartmentId == departmentId,
+            m => m.EmployeeId == employeeId &&
+                 m.DepartmentId == departmentId &&
+                 m.Status == DepartmentMembershipStatus.Active,
             cancellationToken);
     }
 
@@ -115,4 +126,10 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         await context.Employees.AddAsync(employee, cancellationToken);
 
     public void Update(Employee employee) => context.Employees.Update(employee);
+
+    public async Task<Employee?> GetSwapHoldByOrganizationAsync(Guid organizationId, CancellationToken cancellationToken = default) =>
+        await context.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(
+                e => e.OrganizationId == organizationId && e.FirstName == "Swap" && e.LastName == "Hold",
+                cancellationToken);
 }

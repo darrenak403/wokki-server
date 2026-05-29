@@ -16,5 +16,7 @@ public sealed class LocationSchedulingPolicyConfiguration : IEntityTypeConfigura
             .WithOne()
             .HasForeignKey<LocationSchedulingPolicy>(x => x.LocationId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

@@ -6,6 +6,7 @@ namespace Wokki.Infrastructure.Repositories;
 
 public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
 {
+    private IOrganizationRepository? _organizations;
     private IUserRepository? _users;
     private IEmployeeRepository? _employees;
     private ILocationRepository? _locations;
@@ -29,6 +30,7 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private ILocationManagerRepository? _locationManagers;
     private IDbContextTransaction? _transaction;
 
+    public IOrganizationRepository Organizations => _organizations ??= new OrganizationRepository(context);
     public IUserRepository Users => _users ??= new UserRepository(context);
     public IEmployeeRepository Employees => _employees ??= new EmployeeRepository(context);
     public ILocationRepository Locations => _locations ??= new LocationRepository(context);

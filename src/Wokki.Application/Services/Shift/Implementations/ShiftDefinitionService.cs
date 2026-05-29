@@ -1,12 +1,13 @@
 using Wokki.Application.Dtos.Shift;
 using Wokki.Application.Mappings.Shifts;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Shift.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Shift.Implementations;
 
-public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork) : IShiftDefinitionService
+public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : IShiftDefinitionService
 {
     public async Task<ApiResponse<IReadOnlyList<ShiftDefinitionResponse>>> ListAsync(
         Guid locationId,
@@ -14,7 +15,7 @@ public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork) : IShiftDefin
         CancellationToken cancellationToken = default)
     {
         var location = await unitOfWork.Locations.GetByIdAsync(locationId, cancellationToken: cancellationToken);
-        if (location is null)
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<IReadOnlyList<ShiftDefinitionResponse>>.FailureResponse(AppMessages.Shift.LocationNotFound);
 
         var items = await unitOfWork.ShiftDefinitions.ListAsync(locationId, departmentId, activeOnly: false, cancellationToken);
@@ -30,18 +31,19 @@ public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork) : IShiftDefin
         if (request.EndTime <= request.StartTime)
             return ApiResponse<ShiftDefinitionResponse>.FailureResponse(AppMessages.Shift.InvalidTimeRange);
 
+        var organizationId = organizationScope.RequireOrganizationId();
         var location = await unitOfWork.Locations.GetByIdAsync(request.LocationId, cancellationToken: cancellationToken);
-        if (location is null)
+        if (location is null || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<ShiftDefinitionResponse>.FailureResponse(AppMessages.Shift.LocationNotFound);
 
         if (request.DepartmentId.HasValue)
         {
             var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId.Value, cancellationToken: cancellationToken);
-            if (department is null)
+            if (department is null || department.OrganizationId != organizationId)
                 return ApiResponse<ShiftDefinitionResponse>.FailureResponse(AppMessages.Department.NotFound);
         }
 
-        var entity = request.ToEntity();
+        var entity = request.ToEntity(organizationId);
         await unitOfWork.ShiftDefinitions.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -57,7 +59,7 @@ public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork) : IShiftDefin
             return ApiResponse<ShiftDefinitionResponse>.FailureResponse(AppMessages.Shift.InvalidTimeRange);
 
         var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (shift is null)
+        if (shift is null || !organizationScope.IsSameOrganization(shift.OrganizationId))
             return ApiResponse<ShiftDefinitionResponse>.FailureResponse(AppMessages.Shift.NotFound);
 
         shift.ApplyUpdate(request);
@@ -70,7 +72,7 @@ public sealed class ShiftDefinitionService(IUnitOfWork unitOfWork) : IShiftDefin
     public async Task<ApiResponse<object>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (shift is null)
+        if (shift is null || !organizationScope.IsSameOrganization(shift.OrganizationId))
             return ApiResponse<object>.FailureResponse(AppMessages.Shift.NotFound);
 
         shift.IsActive = false;

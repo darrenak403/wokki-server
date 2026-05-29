@@ -29,6 +29,7 @@ public interface IEmployeeDepartmentMembershipRepository
 
     Task ReplaceForEmployeeAsync(
         Guid employeeId,
+        Guid organizationId,
         IReadOnlyList<Guid> departmentIds,
         Guid primaryDepartmentId,
         CancellationToken cancellationToken = default);

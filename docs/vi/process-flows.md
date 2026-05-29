@@ -19,29 +19,23 @@ Một công ty một môi trường. Không chia sẻ database đa tenant trong 
 
 ## 1.1 Quyền truy cập workspace chi nhánh
 
+Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** — **không** có `/join` hay duyệt yêu cầu tham gia.
+
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant FE as Wokki Client
-    participant API as LocationMembership API
-    participant R as Admin/Manager chi nhánh
+    participant A as Org Admin
+    participant API as Employee API
+    participant E as Nhân viên
 
-    U->>FE: Mở route app được bảo vệ
-    FE->>API: GET /location-memberships/my
-    alt Chưa có membership
-        FE-->>U: Điều hướng /join
-        U->>API: POST /location-memberships/request { locationId }
-        FE-->>U: Điều hướng /pending
-    else Pending / Rejected / Left / Transferred
-        FE-->>U: Điều hướng /pending
-    else Active
-        FE-->>U: Hiển thị workspace
-    end
-    R->>API: PATCH /location-memberships/{id}/review
-    API-->>R: Active hoặc Rejected
+    A->>API: POST /employees { email, departmentId, ... }
+    API-->>A: employeeId + temporaryPassword
+    A->>E: Gửi email + mật khẩu tạm
+    E->>API: POST /auth/login
+    E->>API: GET /location-memberships/my
+    Note over E,API: Active membership — vào /app ngay
 ```
 
-Admin quản lý mọi chi nhánh. Manager chỉ có phạm vi các `LocationManager` được Admin gán; các endpoint list luôn truyền danh sách location được quản lý xuống repository ngay cả khi FE không gửi filter location. Việc hiển thị/quản lý nhân viên dựa trên Active `LocationMembership`; phân phòng ban được thực hiện sau khi nhân viên được duyệt vào chi nhánh.
+Đổi chi nhánh sau này: Admin/Manager dùng `POST /api/v1/workspace/location/transfer`.
 
 ---
 
@@ -258,12 +252,12 @@ sequenceDiagram
 
 ## 9. Cây quyết định cho agent (sửa code ở đâu)
 
-| Loại thay đổi | Tầng |
-|---------------|------|
-| Quy tắc / validation mới | `Wokki.Application` service |
-| Route HTTP mới | `Wokki.Api/Apis/{Feature}/*Endpoints.cs` |
-| Truy vấn DB mới | Interface repo `Wokki.Domain` + impl `Infrastructure` |
-| Message hiển thị | `AppMessages` + service return |
-| Trạng thái enum mới | `Wokki.Domain.Enums` + chuyển trạng thái trong service |
+| Loại thay đổi            | Tầng                                                   |
+| ------------------------ | ------------------------------------------------------ |
+| Quy tắc / validation mới | `Wokki.Application` service                            |
+| Route HTTP mới           | `Wokki.Api/Apis/{Feature}/*Endpoints.cs`               |
+| Truy vấn DB mới          | Interface repo `Wokki.Domain` + impl `Infrastructure`  |
+| Message hiển thị         | `AppMessages` + service return                         |
+| Trạng thái enum mới      | `Wokki.Domain.Enums` + chuyển trạng thái trong service |
 
 Không đặt EF hay quy tắc nghiệp vụ trong handler `Wokki.Api`.

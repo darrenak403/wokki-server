@@ -3,6 +3,7 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.SwapRequest;
 using Wokki.Application.Mappings.SwapRequests;
 using SwapMapper = Wokki.Application.Mappings.SwapRequests.SwapRequestMapper;
+using Wokki.Application.Services.Organization.Implementations;
 using Wokki.Application.Services.SwapRequest.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -17,7 +18,10 @@ using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.SwapRequest.Implementations;
 
-public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationService notifications) : ISwapRequestService
+public sealed class SwapRequestService(
+    IUnitOfWork unitOfWork,
+    INotificationService notifications,
+    IPasswordHasher passwordHasher) : ISwapRequestService
 {
     public async Task<ApiResponse<SwapRequestResponse>> CreateAsync(
         CreateSwapRequestRequest request,
@@ -48,6 +52,10 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
         if (targetContext.Assignment.EmployeeId == requesterEmployee.Id)
             return ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.SameEmployee);
 
+        if (requesterContext.Assignment.OrganizationId != targetContext.Assignment.OrganizationId
+            || requesterContext.Assignment.OrganizationId != requesterEmployee.OrganizationId)
+            return ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.AssignmentNotFound);
+
         var timeZone = SwapCutoffRules.ResolveTimeZone(requesterContext.Location.TimeZone);
         if (SwapCutoffRules.IsCutoffExceeded(requesterContext.Assignment.Date, timeZone, isCreate: true))
             return ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.CutoffExceeded);
@@ -55,7 +63,11 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
         if (await unitOfWork.SwapRequests.HasOpenSwapForAssignmentAsync(request.RequesterAssignmentId, cancellationToken))
             return ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.OpenSwapExists);
 
-        var entity = SwapMapper.ToEntity(request, requesterEmployee.Id, targetContext.Assignment.EmployeeId);
+        var entity = SwapMapper.ToEntity(
+            request,
+            requesterEmployee.Id,
+            targetContext.Assignment.EmployeeId,
+            requesterEmployee.OrganizationId);
         await unitOfWork.SwapRequests.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -365,9 +377,22 @@ public sealed class SwapRequestService(IUnitOfWork unitOfWork, INotificationServ
             || targetAssignment.EmployeeId != swap.TargetEmployeeId)
             return (false, ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.InvalidTransition));
 
+        var schedule = await unitOfWork.Schedules.GetByIdAsync(requesterAssignment.ScheduleId, cancellationToken: cancellationToken);
+        if (schedule is null)
+            return (false, ApiResponse<SwapRequestResponse>.FailureResponse(AppMessages.Swap.AssignmentNotFound));
+
+        var holdEmployeeId = await SwapHoldProvisioner.EnsureForOrganizationAsync(
+            unitOfWork,
+            passwordHasher,
+            requesterAssignment.OrganizationId,
+            schedule.DepartmentId,
+            cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
         await unitOfWork.ShiftAssignments.SwapEmployeeIdsAsync(
             requesterAssignment.Id,
             targetAssignment.Id,
+            holdEmployeeId,
             cancellationToken);
 
         return (true, null);

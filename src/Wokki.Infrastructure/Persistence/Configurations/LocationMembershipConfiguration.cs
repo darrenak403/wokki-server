@@ -41,5 +41,7 @@ public sealed class LocationMembershipConfiguration : IEntityTypeConfiguration<L
             .WithMany()
             .HasForeignKey(x => x.ReviewedById)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

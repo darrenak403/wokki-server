@@ -12,6 +12,7 @@ public interface IScheduleRepository
     Task<(IReadOnlyList<Schedule> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
         IReadOnlySet<Guid>? locationIds = null,

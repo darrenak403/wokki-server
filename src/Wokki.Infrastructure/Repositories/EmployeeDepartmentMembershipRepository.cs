@@ -14,8 +14,8 @@ public sealed class EmployeeDepartmentMembershipRepository(AppDbContext context)
         await context.EmployeeDepartmentMemberships
             .AsNoTracking()
             .Where(m => m.EmployeeId == employeeId)
-            .OrderByDescending(m => m.IsPrimary)
-            .ThenBy(m => m.DepartmentId)
+            .OrderByDescending(m => m.JoinedAt)
+            .ThenByDescending(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
 
     public Task<bool> ExistsAsync(
@@ -23,7 +23,9 @@ public sealed class EmployeeDepartmentMembershipRepository(AppDbContext context)
         Guid departmentId,
         CancellationToken cancellationToken = default) =>
         context.EmployeeDepartmentMemberships.AnyAsync(
-            m => m.EmployeeId == employeeId && m.DepartmentId == departmentId,
+            m => m.EmployeeId == employeeId &&
+                 m.DepartmentId == departmentId &&
+                 m.Status == DepartmentMembershipStatus.Active,
             cancellationToken);
 
     public async Task<EmployeeDepartmentMembership?> GetByEmployeeAndDepartmentAsync(
@@ -35,8 +37,11 @@ public sealed class EmployeeDepartmentMembershipRepository(AppDbContext context)
         var query = track
             ? context.EmployeeDepartmentMemberships
             : context.EmployeeDepartmentMemberships.AsNoTracking();
-        return await query.FirstOrDefaultAsync(
-            m => m.EmployeeId == employeeId && m.DepartmentId == departmentId,
+        return await query
+            .Where(m => m.EmployeeId == employeeId && m.DepartmentId == departmentId)
+            .OrderByDescending(m => m.Status == DepartmentMembershipStatus.Active)
+            .ThenByDescending(m => m.JoinedAt)
+            .FirstOrDefaultAsync(
             cancellationToken);
     }
 
@@ -48,8 +53,10 @@ public sealed class EmployeeDepartmentMembershipRepository(AppDbContext context)
         var query = track
             ? context.EmployeeDepartmentMemberships
             : context.EmployeeDepartmentMemberships.AsNoTracking();
-        return await query.FirstOrDefaultAsync(
-            m => m.EmployeeId == employeeId && m.Status == DepartmentMembershipStatus.Active && m.IsPrimary,
+        return await query
+            .Where(m => m.EmployeeId == employeeId && m.Status == DepartmentMembershipStatus.Active && m.IsPrimary)
+            .OrderByDescending(m => m.JoinedAt)
+            .FirstOrDefaultAsync(
             cancellationToken);
     }
 
@@ -61,49 +68,51 @@ public sealed class EmployeeDepartmentMembershipRepository(AppDbContext context)
 
     public async Task ReplaceForEmployeeAsync(
         Guid employeeId,
+        Guid organizationId,
         IReadOnlyList<Guid> departmentIds,
         Guid primaryDepartmentId,
         CancellationToken cancellationToken = default)
     {
         var unique = departmentIds.Append(primaryDepartmentId).Distinct().ToHashSet();
+        var now = DateTime.UtcNow;
 
         var existing = await context.EmployeeDepartmentMemberships
             .Where(m => m.EmployeeId == employeeId)
             .ToListAsync(cancellationToken);
 
-        // Soft-delete memberships no longer in the new set, preserving history.
-        foreach (var m in existing.Where(m => !unique.Contains(m.DepartmentId) && m.Status == DepartmentMembershipStatus.Active))
+        var activeRows = existing.Where(m => m.Status == DepartmentMembershipStatus.Active).ToList();
+
+        // Close active memberships no longer in the new set, preserving full history rows.
+        foreach (var m in activeRows.Where(m => !unique.Contains(m.DepartmentId)))
         {
             m.Status = DepartmentMembershipStatus.Transferred;
-            m.LeftAt = DateTime.UtcNow;
+            m.LeftAt = now;
             m.IsPrimary = false;
         }
 
-        var existingIds = existing.Select(m => m.DepartmentId).ToHashSet();
-        var toAdd = unique.Where(id => !existingIds.Contains(id)).ToList();
+        var activeByDepartment = activeRows
+            .GroupBy(m => m.DepartmentId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.JoinedAt).First());
+
+        var toAdd = unique.Where(id => !activeByDepartment.ContainsKey(id)).ToList();
 
         await context.EmployeeDepartmentMemberships.AddRangeAsync(
             toAdd.Select(id => new EmployeeDepartmentMembership
             {
                 EmployeeId = employeeId,
+                OrganizationId = organizationId,
                 DepartmentId = id,
                 IsPrimary = id == primaryDepartmentId,
                 Status = DepartmentMembershipStatus.Active,
-                JoinedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow
+                JoinedAt = now,
+                CreatedAt = now
             }),
             cancellationToken);
 
-        // Reactivate or update existing rows in the new set (handles both retained-active and previously-transferred).
-        foreach (var m in existing.Where(m => unique.Contains(m.DepartmentId)))
+        // Keep only active rows in the target set and make the intended one primary.
+        foreach (var m in activeRows.Where(m => unique.Contains(m.DepartmentId)))
         {
-            m.Status = DepartmentMembershipStatus.Active;
             m.IsPrimary = m.DepartmentId == primaryDepartmentId;
-            if (m.LeftAt is not null)
-            {
-                m.JoinedAt = DateTime.UtcNow;
-                m.LeftAt = null;
-            }
         }
     }
 }

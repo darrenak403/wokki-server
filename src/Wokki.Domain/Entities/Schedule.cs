@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class Schedule
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid DepartmentId { get; set; }
     public DateOnly WeekStartDate { get; set; }
     public ScheduleStatus Status { get; set; } = ScheduleStatus.Draft;

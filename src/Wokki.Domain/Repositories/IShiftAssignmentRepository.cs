@@ -33,5 +33,9 @@ public interface IShiftAssignmentRepository
     Task AddAsync(ShiftAssignment assignment, CancellationToken cancellationToken = default);
     void Update(ShiftAssignment assignment);
     void Remove(ShiftAssignment assignment);
-    Task SwapEmployeeIdsAsync(Guid assignmentId1, Guid assignmentId2, CancellationToken cancellationToken = default);
+    Task SwapEmployeeIdsAsync(
+        Guid assignmentId1,
+        Guid assignmentId2,
+        Guid holdEmployeeId,
+        CancellationToken cancellationToken = default);
 }

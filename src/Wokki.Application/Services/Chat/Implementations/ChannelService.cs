@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Wokki.Application.Dtos.Chat;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Services.Chat.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
@@ -9,7 +10,10 @@ using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Chat.Implementations;
 
-public sealed partial class ChannelService(IUnitOfWork unitOfWork, IChatRealtimeNotifier realtime) : IChannelService
+public sealed partial class ChannelService(
+    IUnitOfWork unitOfWork,
+    IChatRealtimeNotifier realtime,
+    IOrganizationScopeService organizationScope) : IChannelService
 {
     private const int MaxBodyLength = 4000;
     private const string DeletedPlaceholder = "[Message deleted]";
@@ -49,7 +53,8 @@ public sealed partial class ChannelService(IUnitOfWork unitOfWork, IChatRealtime
         foreach (var memberId in memberIds)
         {
             var member = await unitOfWork.Employees.GetByIdAsync(memberId, cancellationToken: cancellationToken);
-            if (member is null || member.TerminatedAt is not null)
+            if (member is null || member.TerminatedAt is not null
+                || !organizationScope.IsSameOrganization(member.OrganizationId))
                 return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.MemberNotFound);
         }
 
@@ -75,6 +80,7 @@ public sealed partial class ChannelService(IUnitOfWork unitOfWork, IChatRealtime
         var channel = new Channel
         {
             Id = Guid.NewGuid(),
+            OrganizationId = creator.OrganizationId,
             Name = request.Type == ChannelType.Group ? request.Name!.Trim() : null,
             Type = request.Type,
             CreatedBy = createdByUserId,
@@ -86,6 +92,7 @@ public sealed partial class ChannelService(IUnitOfWork unitOfWork, IChatRealtime
         var members = memberIds.Select(id => new ChannelMember
         {
             Id = Guid.NewGuid(),
+            OrganizationId = creator.OrganizationId,
             ChannelId = channel.Id,
             EmployeeId = id,
             JoinedAt = DateTime.UtcNow
@@ -144,12 +151,13 @@ public sealed partial class ChannelService(IUnitOfWork unitOfWork, IChatRealtime
             return ApiResponse<MessageResponse>.FailureResponse(AppMessages.Chat.Forbidden);
 
         var channel = await unitOfWork.Channels.GetByIdAsync(channelId, cancellationToken);
-        if (channel is null)
+        if (channel is null || !organizationScope.IsSameOrganization(channel.OrganizationId))
             return ApiResponse<MessageResponse>.FailureResponse(AppMessages.Chat.ChannelNotFound);
 
         var message = new Message
         {
             Id = Guid.NewGuid(),
+            OrganizationId = channel.OrganizationId,
             ChannelId = channelId,
             SenderId = employee.Id,
             Body = body,

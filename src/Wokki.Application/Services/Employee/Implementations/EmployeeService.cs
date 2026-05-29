@@ -3,23 +3,63 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Mappings.Employees;
 using Wokki.Application.Services.Employee.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using LocationEntity = Wokki.Domain.Entities.Location;
+using LocationMembershipEntity = Wokki.Domain.Entities.LocationMembership;
 
 namespace Wokki.Application.Services.Employee.Implementations;
 
-public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher) : IEmployeeService
+public sealed class EmployeeService(
+    IUnitOfWork unitOfWork,
+    IPasswordHasher passwordHasher,
+    IOrganizationScopeService organizationScope) : IEmployeeService
 {
     public async Task<ApiResponse<EmployeeResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var employee = await unitOfWork.Employees.GetByIdAsync(id, cancellationToken: cancellationToken);
-        if (employee is null)
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.NotFound);
 
         var response = await BuildResponseAsync(employee, cancellationToken);
         return ApiResponse<EmployeeResponse>.SuccessResponse(response, AppMessages.Employee.Found);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<EmployeeDepartmentMembershipResponse>>> ListDepartmentMembershipsAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByIdAsync(id, cancellationToken: cancellationToken);
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
+            return ApiResponse<IReadOnlyList<EmployeeDepartmentMembershipResponse>>.FailureResponse(AppMessages.Employee.NotFound);
+
+        var memberships = await unitOfWork.EmployeeDepartmentMemberships.ListByEmployeeAsync(id, cancellationToken);
+        var responses = new List<EmployeeDepartmentMembershipResponse>(memberships.Count);
+
+        foreach (var membership in memberships)
+        {
+            var department = await unitOfWork.Departments.GetByIdAsync(membership.DepartmentId, cancellationToken: cancellationToken);
+            LocationEntity? location = null;
+            if (department is not null)
+                location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
+
+            responses.Add(new EmployeeDepartmentMembershipResponse(
+                membership.DepartmentId,
+                department?.Name,
+                location?.Id,
+                location?.Name,
+                membership.Status,
+                membership.IsPrimary,
+                membership.JoinedAt,
+                membership.LeftAt));
+        }
+
+        return ApiResponse<IReadOnlyList<EmployeeDepartmentMembershipResponse>>.SuccessResponse(
+            responses,
+            AppMessages.Employee.DepartmentMembershipsListed);
     }
 
     public async Task<ApiResponse<PagedResponse<EmployeeResponse>>> ListAsync(
@@ -33,6 +73,7 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         var (items, total) = await unitOfWork.Employees.ListAsync(
             page,
             pageSize,
+            organizationScope.GetCurrentOrganizationId(),
             request.DepartmentId,
             request.LocationId,
             request.IncludeTerminated,
@@ -60,8 +101,10 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         if (existingUser is not null)
             return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
 
+        var organizationId = organizationScope.RequireOrganizationId();
+
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null || !department.IsActive)
+        if (department is null || !department.IsActive || department.OrganizationId != organizationId)
             return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
@@ -78,10 +121,11 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
             Email = email,
             PasswordHash = passwordHasher.HashPassword(temporaryPassword),
             Role = request.Role,
+            OrganizationId = organizationId,
             CreatedAt = DateTime.UtcNow
         };
 
-        var employee = request.ToEntity(user.Id);
+        var employee = request.ToEntity(user.Id, organizationId);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
@@ -91,8 +135,14 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
                 employee.Id,
+                organizationId,
                 departmentIds,
                 request.DepartmentId,
+                cancellationToken);
+            await EnsureActiveLocationMembershipAsync(
+                employee.Id,
+                organizationId,
+                department.LocationId,
                 cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -113,11 +163,11 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         CancellationToken cancellationToken = default)
     {
         var employee = await unitOfWork.Employees.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (employee is null || employee.TerminatedAt is not null)
+        if (employee is null || employee.TerminatedAt is not null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.NotFound);
 
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null || !department.IsActive)
+        if (department is null || !department.IsActive || department.OrganizationId != employee.OrganizationId)
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
@@ -128,8 +178,14 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         unitOfWork.Employees.Update(employee);
         await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
             employee.Id,
+            employee.OrganizationId,
             departmentIds,
             request.DepartmentId,
+            cancellationToken);
+        await EnsureActiveLocationMembershipAsync(
+            employee.Id,
+            employee.OrganizationId,
+            department.LocationId,
             cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -185,5 +241,35 @@ public sealed class EmployeeService(IUnitOfWork unitOfWork, IPasswordHasher pass
         }
 
         return true;
+    }
+
+    private async Task EnsureActiveLocationMembershipAsync(
+        Guid employeeId,
+        Guid organizationId,
+        Guid locationId,
+        CancellationToken cancellationToken)
+    {
+        var active = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(
+            employeeId, track: true, cancellationToken: cancellationToken);
+        if (active?.LocationId == locationId)
+            return;
+
+        if (active is not null)
+        {
+            active.Status = LocationMembershipStatus.Transferred;
+            active.ReviewedAt = DateTime.UtcNow;
+            unitOfWork.LocationMemberships.Update(active);
+        }
+
+        await unitOfWork.LocationMemberships.AddAsync(new LocationMembershipEntity
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            EmployeeId = employeeId,
+            LocationId = locationId,
+            Status = LocationMembershipStatus.Active,
+            RequestedAt = DateTime.UtcNow,
+            ReviewedAt = DateTime.UtcNow,
+        }, cancellationToken);
     }
 }

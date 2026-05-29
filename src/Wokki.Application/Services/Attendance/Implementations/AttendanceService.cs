@@ -2,6 +2,7 @@ using Wokki.Application.Common;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Mappings.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
@@ -14,7 +15,10 @@ using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.Attendance.Implementations;
 
-public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendanceService autoCloseService) : IAttendanceService
+public sealed class AttendanceService(
+    IUnitOfWork unitOfWork,
+    IAutoCloseAttendanceService autoCloseService,
+    IOrganizationScopeService organizationScope) : IAttendanceService
 {
     public async Task<ApiResponse<AttendanceResponse>> ClockInAsync(
         Guid userId,
@@ -66,6 +70,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
         var record = new AttendanceEntity
         {
             Id = Guid.NewGuid(),
+            OrganizationId = employee.OrganizationId,
             EmployeeId = employee.Id,
             AssignmentId = assignmentId,
             ClockIn = DateTimeOffset.UtcNow,
@@ -120,6 +125,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
         var (items, total) = await unitOfWork.Attendance.ListAsync(
             page,
             pageSize,
+            organizationScope.GetCurrentOrganizationId(),
             request.EmployeeId,
             request.FromDate,
             request.ToDate,
@@ -163,7 +169,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Validation.Failed);
 
         var record = await unitOfWork.Attendance.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (record is null)
+        if (record is null || !organizationScope.IsSameOrganization(record.OrganizationId))
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NotFound);
 
         if (await IsPayPeriodLockedForRecordAsync(record, cancellationToken))

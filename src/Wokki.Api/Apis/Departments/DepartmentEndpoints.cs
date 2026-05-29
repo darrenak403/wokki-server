@@ -47,7 +47,7 @@ public static class DepartmentEndpoints
         group.MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateDepartment")
             .WithDescription("Cập nhật phòng ban.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<DepartmentResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
@@ -102,9 +102,17 @@ public static class DepartmentEndpoints
         [FromRoute] Guid id,
         [FromBody] UpdateDepartmentRequest request,
         [FromServices] IDepartmentService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<UpdateDepartmentRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<DepartmentResponse>();
+
+        if (!await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 

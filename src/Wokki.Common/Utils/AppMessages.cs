@@ -44,6 +44,7 @@ public static class AppMessages
         public static readonly AppMessage AlreadyTerminated = new("EMPLOYEE_ALREADY_TERMINATED", "Employee is already terminated.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage UserAlreadyLinked = new("EMPLOYEE_USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
         public static readonly AppMessage DepartmentNotFound = new("EMPLOYEE_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DepartmentMembershipsListed = new("EMPLOYEE_DEPT_MEMBERSHIPS_LISTED", "Employee department membership history listed.", StatusCodes.Status200OK);
     }
 
     public static class Location
@@ -288,6 +289,19 @@ public static class AppMessages
         public static readonly AppMessage TransferForbidden = new("WS_TRANSFER_FORBIDDEN", "You are not authorized to manage this employee.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage AlreadyAtLocation = new("WS_ALREADY_AT_LOCATION", "Employee already has an active membership at this location.", StatusCodes.Status409Conflict);
         public static readonly AppMessage AlreadyInDepartment = new("WS_ALREADY_IN_DEPT", "Employee is already in this department.", StatusCodes.Status409Conflict);
+    }
+
+    public static class Stats
+    {
+        public static readonly AppMessage PlatformFound = new("STATS_PLATFORM_FOUND", "Platform statistics retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgFound = new("STATS_ORG_FOUND", "Organization statistics retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Forbidden = new("STATS_FORBIDDEN", "You are not authorized to view these statistics.", StatusCodes.Status403Forbidden);
+    }
+
+    public static class Organization
+    {
+        public static readonly AppMessage CrossTenant = new("ORG_CROSS_TENANT", "Resource not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Required = new("ORG_REQUIRED", "Organization context is required.", StatusCodes.Status403Forbidden);
     }
 
     public static class Validation

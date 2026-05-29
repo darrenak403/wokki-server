@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class ShiftDefinition
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid LocationId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string Name { get; set; } = string.Empty;

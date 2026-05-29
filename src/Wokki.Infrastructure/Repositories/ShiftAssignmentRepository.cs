@@ -100,6 +100,7 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
     public async Task SwapEmployeeIdsAsync(
         Guid assignmentId1,
         Guid assignmentId2,
+        Guid holdEmployeeId,
         CancellationToken cancellationToken = default)
     {
         var emp1 = await context.ShiftAssignments.AsNoTracking()
@@ -111,10 +112,8 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
             .Select(a => a.EmployeeId)
             .FirstAsync(cancellationToken);
 
-        var holdId = SeedData.SwapHoldEmployeeId;
-
         await context.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE shift_assignments SET "EmployeeId" = {holdId} WHERE "Id" = {assignmentId1}""",
+            $"""UPDATE shift_assignments SET "EmployeeId" = {holdEmployeeId} WHERE "Id" = {assignmentId1}""",
             cancellationToken);
         await context.Database.ExecuteSqlInterpolatedAsync(
             $"""UPDATE shift_assignments SET "EmployeeId" = {emp1} WHERE "Id" = {assignmentId2}""",

@@ -2,6 +2,7 @@ namespace Wokki.Domain.Repositories;
 
 public interface IUnitOfWork : IAsyncDisposable
 {
+    IOrganizationRepository Organizations { get; }
     IUserRepository Users { get; }
     IEmployeeRepository Employees { get; }
     ILocationRepository Locations { get; }

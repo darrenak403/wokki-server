@@ -3,13 +3,13 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.LocationMembership;
 using Wokki.Application.Dtos.Workspace;
 using Wokki.Application.Services.LocationScope.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Workspace.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using LocationMembershipEntity = Wokki.Domain.Entities.LocationMembership;
-using EmployeeDeptMembership = Wokki.Domain.Entities.EmployeeDepartmentMembership;
 
 namespace Wokki.Application.Services.Workspace.Implementations;
 
@@ -17,6 +17,7 @@ public sealed class WorkspaceService(
     IUnitOfWork unitOfWork,
     IJwtTokenService jwtTokenService,
     ILocationScopeService locationScopeService,
+    IOrganizationScopeService organizationScope,
     ILogger<WorkspaceService> logger) : IWorkspaceService
 {
     public async Task<ApiResponse<object>> ChangeRoleAsync(
@@ -26,7 +27,7 @@ public sealed class WorkspaceService(
         CancellationToken ct = default)
     {
         var target = await unitOfWork.Users.GetByIdAsync(targetUserId, ct);
-        if (target is null)
+        if (target is null || target.OrganizationId is null || !organizationScope.IsSameOrganization(target.OrganizationId.Value))
             return ApiResponse<object>.FailureResponse(AppMessages.User.NotFound);
 
         if (target.Role == RoleConstants.Admin)
@@ -56,14 +57,14 @@ public sealed class WorkspaceService(
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Workspace.TransferForbidden);
 
         var employee = await unitOfWork.Employees.GetByIdAsync(request.EmployeeId, cancellationToken: ct);
-        if (employee is null)
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Employee.NotFound);
 
         if (employee.TerminatedAt is not null)
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.Employee.AlreadyTerminated);
 
         var location = await unitOfWork.Locations.GetByIdAsync(request.ToLocationId, cancellationToken: ct);
-        if (location is null || !location.IsActive)
+        if (location is null || !location.IsActive || !organizationScope.IsSameOrganization(location.OrganizationId))
             return ApiResponse<LocationMembershipResponse>.FailureResponse(AppMessages.LocationMembership.LocationNotFound);
 
         var currentActive = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(request.EmployeeId, track: true, cancellationToken: ct);
@@ -81,6 +82,7 @@ public sealed class WorkspaceService(
         var newMembership = new LocationMembershipEntity
         {
             Id = Guid.NewGuid(),
+            OrganizationId = employee.OrganizationId,
             EmployeeId = request.EmployeeId,
             LocationId = request.ToLocationId,
             Status = LocationMembershipStatus.Active,
@@ -119,50 +121,23 @@ public sealed class WorkspaceService(
         if (!await locationScopeService.CanManageDepartmentAsync(callerId, callerRole, request.ToDepartmentId, ct))
             return ApiResponse<object>.FailureResponse(AppMessages.Workspace.TransferForbidden);
 
-        var currentActive = await unitOfWork.EmployeeDepartmentMemberships.GetActivePrimaryByEmployeeAsync(
-            request.EmployeeId, track: true, cancellationToken: ct);
+        var currentPrimary = await unitOfWork.EmployeeDepartmentMemberships.GetActivePrimaryByEmployeeAsync(
+            request.EmployeeId, track: false, cancellationToken: ct);
 
-        if (currentActive is not null)
-        {
-            if (currentActive.DepartmentId == request.ToDepartmentId)
-                return ApiResponse<object>.FailureResponse(AppMessages.Workspace.AlreadyInDepartment);
+        if (currentPrimary?.DepartmentId == request.ToDepartmentId && employee.DepartmentId == request.ToDepartmentId)
+            return ApiResponse<object>.FailureResponse(AppMessages.Workspace.AlreadyInDepartment);
 
-            currentActive.Status = DepartmentMembershipStatus.Transferred;
-            currentActive.LeftAt = DateTime.UtcNow;
-            currentActive.IsPrimary = false;
-            unitOfWork.EmployeeDepartmentMemberships.Update(currentActive);
-        }
-        else
-        {
-            logger.LogWarning("Employee {EmployeeId} has no active primary department membership; creating new one directly.", request.EmployeeId);
-        }
+        if (currentPrimary is null)
+            logger.LogWarning("Employee {EmployeeId} has no active primary department membership; syncing memberships to target department.", request.EmployeeId);
 
-        var existing = await unitOfWork.EmployeeDepartmentMemberships.GetByEmployeeAndDepartmentAsync(
-            request.EmployeeId, request.ToDepartmentId, track: true, cancellationToken: ct);
+        // Close every other active membership (not only primary) and activate the target row.
+        await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
+            request.EmployeeId,
+            employee.OrganizationId,
+            [request.ToDepartmentId],
+            request.ToDepartmentId,
+            ct);
 
-        if (existing is not null)
-        {
-            existing.Status = DepartmentMembershipStatus.Active;
-            existing.JoinedAt = DateTime.UtcNow;
-            existing.LeftAt = null;
-            existing.IsPrimary = true;
-            unitOfWork.EmployeeDepartmentMemberships.Update(existing);
-        }
-        else
-        {
-            var newMembership = new EmployeeDeptMembership
-            {
-                EmployeeId = request.EmployeeId,
-                DepartmentId = request.ToDepartmentId,
-                IsPrimary = true,
-                Status = DepartmentMembershipStatus.Active,
-                JoinedAt = DateTime.UtcNow,
-                CreatedAt = DateTime.UtcNow,
-            };
-            await unitOfWork.EmployeeDepartmentMemberships.AddAsync(newMembership, ct);
-        }
-
-        // Keep Employee.DepartmentId in sync so assignment guards and scope checks stay correct.
         employee.DepartmentId = request.ToDepartmentId;
         unitOfWork.Employees.Update(employee);
 

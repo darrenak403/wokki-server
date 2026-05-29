@@ -23,12 +23,16 @@ public sealed class ScheduleRepository(AppDbContext context) : IScheduleReposito
     public async Task<(IReadOnlyList<Schedule> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
         IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Schedules.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(s => s.OrganizationId == organizationId.Value);
 
         if (departmentId.HasValue)
             query = query.Where(s => s.DepartmentId == departmentId.Value);

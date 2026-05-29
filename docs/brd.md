@@ -112,7 +112,7 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 | FR-102 | P1 | Admin shall CRUD users and employees (employee creates linked user). |
 | FR-103 | P1 | Admin shall manage every location and department; Manager shall manage only locations assigned through `LocationManager`. |
 | FR-104 | P1 | Employee shall store position, hourly rate, department, termination date. |
-| FR-105 | P1 | Employee shall require an Active `LocationMembership` to access protected workspace routes; users without membership request a branch from `/join` and wait for Admin/target Manager review. |
+| FR-105 | P1 | Org Admin creates employees with a `DepartmentId`; the system auto-provisions Active `LocationMembership` at that department's location. Employees log in directly — no self-serve join request or `/join` gate. |
 
 ### 5.2 Scheduling (Phase 2)
 

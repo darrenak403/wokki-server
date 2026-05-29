@@ -6,7 +6,9 @@ Tài liệu bàn giao cho team FE tích hợp **Wokki Shift Ops MVP**. Chi tiế
 
 **Smoke BE (không unit test):** `plans/fe-handoff-flow-verification/run-smoke.sh`
 
-**Handoff theo wave (contract từng file):** [docs/fe/README.md](../fe/README.md)
+**Handoff self-serve org (2026-05-29):** [fe/self-serve-org-handoff.md](./fe/self-serve-org-handoff.md) — **ưu tiên thay luồng demo/seed cũ**
+
+**Handoff theo wave (MVP cũ — phần seed đã lỗi thời):** [docs/fe/README.md](../fe/README.md)
 
 ---
 

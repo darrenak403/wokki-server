@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class AttendanceRecord
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid EmployeeId { get; set; }
     public Guid? AssignmentId { get; set; }
     public DateTimeOffset ClockIn { get; set; }

@@ -17,5 +17,7 @@ public sealed class ChannelConfiguration : IEntityTypeConfiguration<Channel>
             .WithMany()
             .HasForeignKey(x => x.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

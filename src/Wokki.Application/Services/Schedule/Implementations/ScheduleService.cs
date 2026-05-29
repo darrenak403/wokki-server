@@ -2,6 +2,7 @@ using Wokki.Application.Common;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Mappings.Schedules;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
@@ -19,7 +20,8 @@ public sealed class ScheduleService(
     IUnitOfWork unitOfWork,
     INotificationService notifications,
     IScheduleSuggestionOrchestrator scheduleSuggestions,
-    IScheduleInsightService scheduleInsights) : IScheduleService
+    IScheduleInsightService scheduleInsights,
+    IOrganizationScopeService organizationScope) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
@@ -32,6 +34,7 @@ public sealed class ScheduleService(
         var (items, total) = await unitOfWork.Schedules.ListAsync(
             page,
             pageSize,
+            organizationScope.GetCurrentOrganizationId(),
             request.DepartmentId,
             request.WeekStartDate,
             locationIds,
@@ -50,7 +53,7 @@ public sealed class ScheduleService(
         CancellationToken cancellationToken = default)
     {
         var schedule = await unitOfWork.Schedules.GetByIdAsync(id, cancellationToken: cancellationToken);
-        if (schedule is null)
+        if (schedule is null || !organizationScope.IsSameOrganization(schedule.OrganizationId))
             return ApiResponse<ScheduleDetailResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
         var assignments = await BuildAssignmentResponsesAsync(id, cancellationToken);
@@ -67,8 +70,9 @@ public sealed class ScheduleService(
         if (!ScheduleRules.IsMonday(request.WeekStartDate))
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
 
+        var organizationId = organizationScope.RequireOrganizationId();
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null)
+        if (department is null || department.OrganizationId != organizationId)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
 
         var existing = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
@@ -78,7 +82,7 @@ public sealed class ScheduleService(
         if (existing is not null)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyExists);
 
-        var entity = request.ToEntity(createdByUserId);
+        var entity = request.ToEntity(createdByUserId, organizationId);
         await unitOfWork.Schedules.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -315,6 +319,7 @@ public sealed class ScheduleService(
             var clone = new ShiftAssignmentEntity
             {
                 Id = Guid.NewGuid(),
+                OrganizationId = assignment.OrganizationId,
                 ScheduleId = targetScheduleId,
                 ShiftDefinitionId = assignment.ShiftDefinitionId,
                 EmployeeId = assignment.EmployeeId,
@@ -651,7 +656,7 @@ public sealed class ScheduleService(
                 cancellationToken: cancellationToken))
             return (null, null, AppMessages.Schedule.AssignmentConflict);
 
-        return (request.ToAssignmentEntity(scheduleId), shift, null);
+        return (request.ToAssignmentEntity(scheduleId, schedule.OrganizationId), shift, null);
     }
 
     public async Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyScheduleAsync(

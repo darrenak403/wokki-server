@@ -1,5 +1,6 @@
 using Wokki.Application.Common;
 using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
@@ -8,7 +9,7 @@ using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.Schedule.Implementations;
 
-public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedulePreferenceService
+public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : ISchedulePreferenceService
 {
     public async Task<ApiResponse<EmployeeDraftScheduleResponse?>> GetDraftScheduleForEmployeeAsync(
         Guid userId,
@@ -27,7 +28,8 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             weekStartDate,
             cancellationToken);
 
-        if (schedule is null || schedule.Status != ScheduleStatus.Draft)
+        if (schedule is null || schedule.Status != ScheduleStatus.Draft
+            || !organizationScope.IsSameOrganization(schedule.OrganizationId))
             return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
 
         var department = await unitOfWork.Departments.GetByIdAsync(
@@ -116,7 +118,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
 
         var schedule = await unitOfWork.Schedules.GetByIdAsync(scheduleId, cancellationToken: cancellationToken);
-        if (schedule is null)
+        if (schedule is null || !organizationScope.IsSameOrganization(schedule.OrganizationId))
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
         if (schedule.DepartmentId != employee.DepartmentId)
@@ -144,7 +146,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
 
         var schedule = await unitOfWork.Schedules.GetByIdAsync(scheduleId, cancellationToken: cancellationToken);
-        if (schedule is null)
+        if (schedule is null || !organizationScope.IsSameOrganization(schedule.OrganizationId))
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
         if (schedule.Status != ScheduleStatus.Draft)
@@ -157,6 +159,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         if (department is null)
             return ApiResponse<MySchedulePreferenceResponse>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
 
+        var orgId = schedule.OrganizationId;
         var shifts = await unitOfWork.ShiftDefinitions.ListAsync(
             department.LocationId,
             schedule.DepartmentId,
@@ -186,6 +189,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             lines.Add(new SchedulePreferenceLine
             {
                 Id = Guid.NewGuid(),
+                OrganizationId = orgId,
                 ShiftDefinitionId = input.ShiftDefinitionId,
                 Date = input.Date,
                 PreferenceType = preferenceType
@@ -205,6 +209,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
             submission = new SchedulePreferenceSubmission
             {
                 Id = submissionId,
+                OrganizationId = orgId,
                 ScheduleId = scheduleId,
                 EmployeeId = employee.Id,
                 Status = SchedulePreferenceStatus.Draft,
@@ -293,6 +298,7 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork) : ISchedul
         var employeePage = await unitOfWork.Employees.ListAsync(
             1,
             500,
+            department.OrganizationId,
             schedule.DepartmentId,
             locationIds: new HashSet<Guid> { department.LocationId },
             cancellationToken: cancellationToken);

@@ -26,5 +26,9 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
+
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
     }
 }

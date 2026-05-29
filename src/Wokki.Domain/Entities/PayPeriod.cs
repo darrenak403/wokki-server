@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class PayPeriod
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid DepartmentId { get; set; }
     public DateOnly StartDate { get; set; }
     public DateOnly EndDate { get; set; }

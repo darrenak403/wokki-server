@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class EmployeeAvailability
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid EmployeeId { get; set; }
     public DayOfWeek DayOfWeek { get; set; }
     public TimeOnly StartTime { get; set; }

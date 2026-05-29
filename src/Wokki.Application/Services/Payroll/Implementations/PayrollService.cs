@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Wokki.Application.Dtos.Payroll;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Payroll.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
@@ -10,7 +11,7 @@ using PayPeriodEntity = Wokki.Domain.Entities.PayPeriod;
 
 namespace Wokki.Application.Services.Payroll.Implementations;
 
-public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
+public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : IPayrollService
 {
     private const int MaxExportRows = 500;
 
@@ -40,7 +41,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
         CancellationToken cancellationToken = default)
     {
         var employee = await unitOfWork.Employees.GetByIdAsync(employeeId, cancellationToken: cancellationToken);
-        if (employee is null)
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<PayrollEmployeeDetailResponse>.FailureResponse(AppMessages.Payroll.EmployeeNotFound);
 
         var (period, lines, error) = await BuildSummaryCoreAsync(request, cancellationToken);
@@ -130,7 +131,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
             return (null, null, AppMessages.Payroll.InvalidDateRange);
 
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null)
+        if (department is null || !organizationScope.IsSameOrganization(department.OrganizationId))
             return (null, null, AppMessages.Payroll.DepartmentNotFound);
 
         var period = existingPeriod
@@ -151,6 +152,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
             period = new PayPeriodEntity
             {
                 Id = Guid.NewGuid(),
+                OrganizationId = department.OrganizationId,
                 DepartmentId = request.DepartmentId,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
@@ -187,6 +189,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork) : IPayrollService
         var employeePage = await unitOfWork.Employees.ListAsync(
             1,
             1000,
+            department.OrganizationId,
             request.DepartmentId,
             locationIds: new HashSet<Guid> { department.LocationId },
             cancellationToken: cancellationToken);

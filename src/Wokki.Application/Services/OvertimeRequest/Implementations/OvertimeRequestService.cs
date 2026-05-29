@@ -1,5 +1,6 @@
 using Wokki.Application.Dtos.OvertimeRequest;
 using Wokki.Application.Mappings.OvertimeRequest;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.OvertimeRequest.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
@@ -8,7 +9,7 @@ using Wokki.Domain.Repositories;
 
 namespace Wokki.Application.Services.OvertimeRequest.Implementations;
 
-public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRequestService
+public sealed class OvertimeRequestService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : IOvertimeRequestService
 {
     public async Task<ApiResponse<OvertimeRequestResponse>> SubmitAsync(
         Guid userId,
@@ -29,6 +30,9 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         if (assignment.EmployeeId != employee.Id)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.Forbidden);
 
+        if (assignment.OrganizationId != employee.OrganizationId)
+            return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.AssignmentNotFound);
+
         var schedule = await unitOfWork.Schedules.GetByIdAsync(assignment.ScheduleId, cancellationToken: ct);
         if (schedule?.Status != ScheduleStatus.Published)
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.ScheduleNotPublished);
@@ -45,6 +49,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         var request = new Domain.Entities.OvertimeRequest
         {
             Id = Guid.NewGuid(),
+            OrganizationId = employee.OrganizationId,
             ShiftAssignmentId = dto.ShiftAssignmentId,
             EmployeeId = employee.Id,
             Reason = dto.Reason.Trim(),
@@ -69,7 +74,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NoEmployeeProfile);
 
         var request = await unitOfWork.OvertimeRequests.GetByIdAsync(id, track: true, cancellationToken: ct);
-        if (request is null)
+        if (request is null || !organizationScope.IsSameOrganization(request.OrganizationId))
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NotFound);
 
         if (request.EmployeeId != employee.Id)
@@ -161,7 +166,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         CancellationToken ct = default)
     {
         var otRequest = await unitOfWork.OvertimeRequests.GetByIdAsync(id, track: true, cancellationToken: ct);
-        if (otRequest is null)
+        if (otRequest is null || !organizationScope.IsSameOrganization(otRequest.OrganizationId))
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NotFound);
 
         if (otRequest.Status is not OvertimeStatus.PendingApproval and not OvertimeStatus.AutoClosed)
@@ -200,7 +205,7 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork) : IOvertimeRe
         CancellationToken ct = default)
     {
         var otRequest = await unitOfWork.OvertimeRequests.GetByIdAsync(id, track: true, cancellationToken: ct);
-        if (otRequest is null)
+        if (otRequest is null || !organizationScope.IsSameOrganization(otRequest.OrganizationId))
             return ApiResponse<OvertimeRequestResponse>.FailureResponse(AppMessages.OvertimeRequest.NotFound);
 
         if (otRequest.Status is not OvertimeStatus.PendingApproval and not OvertimeStatus.AutoClosed)

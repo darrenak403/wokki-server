@@ -10,15 +10,15 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 
 | ID | Rule | Enforcement |
 |----|------|-------------|
-| BR-001 | Roles are fixed: `Admin`, `Manager`, `User` only. No dynamic permission matrix in MVP. | JWT claims + endpoint `RequireRole` |
+| BR-001 | Roles are fixed: `Admin`, `Manager`, `User`, and platform-only `PlatformOperator`. No dynamic permission matrix in MVP. | JWT claims + endpoint `RequireRole` |
 | BR-002 | `User` may not access manager schedule APIs (`/api/v1/schedules/*` except via published data indirectly). Own schedule only via `/api/v1/self/schedule`. | Route authorization |
 | BR-003 | `Admin` may manage users, payroll export, and soft-delete any chat message. | `ChannelService`, `PayrollEndpoints` |
 | BR-004 | `Manager` may manage schedules, assignments, swap overrides, attendance adjust, and create chat channels. | Route authorization |
 | BR-005 | Every employee-facing action requires an `Employee` row linked to the authenticated `User`. | Services return `*_NO_EMPLOYEE` / 404 |
-| BR-006 | `Admin` has full branch scope and may list/manage all `Location` workspaces. | `LocationScopeService.GetManagedLocationIdsAsync` returns `null` |
+| BR-006 | `Admin` has full branch scope **within their organization** and may list/manage all `Location` workspaces in that org. | `LocationScopeService`, `IOrganizationScopeService` |
 | BR-007 | `Manager` scope is only the locations assigned through `LocationManager`. Do not infer Manager access from role alone, user global role, or the Manager's own employee/department memberships. | `LocationScopeService`, scoped list queries |
-| BR-008 | A `User` with a linked `Employee` but no Active `LocationMembership` cannot enter protected employee app routes: no membership → `/join`; Pending/Rejected/Left/Transferred → `/pending`. | FE `MembershipGate`, `LocationMembershipService.GetMyStatusAsync` |
-| BR-009 | Branch join requests are reviewed only by `Admin` or a `Manager` assigned to the target location. Approval creates the employee's Active branch boundary; after that, Admin or that branch's Manager may place the employee into an appropriate department. | `LocationMembershipService.ReviewAsync`, `WorkspaceService.TransferDepartmentAsync` |
+| BR-008 | Org Admin creates employees with a `DepartmentId`; the system auto-provisions **Active** `LocationMembership` at that department's location. Employees log in and enter `/app` directly — no self-serve join or pending gate. | `EmployeeService.CreateAsync`, `EmployeeService.EnsureActiveLocationMembershipAsync` |
+| BR-009 | Branch changes for an existing employee use Admin/Manager workspace transfer (`POST /api/v1/workspace/location/transfer`), not employee join requests. Department placement uses `POST /api/v1/workspace/department/transfer`. | `WorkspaceService.TransferLocationAsync`, `WorkspaceService.TransferDepartmentAsync` |
 
 ---
 
@@ -27,9 +27,14 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | ID | Rule | Enforcement |
 |----|------|-------------|
 | BR-010 | A `Department` belongs to exactly one `Location`. | EF FK |
-| BR-011 | Employees must have Active `LocationMembership` for the schedule's location and department membership for the schedule department before they can be assigned. `Employee.DepartmentId` remains the primary/backward-compatible department. | `TryPrepareAssignmentAsync`, `EmployeeDepartmentMembership` |
+| BR-011 | Employees must have Active `LocationMembership` for the schedule's location and Active department membership for the schedule department before assignment. `Employee.DepartmentId` is the current primary department. Department transfers close the active row (`Status=Transferred`, `LeftAt` set) and append a new row when the employee returns to a department — history rows are never overwritten. Tenure is read from `JoinedAt`/`LeftAt` per `employee_department_memberships` row. | `TryPrepareAssignmentAsync`, `WorkspaceService.TransferDepartmentAsync`, `GET /api/v1/employees/{id}/department-memberships` |
 | BR-012 | Terminated employees (`TerminatedAt` set) cannot receive new assignments or be swap targets. | `EmployeeService`, assignment validators |
 | BR-013 | `ShiftDefinition` must match schedule scope: same `LocationId`; if `DepartmentId` set, must equal schedule department. | `TryPrepareAssignmentAsync` |
+| BR-014 | Tenant root is `Organization`. Business data carries `OrganizationId`; org users must have JWT claim `organization_id`. Never accept `organizationId` from request body for authorization. | `OrganizationContextMiddleware`, `IOrganizationScopeService` |
+| BR-015 | `PlatformOperator` (`admin@gmail.com` seed) has `OrganizationId = null`, may view `/api/v1/platform/stats` only — not org business routes. | `StatsService`, route auth |
+| BR-016 | `POST /register` atomically creates `Organization` + Org Admin (`Admin` role) + JWT. One email = one org; duplicate email → 409. | `AuthService.RegisterAsync` |
+| BR-017 | Branch transfer validates `location.OrganizationId == employee.organizationId`. Cross-tenant location access returns 404. | `WorkspaceService`, `EmployeeService` |
+| BR-018 | Org stats (`GET /api/v1/org/stats`) for `Admin` + `Manager` only; platform stats for `PlatformOperator` only. | `StatsService`, endpoint auth |
 
 ---
 

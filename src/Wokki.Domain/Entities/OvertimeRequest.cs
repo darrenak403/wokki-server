@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class OvertimeRequest
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid ShiftAssignmentId { get; set; }
     public ShiftAssignment ShiftAssignment { get; set; } = null!;
     public Guid EmployeeId { get; set; }

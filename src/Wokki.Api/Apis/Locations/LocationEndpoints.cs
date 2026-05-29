@@ -54,7 +54,7 @@ public static class LocationEndpoints
         group.MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateLocation")
             .WithDescription("Cập nhật địa điểm.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<LocationResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
@@ -126,9 +126,17 @@ public static class LocationEndpoints
         [FromRoute] Guid id,
         [FromBody] UpdateLocationRequest request,
         [FromServices] ILocationService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<UpdateLocationRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<LocationResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Results.Json(ApiResponse<LocationResponse>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 

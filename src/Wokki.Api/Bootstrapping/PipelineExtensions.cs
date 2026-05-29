@@ -18,6 +18,8 @@ using Wokki.Api.Apis.Schedules;
 using Wokki.Api.Apis.Shifts;
 using Wokki.Api.Apis.SwapRequests;
 using Wokki.Api.Apis.Users;
+using Wokki.Api.Apis.Organization;
+using Wokki.Api.Apis.Platform;
 using Wokki.Api.Apis.Workspace;
 
 namespace Wokki.Api.Bootstrapping;
@@ -44,6 +46,7 @@ public static class PipelineExtensions
         app.UseCors(CorsSettings.FrontendPolicy);
         app.UseRateLimiter();
         app.UseAuthentication();
+        app.UseMiddleware<Middleware.OrganizationContextMiddleware>();
         app.UseAuthorization();
 
         app.MapHub<ChatHub>("/ws/chat");
@@ -88,6 +91,8 @@ public static class PipelineExtensions
         app.MapLocationMembershipApi();
         app.MapLocationManagerApi();
         app.MapWorkspaceApi();
+        app.MapPlatformApi();
+        app.MapOrgStatsApi();
 
         return app;
     }

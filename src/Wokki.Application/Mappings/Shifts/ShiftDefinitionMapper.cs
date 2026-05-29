@@ -18,10 +18,11 @@ public static class ShiftDefinitionMapper
             shift.IsActive,
             shift.CreatedAt);
 
-    public static ShiftDefinition ToEntity(this CreateShiftDefinitionRequest request) =>
+    public static ShiftDefinition ToEntity(this CreateShiftDefinitionRequest request, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             LocationId = request.LocationId,
             DepartmentId = request.DepartmentId,
             Name = request.Name.Trim(),

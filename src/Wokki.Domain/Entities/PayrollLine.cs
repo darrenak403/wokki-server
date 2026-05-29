@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class PayrollLine
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid PayPeriodId { get; set; }
     public Guid EmployeeId { get; set; }
     public int TotalWorkedMinutes { get; set; }

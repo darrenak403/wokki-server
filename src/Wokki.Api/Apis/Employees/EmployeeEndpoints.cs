@@ -43,6 +43,15 @@ public static class EmployeeEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/{id:guid}/department-memberships", ListDepartmentMembershipsAsync)
+            .WithName("ListEmployeeDepartmentMemberships")
+            .WithDescription("Lịch sử thuộc phòng ban của nhân viên (JoinedAt, LeftAt, trạng thái).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<IReadOnlyList<EmployeeDepartmentMembershipResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPost("/", CreateAsync)
             .WithName("CreateEmployee")
             .WithDescription("Tạo nhân viên và tài khoản User liên kết.")
@@ -123,6 +132,23 @@ public static class EmployeeEndpoints
             return Forbidden();
 
         var response = await service.GetByIdAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListDepartmentMembershipsAsync(
+        [FromRoute] Guid id,
+        [FromServices] IEmployeeService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<IReadOnlyList<EmployeeDepartmentMembershipResponse>>();
+
+        if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
+        var response = await service.ListDepartmentMembershipsAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
 

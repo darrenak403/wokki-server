@@ -35,9 +35,9 @@ public static class AuthEndpoints
 
         group.MapPost("/register", RegisterUserAsync)
             .WithName("Register")
-            .WithDescription("Tự đăng ký tài khoản (Anonymous); luôn tạo role User — Admin tạo user qua POST /api/v1/users")
+            .WithDescription("Tự đăng ký tổ chức: email + password + organizationName → Org Admin + JWT.")
             .AllowAnonymous()
-            .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
