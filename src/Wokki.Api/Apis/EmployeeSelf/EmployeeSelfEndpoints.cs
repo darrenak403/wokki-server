@@ -118,12 +118,23 @@ public static class EmployeeSelfEndpoints
 
         group.MapPut("/profile", UpdateMyProfileAsync)
             .WithName("UpdateMyProfile")
-            .WithDescription("Cập nhật họ tên và số điện thoại của nhân viên đang đăng nhập.")
+            .WithDescription("Cập nhật hồ sơ cá nhân: họ tên, SĐT, thông tin ngân hàng.")
             .RequireAuthorization()
             .Produces<ApiResponse<EmployeeResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/profile/payment-qr", UploadMyPaymentQrAsync)
+            .WithName("UploadMyPaymentQr")
+            .WithDescription("Upload ảnh QR chuyển khoản lương (Cloudinary, tối đa 5MB).")
+            .RequireAuthorization()
+            .DisableAntiforgery()
+            .Produces<ApiResponse<PaymentQrUploadResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status503ServiceUnavailable);
 
         return group;
     }
@@ -270,6 +281,29 @@ public static class EmployeeSelfEndpoints
             return validationResult!;
 
         var response = await service.UpdateMineAsync(currentUser.UserId.Value, request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> UploadMyPaymentQrAsync(
+        IFormFile? file,
+        [FromServices] IEmployeeSelfProfileService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<PaymentQrUploadResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (file is null || file.Length == 0)
+            return Results.Json(ApiResponse<PaymentQrUploadResponse>.FailureResponse(AppMessages.Self.PaymentQrInvalid), statusCode: 400);
+
+        await using var stream = file.OpenReadStream();
+        var response = await service.UploadPaymentQrAsync(
+            currentUser.UserId.Value,
+            stream,
+            file.FileName,
+            file.ContentType,
+            file.Length,
+            cancellationToken);
         return response.ToHttpResult();
     }
 }

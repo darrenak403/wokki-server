@@ -14,6 +14,10 @@ public sealed record EmployeeResponse(
     string? DepartmentName,
     Guid? LocationId,
     string? LocationName,
+    string? BankAccountNumber,
+    string? BankAccountHolderName,
+    string? BankName,
+    string? PaymentQrImageUrl,
     DateTime EmployedAt,
     DateTime? TerminatedAt,
     DateTime CreatedAt);

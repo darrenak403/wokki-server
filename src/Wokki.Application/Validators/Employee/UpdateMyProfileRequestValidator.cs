@@ -10,5 +10,8 @@ public sealed class UpdateMyProfileRequestValidator : AbstractValidator<UpdateMy
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Phone).MaximumLength(32);
+        RuleFor(x => x.BankAccountNumber).MaximumLength(32);
+        RuleFor(x => x.BankAccountHolderName).MaximumLength(200);
+        RuleFor(x => x.BankName).MaximumLength(200);
     }
 }

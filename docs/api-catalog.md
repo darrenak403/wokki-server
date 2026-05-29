@@ -30,7 +30,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 
 | Resource    | Base           | Manager                                       | Admin | Notes                                                                                                                                                                |
 | ----------- | -------------- | --------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Employees   | `/employees`   | Scoped list/read                              | Full  | Creates User + Employee together; same-org legacy User without Employee is linked. Manager sees employees with Active membership in assigned branches. Soft delete = terminate |
+| Employees   | `/employees`   | Scoped list/read                              | Full  | Creates User + Employee together; same-org legacy User without Employee is linked. Manager sees employees with Active membership in assigned branches. Soft delete = terminate. List/detail includes employee self-service **payment profile** (bank + QR URL) for payroll transfer |
 | Locations   | `/locations`   | Scoped read; `PUT /{id}` in assigned branches | Full  | Manager sees assigned locations only; may update branch metadata in scope (workspace drawer). `GET/PUT /locations/{id}/scheduling-policy` — policy write Admin only. |
 | Departments | `/departments` | Scoped read; `PUT /{id}` in assigned branches | Full  | Manager sees departments in assigned locations only; may update department in scope.                                                                                 |
 
@@ -78,7 +78,8 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | GET    | `/self/swap-requests` | Swap requests sent/received                  |
 | GET    | `/self/attendance`    | Own attendance history                       |
 | GET    | `/self/profile`       | Own employee profile (name, phone, org context) |
-| PUT    | `/self/profile`       | Update own `firstName`, `lastName`, `phone` (requires linked Employee; 404 `SELF_NO_EMPLOYEE`) |
+| PUT    | `/self/profile`       | Update own profile: name, phone, bank account fields; optional `removePaymentQr` |
+| POST   | `/self/profile/payment-qr` | Upload payment QR image (multipart `file`, Cloudinary, max 5MB) |
 
 ## Swap requests (`/api/v1/swap-requests`)
 
@@ -106,9 +107,9 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 
 | Method | Path                    | Roles          | Description                   |
 | ------ | ----------------------- | -------------- | ----------------------------- |
-| GET    | `/summary`              | Admin, Manager | Department pay period summary |
-| GET    | `/summary/{employeeId}` | Admin, Manager | Employee breakdown            |
-| POST   | `/summary/export`       | Admin          | CSV file download             |
+| GET    | `/summary`              | Admin, Manager | Department pay period summary; each line includes employee **payment profile** (bank + QR URL) |
+| GET    | `/summary/{employeeId}` | Admin, Manager | Employee breakdown + payment profile |
+| POST   | `/summary/export`       | Admin          | CSV download (includes bank columns + QR URL) |
 
 Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 

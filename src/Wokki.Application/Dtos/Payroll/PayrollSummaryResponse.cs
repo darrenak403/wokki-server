@@ -19,4 +19,8 @@ public sealed record PayrollEmployeeLineResponse(
     decimal HourlyRate,
     decimal GrossPay,
     int ApprovedOvertimeMinutes,
-    decimal OvertimePay);
+    decimal OvertimePay,
+    string? BankAccountNumber = null,
+    string? BankAccountHolderName = null,
+    string? BankName = null,
+    string? PaymentQrImageUrl = null);

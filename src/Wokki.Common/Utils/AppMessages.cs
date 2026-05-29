@@ -67,6 +67,9 @@ public static class AppMessages
     {
         public static readonly AppMessage ProfileFound = new("SELF_PROFILE_FOUND", "Personal profile found.", StatusCodes.Status200OK);
         public static readonly AppMessage ProfileUpdated = new("SELF_PROFILE_UPDATED", "Personal profile updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage PaymentQrUploaded = new("SELF_PAYMENT_QR_UPLOADED", "Payment QR image uploaded.", StatusCodes.Status200OK);
+        public static readonly AppMessage PaymentQrInvalid = new("SELF_PAYMENT_QR_INVALID", "Invalid payment QR image.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CloudinaryNotConfigured = new("CLOUDINARY_NOT_CONFIGURED", "Image upload is not configured.", StatusCodes.Status503ServiceUnavailable);
         public static readonly AppMessage NoEmployeeProfile = new("SELF_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
     }
 

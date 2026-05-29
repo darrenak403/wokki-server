@@ -11,4 +11,12 @@ public interface IEmployeeSelfProfileService
         Guid userId,
         UpdateMyProfileRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PaymentQrUploadResponse>> UploadPaymentQrAsync(
+        Guid userId,
+        Stream content,
+        string fileName,
+        string contentType,
+        long contentLength,
+        CancellationToken cancellationToken = default);
 }

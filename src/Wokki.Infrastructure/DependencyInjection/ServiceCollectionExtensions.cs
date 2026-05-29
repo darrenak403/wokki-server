@@ -16,6 +16,7 @@ using Wokki.Infrastructure.Notifications;
 using Wokki.Infrastructure.Persistence;
 using Wokki.Infrastructure.Repositories;
 using Wokki.Infrastructure.Bedrock;
+using Wokki.Infrastructure.Media;
 using Wokki.Infrastructure.Scheduling;
 using Wokki.Infrastructure.Tenancy;
 using Wokki.Infrastructure.Workers;
@@ -49,6 +50,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
+        services.AddSingleton<IImageStorageService, CloudinaryImageStorageService>();
         var smtp = configuration.GetSection(SmtpSettings.SectionName).Get<SmtpSettings>();
         if (smtp?.IsConfigured == true)
             services.AddScoped<INotificationService, EmailNotificationService>();

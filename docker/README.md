@@ -19,6 +19,7 @@ cp docker/.env.example docker/.env         # prod
 | ---- | ---- |
 | **AWS (Bedrock)** | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `BEDROCK_MODEL_ID` |
 | **Brevo (SMTP)** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USE_SSL`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD` |
+| **Cloudinary** | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` |
 | **Redis** | `REDIS_PORT` (compose dùng `redis:6379` nội bộ) |
 
 Compose chỉ **map** env → `Smtp__*` / `AWS__*`; không hardcode host SMTP.
@@ -30,6 +31,8 @@ Compose chỉ **map** env → `Smtp__*` / `AWS__*`; không hardcode host SMTP.
 - **Brevo SMTP:** [app.brevo.com](https://app.brevo.com) → SMTP & API → SMTP key  
   - `SMTP_USERNAME` = email đăng ký Brevo  
   - `SMTP_PASSWORD` = SMTP key (`xsmtpsib-...`)
+- **Cloudinary:** [cloudinary.com/console](https://cloudinary.com/console) → Dashboard → API Keys  
+  - Dùng cho upload ảnh QR thanh toán lương (`/api/v1/self/profile/payment-qr`)
 
 ## Local API (`task run`)
 
@@ -50,6 +53,10 @@ dotnet user-secrets set "Smtp:UseSsl" "true" --project src/Wokki.Api
 dotnet user-secrets set "Smtp:From" "noreply@your-domain.com" --project src/Wokki.Api
 dotnet user-secrets set "Smtp:Username" "your-brevo-email" --project src/Wokki.Api
 dotnet user-secrets set "Smtp:Password" "YOUR_BREVO_SMTP_KEY" --project src/Wokki.Api
+
+dotnet user-secrets set "Cloudinary:CloudName" "your-cloud-name" --project src/Wokki.Api
+dotnet user-secrets set "Cloudinary:ApiKey" "..." --project src/Wokki.Api
+dotnet user-secrets set "Cloudinary:ApiSecret" "..." --project src/Wokki.Api
 ```
 
 Chưa cấu hình SMTP → dev log OTP ra console.

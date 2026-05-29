@@ -24,6 +24,10 @@ public static class EmployeeMapper
             department?.Name,
             location?.Id,
             location?.Name,
+            employee.BankAccountNumber,
+            employee.BankAccountHolderName,
+            employee.BankName,
+            employee.PaymentQrImageUrl,
             employee.EmployedAt,
             employee.TerminatedAt,
             employee.CreatedAt);
@@ -57,6 +61,22 @@ public static class EmployeeMapper
         employee.FirstName = request.FirstName.Trim();
         employee.LastName = request.LastName.Trim();
         employee.Phone = request.Phone?.Trim() ?? string.Empty;
+        employee.BankAccountNumber = NormalizeOptional(request.BankAccountNumber);
+        employee.BankAccountHolderName = NormalizeOptional(request.BankAccountHolderName);
+        employee.BankName = NormalizeOptional(request.BankName);
+    }
+
+    public static void ClearPaymentQr(this Employee employee)
+    {
+        employee.PaymentQrImageUrl = null;
+        employee.PaymentQrPublicId = null;
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return value.Trim();
     }
 
     /// <summary>Scheduling solver reads Position — kept in sync with primary department name.</summary>

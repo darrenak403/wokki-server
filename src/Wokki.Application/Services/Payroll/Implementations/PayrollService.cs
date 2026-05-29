@@ -64,7 +64,11 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                     0,
                     0,
                     0m,
-                    []),
+                    [],
+                    employee.BankAccountNumber,
+                    employee.BankAccountHolderName,
+                    employee.BankName,
+                    employee.PaymentQrImageUrl),
                 AppMessages.Payroll.EmployeeSummary);
         }
 
@@ -97,7 +101,11 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 line.GrossPay,
                 line.ApprovedOvertimeMinutes,
                 line.OvertimePay,
-                items),
+                items,
+                employee.BankAccountNumber,
+                employee.BankAccountHolderName,
+                employee.BankName,
+                employee.PaymentQrImageUrl),
             AppMessages.Payroll.EmployeeSummary);
     }
 
@@ -172,15 +180,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 var snapshotLines = lockedLines.Select(l =>
                 {
                     var emp = employees[l.EmployeeId];
-                    return new PayrollEmployeeLineResponse(
-                        l.EmployeeId,
-                        emp.FirstName,
-                        emp.LastName,
-                        l.TotalWorkedMinutes,
-                        l.HourlyRate,
-                        l.GrossPay,
-                        l.ApprovedOvertimeMinutes,
-                        l.OvertimePay);
+                    return ToPayrollLine(l.EmployeeId, emp, l.TotalWorkedMinutes, l.HourlyRate, l.GrossPay, l.ApprovedOvertimeMinutes, l.OvertimePay);
                 }).ToList();
                 return (period, snapshotLines, null);
             }
@@ -214,10 +214,9 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
             var otPay = Math.Round((otMinutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
             // otMinutes is already contained in minutes (same clock-in/out window); do not add twice
             var gross = Math.Round((minutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
-            lines.Add(new PayrollEmployeeLineResponse(
+            lines.Add(ToPayrollLine(
                 employee.Id,
-                employee.FirstName,
-                employee.LastName,
+                employee,
                 minutes,
                 hourlyRate,
                 gross,
@@ -227,6 +226,28 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
 
         return (period, lines, null);
     }
+
+    private static PayrollEmployeeLineResponse ToPayrollLine(
+        Guid employeeId,
+        EmployeeEntity employee,
+        int totalWorkedMinutes,
+        decimal hourlyRate,
+        decimal grossPay,
+        int approvedOvertimeMinutes,
+        decimal overtimePay) =>
+        new(
+            employeeId,
+            employee.FirstName,
+            employee.LastName,
+            totalWorkedMinutes,
+            hourlyRate,
+            grossPay,
+            approvedOvertimeMinutes,
+            overtimePay,
+            employee.BankAccountNumber,
+            employee.BankAccountHolderName,
+            employee.BankName,
+            employee.PaymentQrImageUrl);
 
     private async Task<Dictionary<Guid, EmployeeEntity>> LoadEmployeeMapAsync(
         IEnumerable<Guid> employeeIds,
@@ -246,7 +267,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
     private static string BuildCsv(IReadOnlyList<PayrollEmployeeLineResponse> lines)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,TotalHours,HourlyRate,ApprovedOvertimeMinutes,OvertimePay,GrossPay");
+        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,TotalHours,HourlyRate,ApprovedOvertimeMinutes,OvertimePay,GrossPay,BankName,BankAccountHolderName,BankAccountNumber,PaymentQrImageUrl");
         foreach (var line in lines)
         {
             var hours = Math.Round(line.TotalWorkedMinutes / 60m, 2);
@@ -259,7 +280,11 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 line.HourlyRate.ToString(CultureInfo.InvariantCulture),
                 line.ApprovedOvertimeMinutes.ToString(CultureInfo.InvariantCulture),
                 line.OvertimePay.ToString(CultureInfo.InvariantCulture),
-                line.GrossPay.ToString(CultureInfo.InvariantCulture)));
+                line.GrossPay.ToString(CultureInfo.InvariantCulture),
+                Escape(line.BankName ?? string.Empty),
+                Escape(line.BankAccountHolderName ?? string.Empty),
+                Escape(line.BankAccountNumber ?? string.Empty),
+                Escape(line.PaymentQrImageUrl ?? string.Empty)));
         }
 
         return sb.ToString();

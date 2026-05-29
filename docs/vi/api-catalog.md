@@ -30,7 +30,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 | Resource    | Base           | Manager                                              | Admin  | Ghi chú                                                                                                                       |
 | ----------- | -------------- | ---------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Employees   | `/employees`   | Đọc danh sách theo scope                             | Đầy đủ | Tạo User + Employee cùng lúc; User legacy cùng org chưa có Employee sẽ được liên kết. Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft) |
+| Employees   | `/employees`   | Đọc danh sách theo scope                             | Đầy đủ | Tạo User + Employee cùng lúc; User legacy cùng org chưa có Employee sẽ được liên kết. Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft). List/detail trả **hồ sơ nhận lương** (STK + URL QR) do nhân viên tự cập nhật |
 | Locations   | `/locations`   | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy chi nhánh được gán; có thể cập nhật metadata chi nhánh trong scope (drawer Tổ chức). Ghi policy: Admin only. |
 | Departments | `/departments` | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy phòng ban thuộc chi nhánh được gán; có thể cập nhật phòng ban trong scope                                    |
 
@@ -78,7 +78,8 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 | GET    | `/self/swap-requests` | Yêu cầu đổi ca gửi/nhận               |
 | GET    | `/self/attendance`    | Lịch sử chấm công                     |
 | GET    | `/self/profile`       | Hồ sơ nhân viên của user đang đăng nhập |
-| PUT    | `/self/profile`       | Cập nhật `firstName`, `lastName`, `phone` (cần Employee liên kết; 404 `SELF_NO_EMPLOYEE`) |
+| PUT    | `/self/profile`       | Cập nhật hồ sơ: họ tên, SĐT, STK ngân hàng; `removePaymentQr` để xóa ảnh QR |
+| POST   | `/self/profile/payment-qr` | Upload ảnh QR chuyển khoản (multipart `file`, Cloudinary, tối đa 5MB) |
 
 ## Đổi ca (`/api/v1/swap-requests`)
 
@@ -106,9 +107,9 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 
 | Method | Path                    | Vai trò        | Mô tả                         |
 | ------ | ----------------------- | -------------- | ----------------------------- |
-| GET    | `/summary`              | Admin, Manager | Tổng hợp theo department & kỳ |
-| GET    | `/summary/{employeeId}` | Admin, Manager | Chi tiết từng nhân viên       |
-| POST   | `/summary/export`       | Admin          | Tải file CSV                  |
+| GET    | `/summary`              | Admin, Manager | Tổng hợp theo department & kỳ; mỗi dòng có **hồ sơ nhận lương** (STK + URL QR) |
+| GET    | `/summary/{employeeId}` | Admin, Manager | Chi tiết từng nhân viên + hồ sơ nhận lương |
+| POST   | `/summary/export`       | Admin          | Tải CSV (cột ngân hàng + URL QR) |
 
 Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
