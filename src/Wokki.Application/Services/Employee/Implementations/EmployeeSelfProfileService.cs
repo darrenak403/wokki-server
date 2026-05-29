@@ -6,6 +6,7 @@ using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
+using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
 
 namespace Wokki.Application.Services.Employee.Implementations;
@@ -125,7 +126,9 @@ public sealed class EmployeeSelfProfileService(
         var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken: cancellationToken)
                    ?? throw new InvalidOperationException($"User {employee.UserId} not found for employee {employee.Id}.");
 
-        var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);
+        DepartmentEntity? department = null;
+        if (employee.DepartmentId.HasValue)
+            department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         LocationEntity? location = null;
         if (department is not null)
             location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);

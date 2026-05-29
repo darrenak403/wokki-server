@@ -667,7 +667,9 @@ public sealed class ScheduleService(
         if (employee is null)
             return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
 
-        var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);
+        DepartmentEntity? department = null;
+        if (employee.DepartmentId.HasValue)
+            department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         var location = department is not null
             ? await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken)
             : null;

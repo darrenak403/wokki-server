@@ -256,7 +256,7 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("DepartmentId")
+                    b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("EmployedAt")
@@ -1215,8 +1215,7 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasOne("Wokki.Domain.Entities.Department", null)
                         .WithMany()
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Wokki.Domain.Entities.Organization", null)
                         .WithMany()

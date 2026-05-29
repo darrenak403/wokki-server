@@ -60,6 +60,9 @@ public static class AppMessages
         public static readonly AppMessage AlreadyTerminated = new("EMPLOYEE_ALREADY_TERMINATED", "Employee is already terminated.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage UserAlreadyLinked = new("EMPLOYEE_USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
         public static readonly AppMessage DepartmentNotFound = new("EMPLOYEE_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DepartmentRequiredForUser = new("EMPLOYEE_DEPARTMENT_REQUIRED", "Department is required for employee (User) role.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ManagerLocationsRequired = new("EMPLOYEE_MANAGER_LOCATIONS_REQUIRED", "At least one branch must be assigned when creating a Manager.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ManagerLocationNotFound = new("EMPLOYEE_MANAGER_LOCATION_NOT_FOUND", "One or more assigned branches were not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage DepartmentMembershipsListed = new("EMPLOYEE_DEPT_MEMBERSHIPS_LISTED", "Employee department membership history listed.", StatusCodes.Status200OK);
     }
 

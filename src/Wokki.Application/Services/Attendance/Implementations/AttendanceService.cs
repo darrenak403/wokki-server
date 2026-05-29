@@ -37,7 +37,10 @@ public sealed class AttendanceService(
                 return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.OpenRecordExists);
         }
 
-        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId, cancellationToken);
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NoEmployeeProfile);
+
+        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId.Value, cancellationToken);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone));
         var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeInDateRangeAsync(
             employee.Id,
@@ -378,8 +381,11 @@ public sealed class AttendanceService(
         if (employee is null)
             return false;
 
+        if (!employee.DepartmentId.HasValue)
+            return false;
+
         var clockDate = DateOnly.FromDateTime(record.ClockIn.UtcDateTime);
-        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId, clockDate, cancellationToken);
+        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId.Value, clockDate, cancellationToken);
         return period?.Status == PayPeriodStatus.Locked;
     }
 

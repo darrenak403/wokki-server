@@ -30,6 +30,7 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasOne<Department>()
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasRequiredOrganization(x => x.OrganizationId);

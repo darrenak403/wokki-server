@@ -51,7 +51,7 @@ sequenceDiagram
     participant API as Employee API
     participant E as Nhân viên
 
-    A->>API: POST /employees { email, departmentId, ... }
+    A->>API: POST /employees { email, departmentId (User) | locationIds (Manager), ... }
     API-->>A: employeeId + temporaryPassword
     A->>E: Gửi email + mật khẩu tạm
     E->>API: POST /auth/login

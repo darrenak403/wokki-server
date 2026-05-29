@@ -6,33 +6,33 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 ## Auth (`/api/v1/auth`)
 
-| Method | Path               | Vai trò      | Mô tả                                                                                                        |
-| ------ | ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------ |
-| POST   | `/login`           | Anonymous    | Đăng nhập, cấp token                                                                                         |
-| POST   | `/register`        | Anonymous    | Tự đăng ký org: `email`, `password`, `organizationName` → Org Admin + JWT; org mới ở trạng thái NotActivated |
-| POST   | `/refresh-token`   | Đã đăng nhập | Làm mới JWT                                                                                                  |
-| GET    | `/me`              | Đã đăng nhập | User hiện tại                                                                                                |
-| POST   | `/logout`          | Đã đăng nhập | Đăng xuất                                                                                                    |
-| POST   | `/reset-password`  | Đã đăng nhập | Đổi mật khẩu khi đã login: `{ currentPassword, newPassword, confirmNewPassword }`; xóa `mustChangePassword` |
-| POST   | `/forgot-password` | Anonymous    | Gửi OTP 6 số qua email (hết hạn 1 phút). Chặn gửi lại khi OTP còn hiệu lực (`AUTH_OTP_RESEND_TOO_SOON`, 429). Tối đa 5 lần gửi/email, lần 6 khóa 30 phút (`AUTH_OTP_SEND_LOCKED`, 429) |
-| POST   | `/forgot-password/verify-otp` | Anonymous | Xác minh OTP: `{ email, otpCode }`                                                            |
-| POST   | `/forgot-password/complete`   | Anonymous | Đặt mật khẩu mới sau khi OTP đã xác minh: `{ email, newPassword, confirmNewPassword }`        |
+| Method | Path                          | Vai trò      | Mô tả                                                                                                                                                                                  |
+| ------ | ----------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/login`                      | Anonymous    | Đăng nhập, cấp token                                                                                                                                                                   |
+| POST   | `/register`                   | Anonymous    | Tự đăng ký org: `email`, `password`, `organizationName` → Org Admin + JWT; org mới ở trạng thái NotActivated                                                                           |
+| POST   | `/refresh-token`              | Đã đăng nhập | Làm mới JWT                                                                                                                                                                            |
+| GET    | `/me`                         | Đã đăng nhập | User hiện tại                                                                                                                                                                          |
+| POST   | `/logout`                     | Đã đăng nhập | Đăng xuất                                                                                                                                                                              |
+| POST   | `/reset-password`             | Đã đăng nhập | Đổi mật khẩu khi đã login: `{ currentPassword, newPassword, confirmNewPassword }`; xóa `mustChangePassword`                                                                            |
+| POST   | `/forgot-password`            | Anonymous    | Gửi OTP 6 số qua email (hết hạn 1 phút). Chặn gửi lại khi OTP còn hiệu lực (`AUTH_OTP_RESEND_TOO_SOON`, 429). Tối đa 5 lần gửi/email, lần 6 khóa 30 phút (`AUTH_OTP_SEND_LOCKED`, 429) |
+| POST   | `/forgot-password/verify-otp` | Anonymous    | Xác minh OTP: `{ email, otpCode }`                                                                                                                                                     |
+| POST   | `/forgot-password/complete`   | Anonymous    | Đặt mật khẩu mới sau khi OTP đã xác minh: `{ email, newPassword, confirmNewPassword }`                                                                                                 |
 
 ## Users (`/api/v1/users`)
 
-| Method | Path    | Vai trò | Mô tả                       |
-| ------ | ------- | ------- | --------------------------- |
-| GET    | `/`     | Admin   | Danh sách user (phân trang) |
-| GET    | `/{id}` | Admin   | Chi tiết user               |
+| Method | Path    | Vai trò | Mô tả                                                                                         |
+| ------ | ------- | ------- | --------------------------------------------------------------------------------------------- |
+| GET    | `/`     | Admin   | Danh sách user (phân trang)                                                                   |
+| GET    | `/{id}` | Admin   | Chi tiết user                                                                                 |
 | POST   | `/`     | Admin   | Deprecated/bị chặn cho staff org; dùng `POST /employees` để tạo tài khoản + Employee cùng lúc |
 
 ## Nền tảng (Foundation)
 
-| Resource    | Base           | Manager                                              | Admin  | Ghi chú                                                                                                                       |
-| ----------- | -------------- | ---------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Resource    | Base           | Manager                                              | Admin  | Ghi chú                                                                                                                                                                                                                                                         |
+| ----------- | -------------- | ---------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Employees   | `/employees`   | Đọc danh sách theo scope                             | Đầy đủ | Tạo User + Employee cùng lúc; User legacy cùng org chưa có Employee sẽ được liên kết. Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft). List/detail trả **hồ sơ nhận lương** (STK + URL QR) do nhân viên tự cập nhật |
-| Locations   | `/locations`   | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy chi nhánh được gán; có thể cập nhật metadata chi nhánh trong scope (drawer Tổ chức). Ghi policy: Admin only. |
-| Departments | `/departments` | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy phòng ban thuộc chi nhánh được gán; có thể cập nhật phòng ban trong scope                                    |
+| Locations   | `/locations`   | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy chi nhánh được gán; có thể cập nhật metadata chi nhánh trong scope (drawer Tổ chức). Ghi policy: Admin only.                                                                                                                                   |
+| Departments | `/departments` | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy phòng ban thuộc chi nhánh được gán; có thể cập nhật phòng ban trong scope                                                                                                                                                                      |
 
 ## Membership chi nhánh (`/api/v1/location-memberships`)
 
@@ -72,14 +72,14 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần hồ sơ Employee liên kết.
 
-| Method | Path                  | Mô tả                                 |
-| ------ | --------------------- | ------------------------------------- |
-| GET    | `/self/schedule`      | Lịch ca của mình (28 ngày, published) |
-| GET    | `/self/swap-requests` | Yêu cầu đổi ca gửi/nhận               |
-| GET    | `/self/attendance`    | Lịch sử chấm công                     |
-| GET    | `/self/profile`       | Hồ sơ nhân viên của user đang đăng nhập |
-| PUT    | `/self/profile`       | Cập nhật hồ sơ: họ tên, SĐT, STK ngân hàng; `removePaymentQr` để xóa ảnh QR |
-| POST   | `/self/profile/payment-qr` | Upload ảnh QR chuyển khoản (multipart `file`, Cloudinary, tối đa 5MB) |
+| Method | Path                       | Mô tả                                                                       |
+| ------ | -------------------------- | --------------------------------------------------------------------------- |
+| GET    | `/self/schedule`           | Lịch ca của mình (28 ngày, published)                                       |
+| GET    | `/self/swap-requests`      | Yêu cầu đổi ca gửi/nhận                                                     |
+| GET    | `/self/attendance`         | Lịch sử chấm công                                                           |
+| GET    | `/self/profile`            | Hồ sơ nhân viên của user đang đăng nhập                                     |
+| PUT    | `/self/profile`            | Cập nhật hồ sơ: họ tên, SĐT, STK ngân hàng; `removePaymentQr` để xóa ảnh QR |
+| POST   | `/self/profile/payment-qr` | Upload ảnh QR chuyển khoản (multipart `file`, Cloudinary, tối đa 5MB)       |
 
 ## Đổi ca (`/api/v1/swap-requests`)
 
@@ -105,11 +105,11 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 
 ## Lương (`/api/v1/payroll`)
 
-| Method | Path                    | Vai trò        | Mô tả                         |
-| ------ | ----------------------- | -------------- | ----------------------------- |
+| Method | Path                    | Vai trò        | Mô tả                                                                          |
+| ------ | ----------------------- | -------------- | ------------------------------------------------------------------------------ |
 | GET    | `/summary`              | Admin, Manager | Tổng hợp theo department & kỳ; mỗi dòng có **hồ sơ nhận lương** (STK + URL QR) |
-| GET    | `/summary/{employeeId}` | Admin, Manager | Chi tiết từng nhân viên + hồ sơ nhận lương |
-| POST   | `/summary/export`       | Admin          | Tải CSV (cột ngân hàng + URL QR) |
+| GET    | `/summary/{employeeId}` | Admin, Manager | Chi tiết từng nhân viên + hồ sơ nhận lương                                     |
+| POST   | `/summary/export`       | Admin          | Tải CSV (cột ngân hàng + URL QR)                                               |
 
 Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 

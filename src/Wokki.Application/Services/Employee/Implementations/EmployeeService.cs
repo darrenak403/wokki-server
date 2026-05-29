@@ -5,18 +5,22 @@ using Wokki.Application.Mappings.Employees;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
+using Wokki.Domain.Constants;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
+using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
 using LocationMembershipEntity = Wokki.Domain.Entities.LocationMembership;
+using LocationManagerEntity = Wokki.Domain.Entities.LocationManager;
 
 namespace Wokki.Application.Services.Employee.Implementations;
 
 public sealed class EmployeeService(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
-    IOrganizationScopeService organizationScope) : IEmployeeService
+    IOrganizationScopeService organizationScope,
+    ICurrentUserService currentUser) : IEmployeeService
 {
     public async Task<ApiResponse<EmployeeResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -109,13 +113,30 @@ public sealed class EmployeeService(
                 return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
         }
 
-        var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null || !department.IsActive || department.OrganizationId != organizationId)
-            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+        var requiresDepartment = request.Role == RoleConstants.User;
+        if (requiresDepartment && !request.DepartmentId.HasValue)
+            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentRequiredForUser);
 
-        var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
-        if (!await AllDepartmentsActiveAsync(departmentIds, organizationId, cancellationToken))
-            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+        var requiresManagerLocations = request.Role == RoleConstants.Manager;
+        var managerLocationIds = NormalizeLocationIds(request.LocationIds);
+        if (requiresManagerLocations && managerLocationIds.Count == 0)
+            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.ManagerLocationsRequired);
+
+        if (requiresManagerLocations && !await AllLocationsActiveAsync(managerLocationIds, organizationId, cancellationToken))
+            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.ManagerLocationNotFound);
+
+        DepartmentEntity? department = null;
+        IReadOnlyList<Guid> departmentIds = [];
+        if (request.DepartmentId.HasValue)
+        {
+            department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId.Value, cancellationToken: cancellationToken);
+            if (department is null || !department.IsActive || department.OrganizationId != organizationId)
+                return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+
+            departmentIds = NormalizeDepartmentIds(request.DepartmentId.Value, request.DepartmentIds);
+            if (!await AllDepartmentsActiveAsync(departmentIds, organizationId, cancellationToken))
+                return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
+        }
 
         var temporaryPassword = string.IsNullOrWhiteSpace(request.Password)
             ? PasswordGenerator.Generate()
@@ -134,7 +155,10 @@ public sealed class EmployeeService(
         user.MustChangePassword = string.IsNullOrWhiteSpace(request.Password);
 
         var employee = request.ToEntity(user.Id, organizationId);
-        EmployeeMapper.SyncPositionFromDepartment(employee, department);
+        if (department is not null)
+            EmployeeMapper.SyncPositionFromDepartment(employee, department);
+        else
+            employee.Position = request.Role;
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
@@ -146,17 +170,35 @@ public sealed class EmployeeService(
 
             await unitOfWork.Employees.AddAsync(employee, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
-            await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
-                employee.Id,
-                organizationId,
-                departmentIds,
-                request.DepartmentId,
-                cancellationToken);
-            await EnsureActiveLocationMembershipAsync(
-                employee.Id,
-                organizationId,
-                department.LocationId,
-                cancellationToken);
+            if (department is not null && request.DepartmentId.HasValue)
+            {
+                await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
+                    employee.Id,
+                    organizationId,
+                    departmentIds,
+                    request.DepartmentId.Value,
+                    cancellationToken);
+                await EnsureActiveLocationMembershipAsync(
+                    employee.Id,
+                    organizationId,
+                    department.LocationId,
+                    cancellationToken);
+            }
+
+            if (requiresManagerLocations)
+            {
+                var assignResult = await AssignManagerLocationsAsync(
+                    user.Id,
+                    organizationId,
+                    managerLocationIds,
+                    cancellationToken);
+                if (assignResult is not null)
+                {
+                    await unitOfWork.RollbackTransactionAsync(cancellationToken);
+                    return assignResult;
+                }
+            }
+
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
@@ -228,7 +270,9 @@ public sealed class EmployeeService(
         var user = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken: cancellationToken)
                    ?? throw new InvalidOperationException($"User {employee.UserId} not found for employee {employee.Id}.");
 
-        var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);
+        DepartmentEntity? department = null;
+        if (employee.DepartmentId.HasValue)
+            department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         LocationEntity? location = null;
         if (department is not null)
             location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
@@ -256,6 +300,57 @@ public sealed class EmployeeService(
         }
 
         return true;
+    }
+
+    private static IReadOnlyList<Guid> NormalizeLocationIds(IReadOnlyList<Guid>? locationIds) =>
+        (locationIds ?? [])
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+    private async Task<bool> AllLocationsActiveAsync(
+        IReadOnlyList<Guid> locationIds,
+        Guid organizationId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var id in locationIds)
+        {
+            var location = await unitOfWork.Locations.GetByIdAsync(id, cancellationToken: cancellationToken);
+            if (location is null || !location.IsActive || location.OrganizationId != organizationId)
+                return false;
+        }
+
+        return true;
+    }
+
+    private async Task<ApiResponse<CreateEmployeeResponse>?> AssignManagerLocationsAsync(
+        Guid userId,
+        Guid organizationId,
+        IReadOnlyList<Guid> locationIds,
+        CancellationToken cancellationToken)
+    {
+        if (!currentUser.UserId.HasValue)
+            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Auth.Unauthorized);
+
+        var assignedById = currentUser.UserId.Value;
+        foreach (var locationId in locationIds)
+        {
+            var existing = await unitOfWork.LocationManagers.GetAsync(locationId, userId, cancellationToken);
+            if (existing is not null)
+                continue;
+
+            await unitOfWork.LocationManagers.AddAsync(new LocationManagerEntity
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = organizationId,
+                LocationId = locationId,
+                UserId = userId,
+                AssignedById = assignedById,
+                AssignedAt = DateTime.UtcNow,
+            }, cancellationToken);
+        }
+
+        return null;
     }
 
     private async Task EnsureActiveLocationMembershipAsync(

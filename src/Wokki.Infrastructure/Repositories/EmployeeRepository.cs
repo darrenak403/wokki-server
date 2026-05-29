@@ -97,7 +97,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         return await context.Employees.AsNoTracking()
             .Where(e =>
                 e.TerminatedAt == null &&
-                (deptList.Contains(e.DepartmentId) ||
+                (e.DepartmentId.HasValue && deptList.Contains(e.DepartmentId.Value) ||
                  context.EmployeeDepartmentMemberships.Any(m =>
                      m.EmployeeId == e.Id &&
                      m.Status == DepartmentMembershipStatus.Active &&

@@ -331,6 +331,8 @@ sequenceDiagram
 
 **Nhân viên không tự register.** Org Admin:
 
+**User (Nhân viên):**
+
 ```http
 POST /api/v1/employees
 Authorization: Bearer {adminToken}
@@ -347,9 +349,28 @@ Authorization: Bearer {adminToken}
 }
 ```
 
-Response có `temporaryPassword` — hiển thị **một lần** cho Admin copy gửi nhân viên.
+Nhân viên → **Login** → vào **`/app` trực tiếp**. BE tự tạo **Active** `LocationMembership` tại chi nhánh của `departmentId`. User chỉ thấy chi nhánh có membership.
 
-Nhân viên → **Login** (không register) → vào **`/app` trực tiếp**. BE tự tạo **Active** `LocationMembership` tại chi nhánh của `departmentId`.
+**Manager (Quản lý chi nhánh):**
+
+```http
+POST /api/v1/employees
+Authorization: Bearer {adminToken}
+
+{
+  "email": "manager@cafe.vn",
+  "firstName": "Minh",
+  "lastName": "Tran",
+  "hourlyRate": 0,
+  "role": "Manager",
+  "locationIds": ["{locationUuid1}", "{locationUuid2}"],
+  "password": null
+}
+```
+
+BE tạo `LocationManager` cho từng chi nhánh trong `locationIds`. Manager không cần `departmentId`. Khi đăng nhập chỉ thấy chi nhánh được giao.
+
+Response có `temporaryPassword` — hiển thị **một lần** cho Admin copy gửi nhân viên.
 Nếu email đã tồn tại trong cùng org nhưng chưa có `Employee` (dữ liệu legacy từ tab “Tài khoản hệ thống”), gọi API này với email đó sẽ chuyển account thành nhân viên và trả mật khẩu tạm mới.
 
 **Không dùng `POST /api/v1/users` để tạo staff.** Endpoint này bị chặn cho org staff (`USER_EMPLOYEE_PROFILE_REQUIRED`) vì tài khoản không có `Employee` sẽ không có phòng ban/chi nhánh, không xem được lịch, chấm công, chat hoặc route `/user`.

@@ -18,6 +18,11 @@ public sealed class CreateEmployeeRequestValidator : AbstractValidator<CreateEmp
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Phone).MaximumLength(32);
         RuleFor(x => x.HourlyRate).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.DepartmentId).NotEmpty();
+        RuleFor(x => x.DepartmentId)
+            .NotEmpty()
+            .When(x => x.Role == RoleConstants.User);
+        RuleFor(x => x.LocationIds)
+            .NotEmpty()
+            .When(x => x.Role == RoleConstants.Manager);
     }
 }

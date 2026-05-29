@@ -264,7 +264,10 @@ public sealed class OvertimeRequestService(IUnitOfWork unitOfWork, IOrganization
         if (employee is null)
             return false;
 
-        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId, assignment.Date, ct);
+        if (!employee.DepartmentId.HasValue)
+            return false;
+
+        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId.Value, assignment.Date, ct);
         return period?.Status == PayPeriodStatus.Locked;
     }
 

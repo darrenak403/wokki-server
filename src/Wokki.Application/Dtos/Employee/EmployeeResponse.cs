@@ -10,7 +10,7 @@ public sealed record EmployeeResponse(
     string Phone,
     string Position,
     decimal HourlyRate,
-    Guid DepartmentId,
+    Guid? DepartmentId,
     string? DepartmentName,
     Guid? LocationId,
     string? LocationName,

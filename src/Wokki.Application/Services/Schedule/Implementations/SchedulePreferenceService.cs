@@ -23,8 +23,11 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork, IOrganizat
         if (!ScheduleRules.IsMonday(weekStartDate))
             return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
 
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
+
         var schedule = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
-            employee.DepartmentId,
+            employee.DepartmentId.Value,
             weekStartDate,
             cancellationToken);
 
@@ -72,8 +75,11 @@ public sealed class SchedulePreferenceService(IUnitOfWork unitOfWork, IOrganizat
         if (!ScheduleRules.IsMonday(weekStartDate))
             return ApiResponse<EmployeeDraftScheduleResponse?>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
 
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<EmployeeDraftScheduleResponse?>.SuccessResponse(null, AppMessages.SchedulePreference.Found);
+
         var schedule = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
-            employee.DepartmentId,
+            employee.DepartmentId.Value,
             weekStartDate,
             cancellationToken);
 

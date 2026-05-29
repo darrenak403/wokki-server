@@ -8,7 +8,8 @@ public sealed record CreateEmployeeRequest(
     string LastName,
     string? Phone,
     decimal HourlyRate,
-    Guid DepartmentId,
+    Guid? DepartmentId,
     string Role = RoleConstants.User,
     string? Password = null,
-    IReadOnlyList<Guid>? DepartmentIds = null);
+    IReadOnlyList<Guid>? DepartmentIds = null,
+    IReadOnlyList<Guid>? LocationIds = null);

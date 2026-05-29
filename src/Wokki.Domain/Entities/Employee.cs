@@ -20,7 +20,7 @@ public class Employee
     /// <summary>Cloudinary public_id — xóa/thay ảnh.</summary>
     public string? PaymentQrPublicId { get; set; }
     public decimal HourlyRate { get; set; }
-    public Guid DepartmentId { get; set; }
+    public Guid? DepartmentId { get; set; }
     public DateTime EmployedAt { get; set; } = DateTime.UtcNow;
     public DateTime? TerminatedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
