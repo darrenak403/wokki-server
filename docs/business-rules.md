@@ -31,10 +31,11 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-012 | Terminated employees (`TerminatedAt` set) cannot receive new assignments or be swap targets. | `EmployeeService`, assignment validators |
 | BR-013 | `ShiftDefinition` must match schedule scope: same `LocationId`; if `DepartmentId` set, must equal schedule department. | `TryPrepareAssignmentAsync` |
 | BR-014 | Tenant root is `Organization`. Business data carries `OrganizationId`; org users must have JWT claim `organization_id`. Never accept `organizationId` from request body for authorization. | `OrganizationContextMiddleware`, `IOrganizationScopeService` |
-| BR-015 | `PlatformOperator` (`admin@gmail.com` seed) has `OrganizationId = null`, may view `/api/v1/platform/stats` only — not org business routes. | `StatsService`, route auth |
-| BR-016 | `POST /register` atomically creates `Organization` + Org Admin (`Admin` role) + JWT. One email = one org; duplicate email → 409. | `AuthService.RegisterAsync` |
+| BR-015 | `PlatformOperator` (`admin@gmail.com` seed) has `OrganizationId = null`, may use platform routes (`/api/v1/platform/*`) only — not org business routes. | `StatsService`, `PlatformAdminService`, route auth |
+| BR-016 | `POST /register` atomically creates `Organization` + Org Admin (`Admin` role) + JWT. One email = one org; duplicate email → 409. New orgs start without an activated package until Wokki admin enables them. | `AuthService.RegisterAsync` |
 | BR-017 | Branch transfer validates `location.OrganizationId == employee.organizationId`. Cross-tenant location access returns 404. | `WorkspaceService`, `EmployeeService` |
 | BR-018 | Org stats (`GET /api/v1/org/stats`) for `Admin` + `Manager` only; platform stats for `PlatformOperator` only. | `StatsService`, endpoint auth |
+| BR-019 | Wokki admin (`PlatformOperator`) may list platform users/orgs and enable, disable, or renew an org package. Package length is set via `durationDays` in the platform console (admin-chosen; FE must not assume a fixed default such as 30 days). On renew, omitted `durationDays` reuses the org’s stored `subscriptionDurationDays`. Org users cannot log in, refresh, or call org APIs when the package is not activated (`ORG_PACKAGE_NOT_ACTIVATED`) or expired (`ORG_PACKAGE_EXPIRED`). | `PlatformAdminService`, `OrganizationSubscriptionService`, `OrganizationContextMiddleware`, `AuthService` |
 
 ---
 

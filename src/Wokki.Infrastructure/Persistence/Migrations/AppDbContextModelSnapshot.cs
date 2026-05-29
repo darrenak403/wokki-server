@@ -575,6 +575,23 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTime?>("SubscriptionActivatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubscriptionDurationDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("SubscriptionEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("SubscriptionExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SubscriptionUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name");

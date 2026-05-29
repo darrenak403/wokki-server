@@ -8,4 +8,6 @@ public interface IStatsService
 {
     Task<ApiResponse<PlatformStatsResponse>> GetPlatformStatsAsync(CancellationToken cancellationToken = default);
     Task<ApiResponse<OrgStatsResponse>> GetOrgStatsAsync(CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<OrgSubscriptionResponse>> GetOrgSubscriptionAsync(CancellationToken cancellationToken = default);
 }

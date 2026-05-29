@@ -31,10 +31,11 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-012 | Nhân viên đã chấm dứt (`TerminatedAt`) không được phân ca mới hoặc làm đối tác đổi ca. | `EmployeeService`, validator |
 | BR-013 | `ShiftDefinition` phải khớp phạm vi lịch: cùng `LocationId`; nếu có `DepartmentId` thì phải bằng department của lịch. | `TryPrepareAssignmentAsync` |
 | BR-014 | Tenant root là `Organization`. Dữ liệu nghiệp vụ có `OrganizationId`; user org phải có JWT claim `organization_id`. Không dùng `organizationId` từ body để authorize. | `OrganizationContextMiddleware`, `IOrganizationScopeService` |
-| BR-015 | `PlatformOperator` (seed `admin@gmail.com`) có `OrganizationId = null`, chỉ xem `/api/v1/platform/stats` — không vào route nghiệp vụ org. | `StatsService`, route auth |
-| BR-016 | `POST /register` tạo atomic `Organization` + Org Admin (`Admin`) + JWT. Một email = một org; email trùng → 409. | `AuthService.RegisterAsync` |
+| BR-015 | `PlatformOperator` (seed `admin@gmail.com`) có `OrganizationId = null`, chỉ dùng các route platform (`/api/v1/platform/*`) — không vào route nghiệp vụ org. | `StatsService`, `PlatformAdminService`, route auth |
+| BR-016 | `POST /register` tạo atomic `Organization` + Org Admin (`Admin`) + JWT. Một email = một org; email trùng → 409. Org mới mặc định chưa có gói sử dụng cho tới khi Wokki admin kích hoạt. | `AuthService.RegisterAsync` |
 | BR-017 | Chuyển chi nhánh phải `location.OrganizationId == employee.organizationId`. Truy cập cross-tenant → 404. | `WorkspaceService`, `EmployeeService` |
 | BR-018 | Org stats (`GET /api/v1/org/stats`) cho `Admin` + `Manager`; platform stats cho `PlatformOperator` only. | `StatsService`, endpoint auth |
+| BR-019 | Wokki admin (`PlatformOperator`) được xem danh sách user/org toàn hệ thống và bật, tắt hoặc gia hạn gói org. Thời hạn gói do admin chọn qua `durationDays` trên console `/platform` (FE không hardcode mặc định 30 ngày). Gia hạn: có thể gửi `durationDays` mới; bỏ qua thì BE dùng `subscriptionDurationDays` đã lưu của org. User thuộc org không được login, refresh token hoặc gọi API nghiệp vụ khi org chưa kích hoạt gói (`ORG_PACKAGE_NOT_ACTIVATED`) hoặc đã hết hạn (`ORG_PACKAGE_EXPIRED`). | `PlatformAdminService`, `OrganizationSubscriptionService`, `OrganizationContextMiddleware`, `AuthService` |
 
 ---
 

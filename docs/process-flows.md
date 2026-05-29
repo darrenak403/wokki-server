@@ -8,12 +8,36 @@ Visual reference for agents. Rule IDs refer to [business-rules.md](./business-ru
 
 ```mermaid
 flowchart LR
-    Enterprise[Enterprise customer] --> Instance[Dedicated Wokki instance]
-    Instance --> DB[(PostgreSQL)]
-    Instance --> API[Wokki.Api]
+    Customer[Customer admin] --> Register[POST /auth/register]
+    Register --> Org[(Organization tenant)]
+    Platform[Wokki PlatformOperator] --> Package[Enable / renew package]
+    Package --> Org
+    Org --> API[Org business APIs]
+    API --> DB[(PostgreSQL)]
 ```
 
-One company per environment. No shared multi-tenant database in MVP.
+`Organization` is the tenant root. Register creates the org and Org Admin, but the org starts without an activated package. Wokki admin activates or renews the org before org users can log in/use org APIs.
+
+### 1.0 Org package gate
+
+```mermaid
+sequenceDiagram
+    participant C as Customer admin
+    participant API as Auth API
+    participant P as PlatformOperator
+    participant PA as Platform API
+
+    C->>API: POST /auth/register
+    API-->>C: Org Admin JWT; package NotActivated
+    C->>API: POST /auth/login
+    API-->>C: 403 ORG_PACKAGE_NOT_ACTIVATED
+    P->>PA: PUT /platform/organizations/{id}/subscription { enabled: true, durationDays }
+    PA-->>P: subscriptionStatus Active + expiresAt
+    C->>API: POST /auth/login
+    API-->>C: accessToken + refreshToken
+```
+
+Expired org packages return `ORG_PACKAGE_EXPIRED` (402) on login/refresh and authenticated org API calls. Disabled or not-yet-activated packages return `ORG_PACKAGE_NOT_ACTIVATED` (403).
 
 ---
 

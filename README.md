@@ -32,24 +32,19 @@ task run
 
 - API: http://localhost:8386
 
-## Default seed (Wokki Coffê demo)
+## Default seed
 
-Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs) → [`DevSeedData.cs`](src/Wokki.Infrastructure/Persistence/Seed/DevSeedData.cs)). Dates use **`Asia/Ho_Chi_Minh`**.
+Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs)).
 
-**Password (all accounts):** `12345@Abc`
+**Password:** `12345@Abc`
 
 | Email | Role |
 |-------|------|
-| admin@gmail.com | Admin (chủ quán) |
-| manager@gmail.com | Manager (trưởng ca) |
-| user@gmail.com | User (barista demo) |
-| barista1@gmail.com … barista5@gmail.com | User |
+| admin@gmail.com | PlatformOperator (Wokki admin) |
 
-**Also seeded:** location **Wokki Coffê**, departments **Quầy bar** + **Pha chế**, memberships, scheduling policy, 3 shift types, published week schedule (+ today/yesterday fixed slots), sample attendance, pending OT, pending swap, chat.
+Org customers register via `/api/v1/auth/register`, then Wokki admin activates/renews the org package from `/api/v1/platform/organizations/{id}/subscription` before org users can use the system.
 
-**Reset demo data:** `task docker:clear` then `task docker:build`.
-
-Full IDs: [docs/fe/seed-credentials.md](docs/fe/seed-credentials.md).
+**Reset local data:** `task docker:clear` then `task docker:build`.
 
 ## Auth flow
 

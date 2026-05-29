@@ -31,13 +31,14 @@ public static class AuthEndpoints
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status402PaymentRequired)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
         group.MapPost("/register", RegisterUserAsync)
             .WithName("Register")
             .WithDescription("Tự đăng ký tổ chức: email + password + organizationName → Org Admin + JWT.")
             .AllowAnonymous()
-            .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status201Created)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
@@ -47,7 +48,9 @@ public static class AuthEndpoints
             .RequireAuthorization()
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized);
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status402PaymentRequired)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
         group.MapPut("/change-password", ChangePasswordAsync)
             .WithName("ChangePassword")

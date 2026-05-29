@@ -10,6 +10,47 @@ public sealed class OrganizationRepository(AppDbContext context) : IOrganization
     public Task<Organization?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Organizations.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
+    public Task<Organization?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Organizations.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+
+    public async Task<(IReadOnlyList<PlatformOrganizationSnapshot> Items, int TotalCount)> ListPlatformAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.Organizations.AsNoTracking().AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(o => o.Name.ToLower().Contains(term));
+        }
+
+        query = query.OrderByDescending(o => o.CreatedAt);
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(o => new PlatformOrganizationSnapshot(
+                o.Id,
+                o.Name,
+                o.IsActive,
+                o.SubscriptionEnabled,
+                o.SubscriptionDurationDays,
+                o.SubscriptionActivatedAt,
+                o.SubscriptionExpiresAt,
+                o.SubscriptionUpdatedAt,
+                o.CreatedAt,
+                context.Users.Count(u => u.OrganizationId == o.Id),
+                context.Locations.Count(l => l.OrganizationId == o.Id),
+                context.Employees.Count(e => e.OrganizationId == o.Id && e.TerminatedAt == null)))
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
     public async Task AddAsync(Organization organization, CancellationToken cancellationToken = default) =>
         await context.Organizations.AddAsync(organization, cancellationToken);
 

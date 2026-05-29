@@ -1,6 +1,7 @@
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Auth;
 using Wokki.Application.Services.Auth.Interfaces;
+using Wokki.Application.Services.OrganizationSubscription.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
@@ -10,7 +11,8 @@ namespace Wokki.Application.Services.Auth.Implementations;
 public sealed class AuthService(
     IUnitOfWork unitOfWork,
     IJwtTokenService jwtTokenService,
-    IPasswordHasher passwordHasher) : IAuthService
+    IPasswordHasher passwordHasher,
+    IOrganizationSubscriptionService organizationSubscription) : IAuthService
 {
     private readonly IPasswordHasher _passwordHasher = passwordHasher;
 
@@ -19,6 +21,13 @@ public sealed class AuthService(
         var user = await unitOfWork.Users.GetByEmailAsync(request.Email.Trim().ToLowerInvariant(), cancellationToken);
         if (user is null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             return ApiResponse<LoginResponse>.FailureResponse(AppMessages.Auth.InvalidCredentials);
+
+        var accessFailure = await organizationSubscription.GetAccessFailureAsync(
+            user.OrganizationId,
+            user.Role,
+            cancellationToken);
+        if (accessFailure is not null)
+            return ApiResponse<LoginResponse>.FailureResponse(accessFailure);
 
         var accessToken = jwtTokenService.GenerateAccessToken(user);
         var refreshToken = jwtTokenService.GenerateRefreshToken(user);
@@ -49,6 +58,8 @@ public sealed class AuthService(
             Id = Guid.NewGuid(),
             Name = request.OrganizationName.Trim(),
             IsActive = true,
+            SubscriptionEnabled = false,
+            SubscriptionDurationDays = 0,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -126,6 +137,13 @@ public sealed class AuthService(
         var user = await unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
         if (user is null)
             return ApiResponse<LoginResponse>.FailureResponse(AppMessages.Auth.Unauthorized);
+
+        var accessFailure = await organizationSubscription.GetAccessFailureAsync(
+            user.OrganizationId,
+            user.Role,
+            cancellationToken);
+        if (accessFailure is not null)
+            return ApiResponse<LoginResponse>.FailureResponse(accessFailure);
 
         var accessToken = jwtTokenService.GenerateAccessToken(user);
         var refreshToken = jwtTokenService.GenerateRefreshToken(user);

@@ -6,19 +6,22 @@ Use this file for **business meaning** and **where code lives**. Locked rules: `
 
 ## Product (one paragraph)
 
-**Wokki Shift Ops MVP** is a single-tenant workforce backend (one company per deployment): weekly scheduling, shift swaps, attendance, payroll prep, internal chat, and **deterministic** schedule suggestions. Web/mobile-web clients call `/api/v1`. Managers publish official schedules; employee **preferences** are advisory and separate from `ShiftAssignment`.
+**Wokki Shift Ops MVP** is a multi-organization workforce backend: weekly scheduling, shift swaps, attendance, payroll prep, internal chat, and **deterministic** schedule suggestions. Web/mobile-web clients call `/api/v1`; business APIs are scoped by JWT `organization_id`. Managers publish official schedules; employee **preferences** are advisory and separate from `ShiftAssignment`.
 
 ---
 
 ## Roles & API access
 
-| Role | Typical caller | Scheduling | Self (`/self/*`) | Payroll export |
-|------|----------------|------------|------------------|----------------|
-| **Admin** | IT/HR | Full + users | If has Employee | Yes (CSV) |
-| **Manager** | Ops lead | Draft/Publish, assignments, swap override | If has Employee | View |
-| **User** | Staff | No manager schedule APIs | Schedule, swap, clock | No |
+| Role                 | Typical caller | Scheduling                                | Self (`/self/*`)      | Payroll export |
+| -------------------- | -------------- | ----------------------------------------- | --------------------- | -------------- |
+| **PlatformOperator** | Wokki admin    | No org scheduling                         | No                    | No             |
+| **Admin**            | IT/HR          | Full + users                              | If has Employee       | Yes (CSV)      |
+| **Manager**          | Ops lead       | Draft/Publish, assignments, swap override | If has Employee       | View           |
+| **User**             | Staff          | No manager schedule APIs                  | Schedule, swap, clock | No             |
 
 `GET /api/v1/auth/me` = login account. `GET /api/v1/self/*` = workforce profile (requires `Employee` row).
+
+Org package gate: register creates `Organization` + Org Admin but package is NotActivated. `PlatformOperator` uses platform APIs to activate/disable/renew with admin-chosen `durationDays` (no FE default of 30 days). Org users blocked with `ORG_PACKAGE_NOT_ACTIVATED` or `ORG_PACKAGE_EXPIRED` until activated/renewed.
 
 ---
 
@@ -76,31 +79,32 @@ Use **department membership** for guards when employee spans multiple department
 
 ## Solution map
 
-| Layer | Project | Do / Don't |
-|-------|---------|------------|
-| API | `Wokki.Api` | Map HTTP, validate, `ToHttpResult()` — **no** business logic |
-| Application | `Wokki.Application` | Services, DTOs, validators — **no** `DbContext` |
-| Domain | `Wokki.Domain` | Entities, `IUnitOfWork`, `RoleConstants` |
-| Infrastructure | `Wokki.Infrastructure` | EF, JWT |
-| Common | `Wokki.Common` | `ApiResponse<T>`, `AppMessages` |
+| Layer          | Project                | Do / Don't                                                   |
+| -------------- | ---------------------- | ------------------------------------------------------------ |
+| API            | `Wokki.Api`            | Map HTTP, validate, `ToHttpResult()` — **no** business logic |
+| Application    | `Wokki.Application`    | Services, DTOs, validators — **no** `DbContext`              |
+| Domain         | `Wokki.Domain`         | Entities, `IUnitOfWork`, `RoleConstants`                     |
+| Infrastructure | `Wokki.Infrastructure` | EF, JWT                                                      |
+| Common         | `Wokki.Common`         | `ApiResponse<T>`, `AppMessages`                              |
 
 ### Endpoints → services (quick lookup)
 
-| Endpoints | Service(s) |
-|-----------|------------|
-| `AuthEndpoints` | `AuthService` |
-| `UserEndpoints` | `UserService` |
-| `EmployeeEndpoints` | `EmployeeService` |
-| `LocationEndpoints` | `LocationService` (+ policy in schedule/location DTOs) |
-| `DepartmentEndpoints` | `DepartmentService` |
-| `ShiftEndpoints` | `ShiftDefinitionService` |
-| `ScheduleEndpoints` | `ScheduleService`, `SchedulePreferenceService`, `DepartmentSchedulingConfigService`, `ScheduleInsightService`, suggestion engine |
-| `EmployeeSelfEndpoints` | schedule/swap/attendance read models for self |
-| `SwapRequestEndpoints` | `SwapRequestService` |
-| `AttendanceEndpoints` | `AttendanceService` |
-| `PayrollEndpoints` | `PayrollService` |
-| `ChannelEndpoints` | `ChannelService` |
-| `BedrockEndpoints` | `BedrockService` |
+| Endpoints               | Service(s)                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `AuthEndpoints`         | `AuthService`                                                                                                                    |
+| `UserEndpoints`         | `UserService`                                                                                                                    |
+| `EmployeeEndpoints`     | `EmployeeService`                                                                                                                |
+| `LocationEndpoints`     | `LocationService` (+ policy in schedule/location DTOs)                                                                           |
+| `DepartmentEndpoints`   | `DepartmentService`                                                                                                              |
+| `ShiftEndpoints`        | `ShiftDefinitionService`                                                                                                         |
+| `ScheduleEndpoints`     | `ScheduleService`, `SchedulePreferenceService`, `DepartmentSchedulingConfigService`, `ScheduleInsightService`, suggestion engine |
+| `EmployeeSelfEndpoints` | schedule/swap/attendance read models for self                                                                                    |
+| `SwapRequestEndpoints`  | `SwapRequestService`                                                                                                             |
+| `AttendanceEndpoints`   | `AttendanceService`                                                                                                              |
+| `PayrollEndpoints`      | `PayrollService`                                                                                                                 |
+| `ChannelEndpoints`      | `ChannelService`                                                                                                                 |
+| `BedrockEndpoints`      | `BedrockService`                                                                                                                 |
+| `PlatformEndpoints`     | `StatsService`, `PlatformAdminService`                                                                                           |
 
 ### Adding a feature (checklist)
 
@@ -121,29 +125,29 @@ Business codes live in `Wokki.Common` → `AppMessages`. FE maps `message.code` 
 
 ## Related repos & docs
 
-| Path | Content |
-|------|---------|
-| `../wokki-client` | Next.js UI |
-| `docs/vi/fe-integration-guide.md` | FE waves, auth, SignalR |
-| `docs/fe/` | Per-wave handoff (when present) |
-| `plans/shift-ops-mvp/` | Implementation plan |
-| `plans/fe-handoff-flow-verification/` | Smoke scripts |
+| Path                                  | Content                         |
+| ------------------------------------- | ------------------------------- |
+| `../wokki-client`                     | Next.js UI                      |
+| `docs/vi/fe-integration-guide.md`     | FE waves, auth, SignalR         |
+| `docs/fe/`                            | Per-wave handoff (when present) |
+| `plans/shift-ops-mvp/`                | Implementation plan             |
+| `plans/fe-handoff-flow-verification/` | Smoke scripts                   |
 
 ---
 
 ## Seed & local URLs
 
 - API: `http://localhost:8386` · Scalar: `/scalar`
-- Users: `admin@gmail.com`, `manager@gmail.com`, `user@gmail.com` / `12345@Abc`
+- Platform seed: `admin@gmail.com` / `12345@Abc` (`PlatformOperator`). Org Manager/User accounts are created by an Org Admin after the org package is active.
 
 ---
 
 ## Claude quick commands
 
-| Command | Purpose |
-|---------|---------|
-| `/ck:wokki` | Load BRD + `BR-xxx` + file map for topic |
-| `/ck:cook` | Implement from plan |
-| Skill `wokki` | `.claude/skills/wokki/SKILL.md` |
+| Command       | Purpose                                  |
+| ------------- | ---------------------------------------- |
+| `/ck:wokki`   | Load BRD + `BR-xxx` + file map for topic |
+| `/ck:cook`    | Implement from plan                      |
+| Skill `wokki` | `.claude/skills/wokki/SKILL.md`          |
 
 **Auto-loaded:** `CLAUDE.md` + `wokki-bootstrap.md` on session start (hook).

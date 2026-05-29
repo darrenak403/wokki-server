@@ -3,6 +3,8 @@
 > Branch: `main`
 > Date: 2026-05-29
 
+> Superseded note (2026-05-29): self-serve join/pending membership flow was removed after this handoff. For current FE behavior, prefer [self-serve-org-handoff.md](./self-serve-org-handoff.md) and [2026-05-29-feat-platform-org-subscription.md](./2026-05-29-feat-platform-org-subscription.md). Keep only the branch workspace scope concepts from this file; ignore `/join`, `/pending`, membership request/review, and old transfer endpoint names.
+
 ## 1) Endpoint map
 
 - `GET /api/v1/locations` — list locations; Admin gets all, Manager gets assigned branches only.

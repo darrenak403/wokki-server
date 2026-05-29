@@ -6,4 +6,8 @@ public sealed record OrgStatsResponse(
     int LocationCount,
     int DepartmentCount,
     int EmployeeCount,
-    int ActiveLocationMembershipCount);
+    int ActiveLocationMembershipCount,
+    string SubscriptionStatus,
+    int SubscriptionDurationDays,
+    DateTime? SubscriptionExpiresAt,
+    int? DaysRemaining);

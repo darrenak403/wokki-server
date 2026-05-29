@@ -6,16 +6,16 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 ## Auth (`/api/v1/auth`)
 
-| Method | Path               | Vai trò      | Mô tả                                                                     |
-| ------ | ------------------ | ------------ | ------------------------------------------------------------------------- |
-| POST   | `/login`           | Anonymous    | Đăng nhập, cấp token                                                      |
-| POST   | `/register`        | Anonymous    | Tự đăng ký org: `email`, `password`, `organizationName` → Org Admin + JWT |
-| POST   | `/refresh-token`   | Anonymous    | Làm mới JWT                                                               |
-| GET    | `/me`              | Đã đăng nhập | User hiện tại                                                             |
-| POST   | `/logout`          | Đã đăng nhập | Đăng xuất                                                                 |
-| PUT    | `/change-password` | Đã đăng nhập | Đổi mật khẩu                                                              |
-| POST   | `/forgot-password` | Anonymous    | Quên mật khẩu                                                             |
-| POST   | `/reset-password`  | Anonymous    | Đặt lại mật khẩu                                                          |
+| Method | Path               | Vai trò      | Mô tả                                                                                                        |
+| ------ | ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------ |
+| POST   | `/login`           | Anonymous    | Đăng nhập, cấp token                                                                                         |
+| POST   | `/register`        | Anonymous    | Tự đăng ký org: `email`, `password`, `organizationName` → Org Admin + JWT; org mới ở trạng thái NotActivated |
+| POST   | `/refresh-token`   | Đã đăng nhập | Làm mới JWT                                                                                                  |
+| GET    | `/me`              | Đã đăng nhập | User hiện tại                                                                                                |
+| POST   | `/logout`          | Đã đăng nhập | Đăng xuất                                                                                                    |
+| PUT    | `/change-password` | Đã đăng nhập | Đổi mật khẩu                                                                                                 |
+| POST   | `/forgot-password` | Anonymous    | Quên mật khẩu                                                                                                |
+| POST   | `/reset-password`  | Anonymous    | Đặt lại mật khẩu                                                                                             |
 
 ## Users (`/api/v1/users`)
 
@@ -44,9 +44,9 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 
 ## Điều chuyển workspace (`/api/v1/workspace`)
 
-| Method | Path                   | Vai trò        | Mô tả |
-| ------ | ---------------------- | -------------- | ----- |
-| POST   | `/location/transfer`   | Admin, Manager | Chuyển nhân viên sang chi nhánh khác trong phạm vi được quản lý. |
+| Method | Path                   | Vai trò        | Mô tả                                                                                                                                                                  |
+| ------ | ---------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/location/transfer`   | Admin, Manager | Chuyển nhân viên sang chi nhánh khác trong phạm vi được quản lý.                                                                                                       |
 | POST   | `/department/transfer` | Admin, Manager | Chuyển nhân viên sang phòng ban thuộc chi nhánh Active hiện tại của nhân viên. Nếu phòng ban khác chi nhánh, trả `WS_EMPLOYEE_WRONG_LOCATION`; chuyển chi nhánh trước. |
 
 ## Lập lịch (Scheduling)
@@ -118,6 +118,39 @@ Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 | GET    | `/{id}/messages`         | Member (Admin đọc được mọi kênh) | Phân trang cursor: `?before=&limit=` |
 | POST   | `/{id}/messages`         | Member                           | Gửi + đẩy SignalR                    |
 | DELETE | `/{id}/messages/{msgId}` | Người gửi hoặc Admin             | Xóa mềm                              |
+
+## Stats
+
+| Method | Path              | Vai trò          | Mô tả                                                 |
+| ------ | ----------------- | ---------------- | ----------------------------------------------------- |
+| GET    | `/platform/stats` | PlatformOperator | Tổng số org, user, chi nhánh, nhân viên toàn platform |
+| GET    | `/org/stats`      | Admin, Manager   | Số liệu vận hành trong org hiện tại                   |
+
+## Platform admin (`/api/v1/platform`) — PlatformOperator
+
+| Method | Path                                                   | Mô tả                                                   |
+| ------ | ------------------------------------------------------ | ------------------------------------------------------- |
+| GET    | `/users?page=&pageSize=&organizationId=&role=&search=` | Danh sách user toàn hệ thống, có org name nếu thuộc org |
+| GET    | `/organizations?page=&pageSize=&search=`               | Danh sách org kèm trạng thái gói và số liệu             |
+| PUT    | `/organizations/{id}/subscription`                     | Bật/tắt hoặc gia hạn gói org                            |
+
+Body `PUT /platform/organizations/{id}/subscription`:
+
+```json
+{
+  "enabled": true,
+  "durationDays": 90
+}
+```
+
+`durationDays` optional trên API (`1..3650`). FE platform gửi số ngày admin chọn (không hardcode 30). Bỏ trống → BE dùng `subscriptionDurationDays` đã lưu của org. Khi bật: `subscriptionExpiresAt = now + durationDays`. Khi tắt, org không dùng được nhưng không xóa dữ liệu.
+
+Mã gate gói cho user org:
+
+| HTTP | Code                        | Ý nghĩa                                    |
+| ---- | --------------------------- | ------------------------------------------ |
+| 403  | `ORG_PACKAGE_NOT_ACTIVATED` | Org chưa từng kích hoạt gói hoặc đã bị tắt |
+| 402  | `ORG_PACKAGE_EXPIRED`       | Gói org hết hạn; cần Wokki admin gia hạn   |
 
 ## Real-time
 

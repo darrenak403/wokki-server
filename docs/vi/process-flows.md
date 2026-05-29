@@ -8,12 +8,36 @@ Tham chiếu cho agents. Mã quy tắc: [business-rules.md](./business-rules.md)
 
 ```mermaid
 flowchart LR
-    DN[Doanh nghiệp] --> Instance[Instance Wokki riêng]
-    Instance --> DB[(PostgreSQL)]
-    Instance --> API[Wokki.Api]
+    Customer[Admin khách hàng] --> Register[POST /auth/register]
+    Register --> Org[(Organization tenant)]
+    Platform[Wokki PlatformOperator] --> Package[Bật / gia hạn gói]
+    Package --> Org
+    Org --> API[API nghiệp vụ org]
+    API --> DB[(PostgreSQL)]
 ```
 
-Một công ty một môi trường. Không chia sẻ database đa tenant trong MVP.
+`Organization` là tenant root. Register tạo org và Org Admin, nhưng org mới mặc định chưa có gói sử dụng. Wokki admin phải kích hoạt hoặc gia hạn gói trước khi user trong org đăng nhập/dùng API nghiệp vụ.
+
+### 1.0 Gate gói sử dụng org
+
+```mermaid
+sequenceDiagram
+    participant C as Admin khách hàng
+    participant API as Auth API
+    participant P as PlatformOperator
+    participant PA as Platform API
+
+    C->>API: POST /auth/register
+    API-->>C: JWT Org Admin; package NotActivated
+    C->>API: POST /auth/login
+    API-->>C: 403 ORG_PACKAGE_NOT_ACTIVATED
+    P->>PA: PUT /platform/organizations/{id}/subscription { enabled: true, durationDays }
+    PA-->>P: subscriptionStatus Active + expiresAt
+    C->>API: POST /auth/login
+    API-->>C: accessToken + refreshToken
+```
+
+Org hết hạn trả `ORG_PACKAGE_EXPIRED` (402) khi login/refresh và khi gọi API org bằng token cũ. Org chưa kích hoạt hoặc bị tắt trả `ORG_PACKAGE_NOT_ACTIVATED` (403).
 
 ---
 

@@ -9,8 +9,12 @@ using Wokki.Application.Services.LocationScope.Implementations;
 using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Implementations;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
+using Wokki.Application.Services.OrganizationSubscription.Implementations;
+using Wokki.Application.Services.OrganizationSubscription.Interfaces;
 using Wokki.Application.Services.OvertimeRequest.Implementations;
 using Wokki.Application.Services.OvertimeRequest.Interfaces;
+using Wokki.Application.Services.Platform.Implementations;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.Chat.Implementations;
 using Wokki.Application.Services.Chat.Interfaces;
@@ -65,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationManagerService, LocationManagerService>();
         services.AddScoped<ILocationScopeService, LocationScopeService>();
         services.AddScoped<IOrganizationScopeService, OrganizationScopeService>();
+        services.AddScoped<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
+        services.AddScoped<IPlatformAdminService, PlatformAdminService>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
 

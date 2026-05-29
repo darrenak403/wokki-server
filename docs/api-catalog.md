@@ -6,16 +6,16 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 
 ## Auth (`/api/v1/auth`)
 
-| Method | Path               | Roles         | Description                                                                                             |
-| ------ | ------------------ | ------------- | ------------------------------------------------------------------------------------------------------- |
-| POST   | `/login`           | Anonymous     | Issue tokens                                                                                            |
-| POST   | `/register`        | Anonymous     | Self-serve org signup: `email`, `password`, `organizationName` → Org Admin + JWT with `organization_id` |
-| POST   | `/refresh-token`   | Anonymous     | Refresh JWT                                                                                             |
-| GET    | `/me`              | Authenticated | Current user                                                                                            |
-| POST   | `/logout`          | Authenticated | Logout                                                                                                  |
-| PUT    | `/change-password` | Authenticated | Change password                                                                                         |
-| POST   | `/forgot-password` | Anonymous     | Forgot password                                                                                         |
-| POST   | `/reset-password`  | Anonymous     | Reset password                                                                                          |
+| Method | Path               | Roles         | Description                                                                                                                              |
+| ------ | ------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/login`           | Anonymous     | Issue tokens                                                                                                                             |
+| POST   | `/register`        | Anonymous     | Self-serve org signup: `email`, `password`, `organizationName` → Org Admin + JWT with `organization_id`; org package starts NotActivated |
+| POST   | `/refresh-token`   | Authenticated | Refresh JWT                                                                                                                              |
+| GET    | `/me`              | Authenticated | Current user                                                                                                                             |
+| POST   | `/logout`          | Authenticated | Logout                                                                                                                                   |
+| PUT    | `/change-password` | Authenticated | Change password                                                                                                                          |
+| POST   | `/forgot-password` | Anonymous     | Forgot password                                                                                                                          |
+| POST   | `/reset-password`  | Anonymous     | Reset password                                                                                                                           |
 
 ## Users (`/api/v1/users`) — Admin patterns
 
@@ -44,9 +44,9 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 
 ## Workspace transfer (`/api/v1/workspace`)
 
-| Method | Path                   | Roles          | Description |
-| ------ | ---------------------- | -------------- | ----------- |
-| POST   | `/location/transfer`   | Admin, Manager | Move an employee to another branch within caller scope. |
+| Method | Path                   | Roles          | Description                                                                                                                                                                |
+| ------ | ---------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/location/transfer`   | Admin, Manager | Move an employee to another branch within caller scope.                                                                                                                    |
 | POST   | `/department/transfer` | Admin, Manager | Move an employee to a department in the employee's current Active branch. Cross-branch department placement returns `WS_EMPLOYEE_WRONG_LOCATION`; transfer location first. |
 
 ## Scheduling
@@ -125,6 +125,32 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 | ------ | ----------------- | ---------------- | ------------------------------------------------------------- |
 | GET    | `/platform/stats` | PlatformOperator | Aggregate platform counts (orgs, users, locations, employees) |
 | GET    | `/org/stats`      | Admin, Manager   | Org-scoped operational counts for current tenant              |
+
+## Platform admin (`/api/v1/platform`) — PlatformOperator
+
+| Method | Path                                                   | Description                                               |
+| ------ | ------------------------------------------------------ | --------------------------------------------------------- |
+| GET    | `/users?page=&pageSize=&organizationId=&role=&search=` | Paged platform user list, including org name when present |
+| GET    | `/organizations?page=&pageSize=&search=`               | Paged org list with package status and counts             |
+| PUT    | `/organizations/{id}/subscription`                     | Enable/disable or renew org package                       |
+
+`PUT /platform/organizations/{id}/subscription` body:
+
+```json
+{
+  "enabled": true,
+  "durationDays": 90
+}
+```
+
+`durationDays` is optional on the API (`1..3650`). Platform FE should send the value the Wokki admin chooses in settings (no fixed 30-day default in UI). When omitted, BE reuses the org’s stored `subscriptionDurationDays`. Enabling sets `subscriptionExpiresAt = now + durationDays`. Disabling makes the org unusable without deleting data.
+
+Package gate codes for org users:
+
+| HTTP | Code                        | Meaning                                              |
+| ---- | --------------------------- | ---------------------------------------------------- |
+| 403  | `ORG_PACKAGE_NOT_ACTIVATED` | Org package has never been activated or was disabled |
+| 402  | `ORG_PACKAGE_EXPIRED`       | Org package expired; Wokki admin must renew          |
 
 ## Real-time
 

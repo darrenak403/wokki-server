@@ -33,6 +33,18 @@ public static class AppMessages
         public static readonly AppMessage Exists = new("USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
     }
 
+    public static class Platform
+    {
+        public static readonly AppMessage UsersListed = new("PLATFORM_USERS_LISTED", "Platform users listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationsListed = new("PLATFORM_ORGS_LISTED", "Platform organizations listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationUpdated = new("PLATFORM_ORG_UPDATED", "Organization subscription updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationNotFound = new("PLATFORM_ORG_NOT_FOUND", "Organization not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage SubscriptionDurationRequired = new(
+            "SUBSCRIPTION_DURATION_REQUIRED",
+            "durationDays is required (1–3650) when enabling or renewing an org package.",
+            StatusCodes.Status400BadRequest);
+    }
+
     public static class Employee
     {
         public static readonly AppMessage Found = new("EMPLOYEE_FOUND", "Employee found.", StatusCodes.Status200OK);
@@ -296,6 +308,7 @@ public static class AppMessages
     {
         public static readonly AppMessage PlatformFound = new("STATS_PLATFORM_FOUND", "Platform statistics retrieved.", StatusCodes.Status200OK);
         public static readonly AppMessage OrgFound = new("STATS_ORG_FOUND", "Organization statistics retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgSubscriptionFound = new("STATS_ORG_SUBSCRIPTION_FOUND", "Organization subscription retrieved.", StatusCodes.Status200OK);
         public static readonly AppMessage Forbidden = new("STATS_FORBIDDEN", "You are not authorized to view these statistics.", StatusCodes.Status403Forbidden);
     }
 
@@ -303,6 +316,9 @@ public static class AppMessages
     {
         public static readonly AppMessage CrossTenant = new("ORG_CROSS_TENANT", "Resource not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage Required = new("ORG_REQUIRED", "Organization context is required.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage Disabled = new("ORG_DISABLED", "Organization is disabled.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage PackageNotActivated = new("ORG_PACKAGE_NOT_ACTIVATED", "Organization package is not activated.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage PackageExpired = new("ORG_PACKAGE_EXPIRED", "Organization package has expired.", StatusCodes.Status402PaymentRequired);
     }
 
     public static class Validation
