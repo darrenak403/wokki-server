@@ -13,8 +13,9 @@ Read these **before** implementing or changing behavior. Technical how-to stays 
 | 3 | [process-flows.md](./process-flows.md) | End-to-end flows and state machines |
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket surface by role |
 | 5 | [glossary.md](./glossary.md) | Domain terms and enums |
-| 6 | [architecture.md](./architecture.md) | Clean Architecture layers and code conventions |
-| 7 | [minimal-api.md](./minimal-api.md) | Endpoint module pattern in `Wokki.Api` |
+| 6 | [fe/2026-05-29-feat-branch-workspace-scope.md](./fe/2026-05-29-feat-branch-workspace-scope.md) | FE handoff for branch scope, membership, manager scope, and React Flow graph |
+| 7 | [architecture.md](./architecture.md) | Clean Architecture layers and code conventions |
+| 8 | [minimal-api.md](./minimal-api.md) | Endpoint module pattern in `Wokki.Api` |
 
 ## Product context
 

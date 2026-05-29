@@ -12,8 +12,9 @@
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket theo vai trò |
 | 5 | [glossary.md](./glossary.md) | Thuật ngữ và enum |
 | 6 | **[fe-integration-guide.md](./fe-integration-guide.md)** | **Bàn giao FE — 7 main flow, auth, SignalR** |
-| 7 | [../architecture.md](../architecture.md) | Kiến trúc Clean Architecture (EN) |
-| 8 | [../minimal-api.md](../minimal-api.md) | Mẫu Minimal API (EN) |
+| 7 | [../fe/2026-05-29-feat-branch-workspace-scope.md](../fe/2026-05-29-feat-branch-workspace-scope.md) | Bàn giao FE cho branch scope, membership, manager scope và React Flow |
+| 8 | [../architecture.md](../architecture.md) | Kiến trúc Clean Architecture (EN) |
+| 9 | [../minimal-api.md](../minimal-api.md) | Mẫu Minimal API (EN) |
 
 **Bản tiếng Anh (đồng bộ với code):** [../README.md](../README.md)
 
