@@ -1,4 +1,3 @@
-using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.User;
 using Wokki.Application.Mappings.Users;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
@@ -10,7 +9,6 @@ namespace Wokki.Application.Services.User.Implementations;
 
 public sealed class UserService(
     IUnitOfWork unitOfWork,
-    IPasswordHasher passwordHasher,
     IOrganizationScopeService organizationScope) : IUserService
 {
     public async Task<ApiResponse<UserResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -42,16 +40,8 @@ public sealed class UserService(
 
     public async Task<ApiResponse<Guid>> CreateAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
-        var organizationId = organizationScope.RequireOrganizationId();
-        var existing = await unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken);
-        if (existing is not null)
-            return ApiResponse<Guid>.FailureResponse(AppMessages.User.Exists);
-
-        var entity = request.ToEntity(organizationId);
-        entity.PasswordHash = passwordHasher.HashPassword(request.Password);
-        await unitOfWork.Users.AddAsync(entity, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return ApiResponse<Guid>.SuccessResponse(entity.Id, AppMessages.User.Created);
+        _ = request;
+        _ = cancellationToken;
+        return await Task.FromResult(ApiResponse<Guid>.FailureResponse(AppMessages.User.EmployeeProfileRequired));
     }
 }

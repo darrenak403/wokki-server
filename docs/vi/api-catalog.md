@@ -23,13 +23,13 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | ------ | ------- | ------- | --------------------------- |
 | GET    | `/`     | Admin   | Danh sách user (phân trang) |
 | GET    | `/{id}` | Admin   | Chi tiết user               |
-| POST   | `/`     | Admin   | Tạo user                    |
+| POST   | `/`     | Admin   | Deprecated/bị chặn cho staff org; dùng `POST /employees` để tạo tài khoản + Employee cùng lúc |
 
 ## Nền tảng (Foundation)
 
 | Resource    | Base           | Manager                                              | Admin  | Ghi chú                                                                                                                       |
 | ----------- | -------------- | ---------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| Employees   | `/employees`   | Đọc danh sách theo scope                             | Đầy đủ | Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft)                                   |
+| Employees   | `/employees`   | Đọc danh sách theo scope                             | Đầy đủ | Tạo User + Employee cùng lúc; User legacy cùng org chưa có Employee sẽ được liên kết. Manager thấy nhân viên có Active membership trong chi nhánh được gán. Xóa = chấm dứt (soft) |
 | Locations   | `/locations`   | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy chi nhánh được gán; có thể cập nhật metadata chi nhánh trong scope (drawer Tổ chức). Ghi policy: Admin only. |
 | Departments | `/departments` | Đọc theo scope; `PUT /{id}` trong chi nhánh được gán | Đầy đủ | Manager chỉ thấy phòng ban thuộc chi nhánh được gán; có thể cập nhật phòng ban trong scope                                    |
 

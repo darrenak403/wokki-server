@@ -21,8 +21,9 @@
 | Không có dashboard tổng platform                                     | Route **`/platform`** + stats + list user/org + bật/tắt gói org                                       |
 | Manager/Admin không có org dashboard                                 | `GET /api/v1/org/stats` (Admin + Manager)                                                             |
 | Nhân viên tự gửi yêu cầu tham gia chi nhánh (`/join`, `/pending`)    | **Bỏ hẳn** — Admin tạo account + gán phòng ban → membership Active tự động                            |
+| Admin tạo "tài khoản hệ thống" riêng                                 | **Bỏ hẳn** — tạo staff bằng `POST /employees`; BE tạo cả `User` + `Employee`                          |
 
-**Có thể bỏ / viết lại hoàn toàn:** màn hình seed demo, **`/join`**, **`/pending`**, duyệt membership, `MembershipGate` redirect join.
+**Có thể bỏ / viết lại hoàn toàn:** màn hình seed demo, **`/join`**, **`/pending`**, duyệt membership, `MembershipGate` redirect join, tab/form **Tài khoản hệ thống** trong org.
 
 ---
 
@@ -350,6 +351,9 @@ Authorization: Bearer {adminToken}
 Response có `temporaryPassword` — hiển thị **một lần** cho Admin copy gửi nhân viên.
 
 Nhân viên → **Login** (không register) → vào **`/app` trực tiếp**. BE tự tạo **Active** `LocationMembership` tại chi nhánh của `departmentId`.
+Nếu email đã tồn tại trong cùng org nhưng chưa có `Employee` (dữ liệu legacy từ tab “Tài khoản hệ thống”), gọi API này với email đó sẽ chuyển account thành nhân viên và trả mật khẩu tạm mới.
+
+**Không dùng `POST /api/v1/users` để tạo staff.** Endpoint này bị chặn cho org staff (`USER_EMPLOYEE_PROFILE_REQUIRED`) vì tài khoản không có `Employee` sẽ không có phòng ban/chi nhánh, không xem được lịch, chấm công, chat hoặc route `/user`.
 
 ---
 
@@ -404,7 +408,6 @@ Trả membership **Active** — dùng hiển thị chi nhánh hiện tại trên
 | ----------------- | ------------------ | ------------------------ | ------------------ |
 | Tổng quan org     | `/app`             | `/app` (read-only stats) | —                  |
 | Onboarding wizard | `/app/onboarding`  | —                        | —                  |
-| Users             | `/app/users`       | —                        | —                  |
 | Chi nhánh         | `/app/locations`   | scoped                   | —                  |
 | Phòng ban         | `/app/departments` | scoped                   | —                  |
 | Nhân viên         | `/app/employees`   | scoped                   | —                  |
@@ -451,7 +454,7 @@ flowchart TB
 
 | Wave    | Nội dung mới                                                                                                |
 | ------- | ----------------------------------------------------------------------------------------------------------- |
-| **0**   | Login + **Register** + JWT decode + route guard 2 shell (platform vs org) + package gate                    |
+| **0**   | Login + **Register** + JWT decode + route guard 2 shell (platform vs org) + package gate + User redirect theo Active membership |
 | **1**   | Onboarding empty org + **org stats** dashboard                                                              |
 | **2–7** | Giống [fe-integration-guide](../vi/fe-integration-guide.md) nhưng **không dùng seed**, Admin tạo data trước |
 
@@ -471,6 +474,7 @@ flowchart TB
 | Code                        | HTTP    | FE                                            |
 | --------------------------- | ------- | --------------------------------------------- |
 | `USER_EXISTS`               | 409     | Register: email đã có                         |
+| `USER_EMPLOYEE_PROFILE_REQUIRED` | 400 | Không tạo staff bằng `/users`; chuyển sang form **Thêm nhân viên** |
 | `STATS_FORBIDDEN`           | 403     | Sai role cho stats                            |
 | `LOCATION_NOT_FOUND`        | 404     | Id khác org hoặc không tồn tại                |
 | `EMPLOYEE_NOT_FOUND`        | 404     | Cross-tenant                                  |
@@ -497,6 +501,8 @@ Luôn check `success` trước khi đọc `data`.
 - [ ] Action bật/tắt/gia hạn gói (`PUT /platform/organizations/{id}/subscription`)
 - [ ] Auth/global API interceptor cho `ORG_PACKAGE_NOT_ACTIVATED` và `ORG_PACKAGE_EXPIRED`
 - [ ] Employee create flow hiển thị **temporaryPassword**
+- [ ] Xóa tab/form **Tài khoản hệ thống** khỏi màn Nhân sự org; Staff/Manager đều tạo qua **Thêm nhân viên**
+- [ ] User login không branch cookie: gọi `/location-memberships/my`, lưu `locationId`, redirect `/{orgId}/{locationId}/user/dashboard`
 - [ ] Không cho PlatformOperator vào `/app/*`
 - [ ] Không cho org User gọi `/platform/*`
 - [ ] Cập nhật copy: "Admin" = **Org Admin**, không phải platform admin

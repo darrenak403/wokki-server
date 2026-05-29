@@ -97,40 +97,51 @@ public sealed class EmployeeService(
         CancellationToken cancellationToken = default)
     {
         var email = request.Email.Trim().ToLowerInvariant();
+        var organizationId = organizationScope.RequireOrganizationId();
         var existingUser = await unitOfWork.Users.GetByEmailAsync(email, cancellationToken);
         if (existingUser is not null)
-            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
+        {
+            if (existingUser.OrganizationId != organizationId)
+                return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
 
-        var organizationId = organizationScope.RequireOrganizationId();
+            var linkedEmployee = await unitOfWork.Employees.GetByUserIdAsync(existingUser.Id, cancellationToken);
+            if (linkedEmployee is not null)
+                return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
+        }
 
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
         if (department is null || !department.IsActive || department.OrganizationId != organizationId)
             return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
-        if (!await AllDepartmentsActiveAsync(departmentIds, cancellationToken))
+        if (!await AllDepartmentsActiveAsync(departmentIds, organizationId, cancellationToken))
             return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         var temporaryPassword = string.IsNullOrWhiteSpace(request.Password)
             ? PasswordGenerator.Generate()
             : request.Password;
 
-        var user = new Wokki.Domain.Entities.User
+        var user = existingUser ?? new Wokki.Domain.Entities.User
         {
             Id = Guid.NewGuid(),
             Email = email,
-            PasswordHash = passwordHasher.HashPassword(temporaryPassword),
-            Role = request.Role,
             OrganizationId = organizationId,
             CreatedAt = DateTime.UtcNow
         };
+
+        user.PasswordHash = passwordHasher.HashPassword(temporaryPassword);
+        user.Role = request.Role;
 
         var employee = request.ToEntity(user.Id, organizationId);
 
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            await unitOfWork.Users.AddAsync(user, cancellationToken);
+            if (existingUser is null)
+                await unitOfWork.Users.AddAsync(user, cancellationToken);
+            else
+                unitOfWork.Users.Update(user);
+
             await unitOfWork.Employees.AddAsync(employee, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.EmployeeDepartmentMemberships.ReplaceForEmployeeAsync(
@@ -171,7 +182,7 @@ public sealed class EmployeeService(
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         var departmentIds = NormalizeDepartmentIds(request.DepartmentId, request.DepartmentIds);
-        if (!await AllDepartmentsActiveAsync(departmentIds, cancellationToken))
+        if (!await AllDepartmentsActiveAsync(departmentIds, employee.OrganizationId, cancellationToken))
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.DepartmentNotFound);
 
         employee.ApplyUpdate(request);
@@ -196,7 +207,7 @@ public sealed class EmployeeService(
     public async Task<ApiResponse<object>> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var employee = await unitOfWork.Employees.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (employee is null)
+        if (employee is null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<object>.FailureResponse(AppMessages.Employee.NotFound);
 
         if (employee.TerminatedAt is not null)
@@ -231,12 +242,13 @@ public sealed class EmployeeService(
 
     private async Task<bool> AllDepartmentsActiveAsync(
         IReadOnlyList<Guid> departmentIds,
+        Guid organizationId,
         CancellationToken cancellationToken)
     {
         foreach (var id in departmentIds)
         {
             var department = await unitOfWork.Departments.GetByIdAsync(id, cancellationToken: cancellationToken);
-            if (department is null || !department.IsActive)
+            if (department is null || !department.IsActive || department.OrganizationId != organizationId)
                 return false;
         }
 

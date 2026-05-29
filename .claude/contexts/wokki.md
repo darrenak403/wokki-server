@@ -31,6 +31,8 @@ Org package gate: register creates `Organization` + Org Admin but package is Not
 
 Admin may manage every branch in the JWT organization; Manager scope is only `LocationManager` assignments. FE workspace/sidebar actions are selected-branch scoped (`/{orgId}/{locationId}/{role}/...`). Department transfer is branch-local: target department `LocationId` must match the employee's Active `LocationMembership`; use location transfer before cross-branch placement.
 
+Org staff creation is a single workflow: `POST /api/v1/employees` creates both the login `User` and linked `Employee` profile. Same-org legacy Users without Employee are linked through this workflow. Do not create standalone org staff with `/api/v1/users`; without an Employee profile the account has no department, branch membership, schedule, attendance, or chat context.
+
 ### Schedule lifecycle
 
 ```text

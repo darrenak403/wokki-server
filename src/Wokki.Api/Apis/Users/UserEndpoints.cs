@@ -44,10 +44,9 @@ public static class UserEndpoints
 
         group.MapPost("/", CreateAsync)
             .WithName("CreateUser")
-            .WithDescription("Tạo user mới.")
+            .WithDescription("Không dùng cho org staff. Org Admin phải tạo nhân viên qua POST /api/v1/employees để tài khoản luôn có Employee profile.")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
-            .Produces<ApiResponse<Guid>>(StatusCodes.Status201Created)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<Guid>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);

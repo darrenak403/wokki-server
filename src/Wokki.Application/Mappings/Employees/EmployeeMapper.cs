@@ -36,7 +36,7 @@ public static class EmployeeMapper
             UserId = userId,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
-            Phone = request.Phone.Trim(),
+            Phone = request.Phone?.Trim() ?? string.Empty,
             Position = request.Position.Trim(),
             HourlyRate = request.HourlyRate,
             DepartmentId = request.DepartmentId,
@@ -48,7 +48,7 @@ public static class EmployeeMapper
     {
         employee.FirstName = request.FirstName.Trim();
         employee.LastName = request.LastName.Trim();
-        employee.Phone = request.Phone.Trim();
+        employee.Phone = request.Phone?.Trim() ?? string.Empty;
         employee.Position = request.Position.Trim();
         employee.HourlyRate = request.HourlyRate;
         employee.DepartmentId = request.DepartmentId;

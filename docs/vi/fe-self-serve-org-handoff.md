@@ -11,6 +11,7 @@
 4. **Org mới trống** — sau khi gói active, onboarding Admin tạo chi nhánh → phòng ban → nhân viên.
 5. **Nhân viên** do Admin tạo (`POST /employees`) → login vào `/app` **trực tiếp**.
 6. **Bỏ hẳn** `/join`, `/pending`, duyệt yêu cầu tham gia chi nhánh.
+7. **Bỏ hẳn** tab/form "Tài khoản hệ thống" trong org. Staff/Manager đều tạo qua **Thêm nhân viên** để có cả `User` + `Employee`.
 
 ## Routing nhanh
 
@@ -33,6 +34,9 @@ Màn vận hành theo chi nhánh dùng `/{orgId}/{locationId}/{role}/...`. Sideb
 ## Tạo nhân viên
 
 Admin chọn **phòng ban** khi tạo → BE tự gán Active membership chi nhánh. Gửi `temporaryPassword` cho nhân viên login.
+Nếu email đã tồn tại trong cùng org nhưng chưa có `Employee` (dữ liệu legacy từ tab “Tài khoản hệ thống”), gọi `POST /api/v1/employees` với email đó sẽ chuyển account thành nhân viên và trả mật khẩu tạm mới.
+
+Không dùng `POST /api/v1/users` để tạo staff. BE trả `USER_EMPLOYEE_PROFILE_REQUIRED` nếu cố tạo tài khoản org không có Employee profile.
 
 ## Platform gói org
 

@@ -31,6 +31,10 @@ public static class AppMessages
         public static readonly AppMessage NotFound = new("USER_NOT_FOUND", "User not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage Created = new("USER_CREATED", "User created.", StatusCodes.Status201Created);
         public static readonly AppMessage Exists = new("USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage EmployeeProfileRequired = new(
+            "USER_EMPLOYEE_PROFILE_REQUIRED",
+            "Create org accounts through the employee workflow so every account has an employee profile.",
+            StatusCodes.Status400BadRequest);
     }
 
     public static class Platform
