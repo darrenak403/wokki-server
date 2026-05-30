@@ -64,6 +64,10 @@ public sealed class ScheduleInsightService(
             status: SchedulePreferenceStatus.Submitted,
             cancellationToken);
         var suggestions = request.Suggestions ?? [];
+        var orgPolicy = await unitOfWork.OrganizationSchedulingPolicies.GetByOrganizationIdAsync(
+            department.OrganizationId,
+            cancellationToken: cancellationToken);
+        var solverPolicy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(orgPolicy);
         var payload = BuildPayload(
             schedule,
             department,
@@ -72,7 +76,8 @@ public sealed class ScheduleInsightService(
             existingAssignments,
             submittedPreferences,
             suggestions,
-            request);
+            request,
+            solverPolicy);
         var json = JsonSerializer.Serialize(payload, JsonOptions);
 
         var now = DateTime.UtcNow;
@@ -84,6 +89,7 @@ public sealed class ScheduleInsightService(
         {
             entity = new ScheduleInsightContext
             {
+                OrganizationId = department.OrganizationId,
                 ScheduleId = scheduleId,
                 LocationId = department.LocationId,
                 DepartmentId = schedule.DepartmentId,
@@ -100,6 +106,7 @@ public sealed class ScheduleInsightService(
         }
         else
         {
+            entity.OrganizationId = department.OrganizationId;
             entity.SchemaVersion = SchemaVersion;
             entity.LocationId = department.LocationId;
             entity.DepartmentId = schedule.DepartmentId;
@@ -188,7 +195,8 @@ public sealed class ScheduleInsightService(
         IReadOnlyList<ShiftAssignment> existingAssignments,
         IReadOnlyList<SchedulePreferenceSubmission> submittedPreferences,
         IReadOnlyList<ScheduleInsightSuggestionInput> suggestions,
-        GenerateScheduleInsightContextRequest request)
+        GenerateScheduleInsightContextRequest request,
+        OrganizationSchedulingSolverPolicy solverPolicy)
     {
         var employeeMap = employees.ToDictionary(e => e.Id);
         var shiftMap = shifts.ToDictionary(s => s.Id);
@@ -238,7 +246,9 @@ public sealed class ScheduleInsightService(
             .OrderBy(x => x.EmployeeName)
             .ToList();
 
-        var maxWeekly = SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek;
+        var maxWeekly = solverPolicy.MaxShiftsPerWeekEnabled
+            ? solverPolicy.MaxShiftsPerEmployeePerWeek
+            : (int?)null;
         var minLoad = loads.Count == 0 ? 0 : loads.Min(x => x.ShiftCount);
         var maxLoad = loads.Count == 0 ? 0 : loads.Max(x => x.ShiftCount);
         var averageLoad = loads.Count == 0 ? 0 : loads.Average(x => x.ShiftCount);
@@ -342,7 +352,9 @@ public sealed class ScheduleInsightService(
                 MinShifts = minLoad,
                 MaxShifts = maxLoad,
                 AverageShifts = averageLoad,
-                NearMaxCap = loads.Where(x => x.ShiftCount >= maxWeekly - 1).ToList()
+                NearMaxCap = loads
+                    .Where(x => maxWeekly.HasValue && x.ShiftCount >= maxWeekly.Value - 1)
+                    .ToList()
             },
             PreferenceSatisfactionSummary = new
             {

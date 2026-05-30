@@ -1,32 +1,36 @@
+using Wokki.Application.Scheduling;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
-using ShiftAssignmentEntity = Wokki.Domain.Entities.ShiftAssignment;
 
 namespace Wokki.Application.Scheduling;
 
 public static class SchedulingAssignmentRules
 {
-    public static int MaxShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
-        SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek;
-
-    public static int MaxShiftsPerEmployeePerDay(ScheduleSuggestionContext context) =>
-        SchedulingSolverDefaults.MaxShiftsPerEmployeePerDaySafetyCap;
-
-    public static int MinShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
-        SchedulingSolverDefaults.MinShiftsPerWeek;
-
     public static bool MeetsWeeklyCap(
         Guid employeeId,
-        List<ShiftAssignmentEntity> planned,
-        ScheduleSuggestionContext context) =>
-        planned.Count(a => a.EmployeeId == employeeId) < MaxShiftsPerEmployeePerWeek(context);
+        List<ShiftAssignment> planned,
+        ScheduleSuggestionContext context)
+    {
+        var policy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
+        if (!policy.MaxShiftsPerWeekEnabled)
+            return true;
+
+        return planned.Count(a => a.EmployeeId == employeeId) < policy.MaxShiftsPerEmployeePerWeek;
+    }
 
     public static bool MeetsDailyCap(
         Guid employeeId,
         DateOnly date,
-        List<ShiftAssignmentEntity> planned,
-        ScheduleSuggestionContext context) =>
-        planned.Count(a => a.EmployeeId == employeeId && a.Date == date) < MaxShiftsPerEmployeePerDay(context);
+        List<ShiftAssignment> planned,
+        ScheduleSuggestionContext context)
+    {
+        var policy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
+        if (!policy.MaxShiftsPerDayEnabled)
+            return true;
+
+        return planned.Count(a => a.EmployeeId == employeeId && a.Date == date)
+               < policy.MaxShiftsPerEmployeePerDay;
+    }
 
     public static int PreferenceScore(
         Guid employeeId,

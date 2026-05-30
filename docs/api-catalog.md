@@ -57,13 +57,13 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | Method              | Path                                         | Roles          | Description                                                            |
 | ------------------- | -------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
 | GET/POST            | `/schedules`                                 | Admin, Manager | List / create (Draft)                                                  |
-| GET/PUT/DELETE      | `/schedules/{id}`                            | Admin, Manager | Detail / update / delete Draft                                         |
+| GET/PUT/DELETE      | `/schedules/{id}`                            | Admin, Manager | Detail (includes `rebalanceHints`: conflicts, pending leave, preference changes) / update / delete Draft |
 | POST                | `/schedules/{id}/publish`                    | Admin, Manager | Draft → Published                                                      |
 | POST                | `/schedules/{id}/unpublish`                  | Admin, Manager | Published → Draft                                                      |
 | POST                | `/schedules/{id}/copy`                       | Admin, Manager | Copy week to new Draft                                                 |
 | GET/POST            | `/schedules/{id}/assignments`                | Admin, Manager | List / add assignment                                                  |
 | DELETE              | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Remove assignment                                                      |
-| POST                | `/schedules/{id}/suggest`                    | Admin, Manager | Schedule suggestions (no write; Bedrock not used)                      |
+| POST                | `/schedules/{id}/suggest`                    | Admin, Manager | CP-SAT suggestions (read-only; `useAi` ignored; auto-refreshes insight context snapshot; Bedrock not used) |
 | POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Apply suggestions (Draft only)                                         |
 | GET                 | `/schedules/{id}/preference-board`           | Admin, Manager | Read-only grid: all dept employees × shifts × days with preference cells; includes `submittedCount` / `employeeCount` |
 | POST                | `/schedules/{id}/insights/context`           | Admin, Manager | Generate/refresh JSON context snapshot for schedule insight            |
@@ -71,6 +71,16 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | POST                | `/schedules/{id}/insights/chat`              | Admin, Manager | Ask optional Bedrock assistant about the context; no schedule mutation |
 | GET/POST/PUT/DELETE | `/shifts`                                    | Admin, Manager | Shift definitions                                                      |
 | POST                | `/shifts/copy`                               | Admin, Manager | Copy active shifts from source department to target departments (same location; skips duplicates by name+time) |
+
+## Schedule leave requests (`/api/v1/leave-requests`) — Admin, Manager
+
+Draft schedules only. Approve upserts preference Unavailable and removes conflicting assignment.
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/leave-requests?scheduleId=&status=` | List leave requests for a schedule |
+| POST | `/leave-requests/{id}/approve` | Approve leave request |
+| POST | `/leave-requests/{id}/reject` | Reject leave request |
 
 ## Employee self-service (`/api/v1/self`) — User (+ employee profile)
 
@@ -83,6 +93,9 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | GET    | `/self/schedule-preferences/{scheduleId}` | Own preference submission (Draft/Submitted) |
 | PUT    | `/self/schedule-preferences/{scheduleId}` | Save preference lines (Draft schedule only) |
 | POST   | `/self/schedule-preferences/{scheduleId}/submit` | Submit preferences to Admin board (Draft schedule only) |
+| POST   | `/self/leave-requests` | Submit draft-week leave request (shift + date + reason) |
+| GET    | `/self/leave-requests` | List own leave requests (`?scheduleId=` optional) |
+| DELETE | `/self/leave-requests/{id}` | Cancel pending leave request |
 | GET    | `/self/swap-requests` | Swap requests sent/received                  |
 | GET    | `/self/attendance`    | Own attendance history                       |
 | GET    | `/self/profile`       | Own employee profile (name, phone, org context) |

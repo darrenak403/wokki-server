@@ -26,6 +26,16 @@ public static class OrgSchedulingPolicyEndpoints
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
             .Produces<ApiResponse<OrganizationSchedulingPolicyResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status422UnprocessableEntity)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapPost("/scheduling-policy/wizard-draft", BuildWizardDraftAsync)
+            .WithName("BuildOrganizationSchedulingPolicyWizardDraft")
+            .WithDescription("Sinh bản nháp luật xếp lịch từ quy mô org (Admin).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .Produces<ApiResponse<SchedulingPolicyWizardDraftResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
@@ -50,6 +60,15 @@ public static class OrgSchedulingPolicyEndpoints
             return validationResult!;
 
         var result = await service.UpsertPolicyAsync(request, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> BuildWizardDraftAsync(
+        SchedulingPolicyWizardRequest request,
+        IOrganizationSchedulingPolicyService service,
+        CancellationToken cancellationToken)
+    {
+        var result = await service.BuildWizardDraftAsync(request, cancellationToken);
         return result.ToHttpResult();
     }
 }

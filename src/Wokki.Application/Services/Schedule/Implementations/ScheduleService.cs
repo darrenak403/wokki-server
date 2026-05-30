@@ -21,6 +21,7 @@ public sealed class ScheduleService(
     INotificationService notifications,
     IScheduleSuggestionOrchestrator scheduleSuggestions,
     IScheduleInsightService scheduleInsights,
+    IScheduleRebalanceAnalyzer rebalanceAnalyzer,
     IOrganizationScopeService organizationScope) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
@@ -57,8 +58,9 @@ public sealed class ScheduleService(
             return ApiResponse<ScheduleDetailResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
         var assignments = await BuildAssignmentResponsesAsync(id, cancellationToken);
+        var rebalanceHints = await rebalanceAnalyzer.AnalyzeAsync(id, cancellationToken);
         return ApiResponse<ScheduleDetailResponse>.SuccessResponse(
-            new ScheduleDetailResponse(schedule.ToResponse(), assignments),
+            new ScheduleDetailResponse(schedule.ToResponse(), assignments, rebalanceHints),
             AppMessages.Schedule.Found);
     }
 

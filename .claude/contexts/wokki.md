@@ -67,9 +67,11 @@ Cutoff: `SwapCutoffRules` (location timezone). Notifications must not roll back 
 
 1. **Org policy** `OrganizationSchedulingPolicy` (`org-scheduling-policy.v1`) — catalog `GET /scheduling/rule-catalog`; org Admin configures `GET/PUT /org/scheduling-policy` (Manager read-only). **4 enforced rules** (SMB F&B: preferences, min staff/shift, role match) + up to 20 advisory customs. Coverage/rest/caps in `SchedulingSolverDefaults`. Map via `OrganizationSchedulingSolverPolicy`.
 2. **Department** `DepartmentSchedulingConfig` — overrides.
-3. `POST .../suggest` — heuristic only, no DB write; may refresh insight context (`BR-070`).
+3. `POST .../suggest` — **CP-SAT only** (`CpSatScheduleSuggestionService`; `useAi` ignored). Inputs via `ScheduleSuggestionContextLoader` (org policy, employees, shifts, **Submitted** preferences, existing assignments, availabilities, history). Returns suggestions only; auto-refreshes insight context snapshot (`BR-070`, `BR-086`). Existing assignment slots stay locked on re-suggest.
 4. `POST .../apply-suggestions` — Draft only; all rows validated then one transaction (`BR-075`).
-5. **Bedrock** — `ScheduleInsightService` + context snapshot + chat; **never** mutates assignments (`BR-077`–`BR-079`).
+5. **Bedrock** — `ScheduleInsightService` chat on context snapshot; **never** mutates assignments (`BR-077`–`BR-079`).
+6. **Rebalance hints** — `GET /schedules/{id}` includes `rebalanceHints` when Draft assignments conflict with submitted Unavailable or pending leave (`BR-086`). Admin re-suggests via same **Tạo gợi ý AI** button.
+7. **Draft leave** — `/self/leave-requests` + Manager approve removes conflicting assignment + sets Unavailable (`BR-087`); no auto CP-SAT.
 
 Missing setup returns explicit reasons: `no_employees`, `no_shifts`, `missing_preferences` (`BR-072`).
 

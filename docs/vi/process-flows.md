@@ -232,28 +232,13 @@ Export: `POST /payroll/summary/export` → CSV (Admin, tối đa 500 dòng).
 
 ---
 
-## 7. Gợi ý lịch (heuristic)
+## 7. Gợi ý lịch (CP-SAT)
 
-```mermaid
-sequenceDiagram
-    participant M as Manager
-    participant API as Schedule API
-    participant H as HeuristicScheduleSuggestionService
+Solver MVP = **CP-SAT only** (`useAi` trên suggest bị bỏ qua). Bedrock chỉ chat hỗ trợ (BR-077).
 
-    M->>API: POST /schedules/{id}/suggest
-    API->>H: GenerateAsync chỉ đọc
-    alt lịch sử < 3 phân ca
-        H-->>API: rỗng + insufficient_history
-    else
-        H-->>API: danh sách gợi ý xếp hạng
-    end
-    API-->>M: 200 không ghi DB
+Luồng: suggest (đọc org policy + NV + ca + đăng ký **Submitted** + phân ca hiện có) → context JSON → Admin **Áp dụng** (explicit) → Publish. **Không auto-rebalance** khi NV đổi đăng ký sau apply (BR-086) — banner trên Lịch ca, Admin dùng lại **Tạo gợi ý AI**.
 
-    M->>API: POST /schedules/{id}/apply-suggestions
-    API->>API: Validate tất cả dòng
-    API->>API: Transaction ghi hàng loạt
-    API-->>M: 201 phân ca
-```
+**Xin nghỉ (Draft):** NV `POST /self/leave-requests` → Manager duyệt → Unavailable + xóa phân ca conflict (BR-087).
 
 ### Trợ lý insight lịch (Bedrock hỗ trợ)
 

@@ -30,6 +30,13 @@ public sealed class CpSatScheduleSuggestionService(
         if (solverPolicy.RequireSubmittedPreferences && context.SubmittedPreferences.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "missing_preferences", Provider: "cpsat");
 
+        if (!solverPolicy.HasAnyEnabledRule)
+        {
+            logger.LogInformation(
+                "Schedule {ScheduleId}: no org scheduling rules enabled — pure preference mode",
+                scheduleId);
+        }
+
         var employees = context.Employees.ToList();
         var shifts = context.Shifts.ToList();
         var days = Enumerable.Range(0, 7)
@@ -45,8 +52,73 @@ public sealed class CpSatScheduleSuggestionService(
             .GroupBy(a => a.EmployeeId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var minStaffPerSlot = Math.Max(0, solverPolicy.DefaultMinStaffPerShift);
-        var minRestMinutes = Math.Max(0, solverPolicy.MinRestMinutesBetweenShifts);
+        var useStrictCoverage = solverPolicy.RequireFullCoverage && solverPolicy.MinStaffPerShiftEnabled;
+
+        var strictResult = await SolveAsync(
+            scheduleId,
+            context,
+            solverPolicy,
+            employees,
+            shifts,
+            days,
+            existingSet,
+            existingByEmployee,
+            shiftsById,
+            enforceFullCoverageLowerBound: useStrictCoverage,
+            cancellationToken);
+
+        if (strictResult is not null)
+            return strictResult;
+
+        if (!useStrictCoverage)
+            return new ScheduleSuggestionGenerationResult([], "infeasible", Provider: "cpsat");
+
+        logger.LogInformation(
+            "CP-SAT strict coverage infeasible for schedule {ScheduleId}; retrying with partial coverage",
+            scheduleId);
+
+        var relaxedResult = await SolveAsync(
+            scheduleId,
+            context,
+            solverPolicy,
+            employees,
+            shifts,
+            days,
+            existingSet,
+            existingByEmployee,
+            shiftsById,
+            enforceFullCoverageLowerBound: false,
+            cancellationToken);
+
+        if (relaxedResult is not null)
+        {
+            return relaxedResult with
+            {
+                Reason = "partial_coverage",
+                FallbackUsed = true
+            };
+        }
+
+        return new ScheduleSuggestionGenerationResult([], "infeasible", Provider: "cpsat");
+    }
+
+    private async Task<ScheduleSuggestionGenerationResult?> SolveAsync(
+        Guid scheduleId,
+        ScheduleSuggestionContext context,
+        OrganizationSchedulingSolverPolicy solverPolicy,
+        IReadOnlyList<Employee> employees,
+        IReadOnlyList<ShiftDefinition> shifts,
+        IReadOnlyList<DateOnly> days,
+        HashSet<(Guid EmployeeId, Guid ShiftDefinitionId, DateOnly Date)> existingSet,
+        IReadOnlyDictionary<Guid, List<ShiftAssignment>> existingByEmployee,
+        IReadOnlyDictionary<Guid, ShiftDefinition> shiftsById,
+        bool enforceFullCoverageLowerBound,
+        CancellationToken cancellationToken)
+    {
+        var minRestMinutes = solverPolicy.MinRestMinutesEnabled
+            ? solverPolicy.MinRestMinutesBetweenShifts
+            : 0;
+
         var slots = (from s in Enumerable.Range(0, shifts.Count)
                      from d in Enumerable.Range(0, days.Count)
                      select new ScheduleSlot(s, d, BuildSlot(days[d], shifts[s])))
@@ -60,7 +132,6 @@ public sealed class CpSatScheduleSuggestionService(
         for (var d = 0; d < days.Count; d++)
             x[e, s, d] = model.NewBoolVar($"x_{e}_{s}_{d}");
 
-        // Hard-fix forbidden assignments to 0
         for (var e = 0; e < employees.Count; e++)
         for (var s = 0; s < shifts.Count; s++)
         for (var d = 0; d < days.Count; d++)
@@ -75,7 +146,8 @@ public sealed class CpSatScheduleSuggestionService(
                 continue;
             }
 
-            if (ConflictsWithExistingAssignments(
+            if (solverPolicy.MinRestMinutesEnabled
+                && ConflictsWithExistingAssignments(
                     emp.Id,
                     date,
                     shift,
@@ -106,65 +178,77 @@ public sealed class CpSatScheduleSuggestionService(
             }
         }
 
-        // Daily cap per employee
-        for (var e = 0; e < employees.Count; e++)
-        for (var d = 0; d < days.Count; d++)
+        if (solverPolicy.MaxShiftsPerDayEnabled)
         {
-            var dayVars = Enumerable.Range(0, shifts.Count).Select(s => (ILiteral)x[e, s, d]).ToArray();
-            var existingCount = context.ExistingAssignments.Count(a =>
-                a.EmployeeId == employees[e].Id && a.Date == days[d]);
-            var remaining = Math.Max(
-                0,
-                SchedulingSolverDefaults.MaxShiftsPerEmployeePerDaySafetyCap - existingCount);
-            model.Add(LinearExpr.Sum(dayVars) <= remaining);
-        }
-
-        // Weekly cap per employee
-        for (var e = 0; e < employees.Count; e++)
-        {
-            var weekVars = (from s in Enumerable.Range(0, shifts.Count)
-                            from d in Enumerable.Range(0, days.Count)
-                            select (ILiteral)x[e, s, d]).ToArray();
-
-            var existingCount = context.ExistingAssignments.Count(a => a.EmployeeId == employees[e].Id);
-            var remaining = Math.Max(
-                0,
-                SchedulingSolverDefaults.MaxShiftsPerEmployeePerWeek - existingCount);
-            model.Add(LinearExpr.Sum(weekVars) <= remaining);
-        }
-
-        // Cap each slot at the remaining staffing need. If under-staffing is not allowed,
-        // the remaining need is also a hard lower bound.
-        for (var s = 0; s < shifts.Count; s++)
-        for (var d = 0; d < days.Count; d++)
-        {
-            var slotVars = Enumerable.Range(0, employees.Count).Select(e => (ILiteral)x[e, s, d]).ToArray();
-            var existingCount = context.ExistingAssignments.Count(a =>
-                a.ShiftDefinitionId == shifts[s].Id && a.Date == days[d]);
-            var remainingNeed = Math.Max(0, minStaffPerSlot - existingCount);
-
-            model.Add(LinearExpr.Sum(slotVars) <= remainingNeed);
-            if (solverPolicy.RequireFullCoverage && !solverPolicy.AllowUnderstaffedSuggestions)
+            for (var e = 0; e < employees.Count; e++)
+            for (var d = 0; d < days.Count; d++)
             {
-                model.Add(LinearExpr.Sum(slotVars) >= remainingNeed);
+                var dayVars = Enumerable.Range(0, shifts.Count).Select(s => (ILiteral)x[e, s, d]).ToArray();
+                var existingCount = context.ExistingAssignments.Count(a =>
+                    a.EmployeeId == employees[e].Id && a.Date == days[d]);
+                var remaining = Math.Max(0, solverPolicy.MaxShiftsPerEmployeePerDay - existingCount);
+                model.Add(LinearExpr.Sum(dayVars) <= remaining);
             }
         }
 
-        // No overlap and enforce configured rest between any two slots in the week.
-        for (var e = 0; e < employees.Count; e++)
-        for (var i = 0; i < slots.Count; i++)
-        for (var j = i + 1; j < slots.Count; j++)
+        if (solverPolicy.MaxShiftsPerWeekEnabled)
         {
-            if (SlotsConflict(slots[i].Assignment, slots[j].Assignment, minRestMinutes))
+            for (var e = 0; e < employees.Count; e++)
             {
-                model.AddBoolOr([
-                    x[e, slots[i].ShiftIndex, slots[i].DayIndex].Not(),
-                    x[e, slots[j].ShiftIndex, slots[j].DayIndex].Not()
-                ]);
+                var weekVars = (from s in Enumerable.Range(0, shifts.Count)
+                                from d in Enumerable.Range(0, days.Count)
+                                select (ILiteral)x[e, s, d]).ToArray();
+
+                var existingCount = context.ExistingAssignments.Count(a => a.EmployeeId == employees[e].Id);
+                var remaining = Math.Max(0, solverPolicy.MaxShiftsPerEmployeePerWeek - existingCount);
+                model.Add(LinearExpr.Sum(weekVars) <= remaining);
             }
         }
 
-        // Objective: maximize preference score
+        if (solverPolicy.MinStaffPerShiftEnabled)
+        {
+            ApplySlotStaffingConstraints(
+                model,
+                x,
+                employees.Count,
+                shifts,
+                days,
+                context,
+                solverPolicy.MinStaffPerShift,
+                enforceFullCoverageLowerBound);
+        }
+
+        if (solverPolicy.MinRestMinutesEnabled && minRestMinutes > 0)
+        {
+            for (var e = 0; e < employees.Count; e++)
+            for (var i = 0; i < slots.Count; i++)
+            for (var j = i + 1; j < slots.Count; j++)
+            {
+                if (SlotsConflict(slots[i].Assignment, slots[j].Assignment, minRestMinutes))
+                {
+                    model.AddBoolOr([
+                        x[e, slots[i].ShiftIndex, slots[i].DayIndex].Not(),
+                        x[e, slots[j].ShiftIndex, slots[j].DayIndex].Not()
+                    ]);
+                }
+            }
+        }
+        else
+        {
+            for (var e = 0; e < employees.Count; e++)
+            for (var i = 0; i < slots.Count; i++)
+            for (var j = i + 1; j < slots.Count; j++)
+            {
+                if (SlotsOverlap(slots[i].Assignment, slots[j].Assignment))
+                {
+                    model.AddBoolOr([
+                        x[e, slots[i].ShiftIndex, slots[i].DayIndex].Not(),
+                        x[e, slots[j].ShiftIndex, slots[j].DayIndex].Not()
+                    ]);
+                }
+            }
+        }
+
         var objVars = new List<LinearExpr>();
         var objCoeffs = new List<long>();
 
@@ -178,31 +262,21 @@ public sealed class CpSatScheduleSuggestionService(
             objCoeffs.Add(score);
         }
 
-        if (solverPolicy.MinShiftsPerWeekEnabled && solverPolicy.MinShiftsPerWeek > 0)
-        {
-            for (var e = 0; e < employees.Count; e++)
-            {
-                var weekVars = (from s in Enumerable.Range(0, shifts.Count)
-                                from d in Enumerable.Range(0, days.Count)
-                                select (ILiteral)x[e, s, d]).ToArray();
-                var total = LinearExpr.Sum(weekVars);
-                var missing = model.NewIntVar(0, solverPolicy.MinShiftsPerWeek, $"missing_min_week_{e}");
-                model.Add(missing >= solverPolicy.MinShiftsPerWeek - total);
-                objVars.Add(missing);
-                objCoeffs.Add(-SchedulingSolverDefaults.MinShiftsPerWeekBoostPerMissingShift);
-            }
-        }
-
         model.Maximize(LinearExpr.WeightedSum(objVars.ToArray(), objCoeffs.ToArray()));
 
         var solver = new CpSolver();
-        solver.StringParameters = "max_time_in_seconds:10 num_search_workers:4";
+        solver.StringParameters =
+            $"max_time_in_seconds:{SchedulingSolverDefaults.CpSatMaxTimeSeconds} num_search_workers:{SchedulingSolverDefaults.CpSatSearchWorkers}";
         var status = await Task.Run(() => solver.Solve(model), cancellationToken);
 
         if (status is not (CpSolverStatus.Optimal or CpSolverStatus.Feasible))
         {
-            logger.LogWarning("CP-SAT returned {Status} for schedule {ScheduleId}", status, scheduleId);
-            return new ScheduleSuggestionGenerationResult([], "infeasible", Provider: "cpsat");
+            logger.LogWarning(
+                "CP-SAT returned {Status} for schedule {ScheduleId} (fullCoverage={FullCoverage})",
+                status,
+                scheduleId,
+                enforceFullCoverageLowerBound);
+            return null;
         }
 
         var results = new List<ScheduleSuggestionDto>();
@@ -220,19 +294,41 @@ public sealed class CpSatScheduleSuggestionService(
         return new ScheduleSuggestionGenerationResult(results, null, Provider: "cpsat");
     }
 
+    private static void ApplySlotStaffingConstraints(
+        CpModel model,
+        BoolVar[,,] x,
+        int employeeCount,
+        IReadOnlyList<ShiftDefinition> shifts,
+        IReadOnlyList<DateOnly> days,
+        ScheduleSuggestionContext context,
+        int minStaffPerSlot,
+        bool enforceFullCoverageLowerBound)
+    {
+        for (var s = 0; s < shifts.Count; s++)
+        for (var d = 0; d < days.Count; d++)
+        {
+            var slotVars = Enumerable.Range(0, employeeCount).Select(e => (ILiteral)x[e, s, d]).ToArray();
+            var existingCount = context.ExistingAssignments.Count(a =>
+                a.ShiftDefinitionId == shifts[s].Id && a.Date == days[d]);
+            var remainingNeed = Math.Max(0, minStaffPerSlot - existingCount);
+
+            model.Add(LinearExpr.Sum(slotVars) <= remainingNeed);
+            if (enforceFullCoverageLowerBound && remainingNeed > 0)
+                model.Add(LinearExpr.Sum(slotVars) >= remainingNeed);
+        }
+    }
+
     private static bool RoleMatches(Employee employee, ShiftDefinition shift)
     {
         if (string.IsNullOrWhiteSpace(shift.RequiredRole))
             return true;
 
-        // Auth roles (User/Admin/Manager) stored in RequiredRole carry no job-position restriction.
         var required = shift.RequiredRole.Trim();
         if (string.Equals(required, RoleConstants.User, StringComparison.OrdinalIgnoreCase)
             || string.Equals(required, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase)
             || string.Equals(required, RoleConstants.Manager, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        // Only compare against employee job position when RequiredRole is an actual position value.
         var position = employee.Position?.Trim() ?? string.Empty;
         if (string.IsNullOrEmpty(position))
             return false;
@@ -295,11 +391,22 @@ public sealed class CpSatScheduleSuggestionService(
     private static bool SlotsConflict(
         AssignmentTimeSlot left,
         AssignmentTimeSlot right,
-        int minRestMinutes)
+        int minRestMinutes) =>
+        SlotsOverlap(left, right)
+        || (GetGapMinutes(left, right) < minRestMinutes);
+
+    private static bool SlotsOverlap(AssignmentTimeSlot left, AssignmentTimeSlot right)
     {
         var first = left.Start <= right.Start ? left : right;
         var second = left.Start <= right.Start ? right : left;
-        return (second.Start - first.End).TotalMinutes < minRestMinutes;
+        return second.Start < first.End;
+    }
+
+    private static double GetGapMinutes(AssignmentTimeSlot left, AssignmentTimeSlot right)
+    {
+        var first = left.Start <= right.Start ? left : right;
+        var second = left.Start <= right.Start ? right : left;
+        return (second.Start - first.End).TotalMinutes;
     }
 
     private sealed record ScheduleSlot(int ShiftIndex, int DayIndex, AssignmentTimeSlot Assignment);

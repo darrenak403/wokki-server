@@ -26,6 +26,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SchedulePreferenceSubmission> SchedulePreferenceSubmissions => Set<SchedulePreferenceSubmission>();
     public DbSet<SchedulePreferenceLine> SchedulePreferenceLines => Set<SchedulePreferenceLine>();
     public DbSet<ScheduleInsightContext> ScheduleInsightContexts => Set<ScheduleInsightContext>();
+    public DbSet<ScheduleLeaveRequest> ScheduleLeaveRequests => Set<ScheduleLeaveRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OvertimeRequest> OvertimeRequests => Set<OvertimeRequest>();
     public DbSet<LocationManager> LocationManagers => Set<LocationManager>();

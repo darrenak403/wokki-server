@@ -25,6 +25,7 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IEmployeeDepartmentMembershipRepository? _employeeDepartmentMemberships;
     private ISchedulePreferenceRepository? _schedulePreferences;
     private IScheduleInsightContextRepository? _scheduleInsightContexts;
+    private IScheduleLeaveRequestRepository? _scheduleLeaveRequests;
     private IOvertimeRequestRepository? _overtimeRequests;
     private ILocationMembershipRepository? _locationMemberships;
     private ILocationManagerRepository? _locationManagers;
@@ -54,6 +55,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
         _schedulePreferences ??= new SchedulePreferenceRepository(context);
     public IScheduleInsightContextRepository ScheduleInsightContexts =>
         _scheduleInsightContexts ??= new ScheduleInsightContextRepository(context);
+    public IScheduleLeaveRequestRepository ScheduleLeaveRequests =>
+        _scheduleLeaveRequests ??= new ScheduleLeaveRequestRepository(context);
     public IOvertimeRequestRepository OvertimeRequests =>
         _overtimeRequests ??= new OvertimeRequestRepository(context);
     public ILocationMembershipRepository LocationMemberships =>

@@ -12,6 +12,7 @@ using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Application.Services.SwapRequest.Interfaces;
 using Wokki.Application.Validators.Employee;
+using Wokki.Application.Validators.Schedule;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 
@@ -135,6 +136,33 @@ public static class EmployeeSelfEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
             .Produces<ApiResponse<object>>(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapPost("/leave-requests", CreateMyLeaveRequestAsync)
+            .WithName("CreateMyScheduleLeaveRequest")
+            .WithDescription("Gửi đơn xin nghỉ ca (chỉ khi lịch tuần còn Draft).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<ScheduleLeaveRequestResponse>>(StatusCodes.Status201Created)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
+        group.MapGet("/leave-requests", ListMyLeaveRequestsAsync)
+            .WithName("ListMyScheduleLeaveRequests")
+            .WithDescription("Danh sách đơn xin nghỉ của nhân viên.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<ScheduleLeaveRequestResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapDelete("/leave-requests/{id:guid}", CancelMyLeaveRequestAsync)
+            .WithName("CancelMyScheduleLeaveRequest")
+            .WithDescription("Huỷ đơn xin nghỉ đang chờ duyệt.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<object>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
         return group;
     }
@@ -304,6 +332,49 @@ public static class EmployeeSelfEndpoints
             file.ContentType,
             file.Length,
             cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> CreateMyLeaveRequestAsync(
+        [FromBody] CreateScheduleLeaveRequest request,
+        [FromServices] IScheduleLeaveRequestService service,
+        [FromServices] IValidator<CreateScheduleLeaveRequest> validator,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<ScheduleLeaveRequestResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.CreateMineAsync(currentUser.UserId.Value, request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListMyLeaveRequestsAsync(
+        [FromQuery] Guid? scheduleId,
+        [FromServices] IScheduleLeaveRequestService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<ScheduleLeaveRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.ListMineAsync(currentUser.UserId.Value, scheduleId, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> CancelMyLeaveRequestAsync(
+        [FromRoute] Guid id,
+        [FromServices] IScheduleLeaveRequestService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.CancelMineAsync(currentUser.UserId.Value, id, cancellationToken);
         return response.ToHttpResult();
     }
 }

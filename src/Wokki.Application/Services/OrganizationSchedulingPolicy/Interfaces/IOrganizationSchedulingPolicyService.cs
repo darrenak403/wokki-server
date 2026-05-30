@@ -13,4 +13,8 @@ public interface IOrganizationSchedulingPolicyService
     Task<ApiResponse<OrganizationSchedulingPolicyResponse>> UpsertPolicyAsync(
         UpsertOrganizationSchedulingPolicyRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<SchedulingPolicyWizardDraftResponse>> BuildWizardDraftAsync(
+        SchedulingPolicyWizardRequest request,
+        CancellationToken cancellationToken = default);
 }

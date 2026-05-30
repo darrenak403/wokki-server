@@ -232,28 +232,64 @@ Export: `POST /payroll/summary/export` → CSV (Admin, max 500 rows).
 
 ---
 
-## 7. Schedule suggestions (heuristic)
+## 7. Schedule suggestions (CP-SAT)
+
+MVP solver is **CP-SAT only** (`ScheduleSuggestionOrchestrator`; `useAi` on `POST .../suggest` is **ignored**). AWS Bedrock is **advisory chat only** (BR-077) — never mutates assignments.
+
+### Inputs (`ScheduleSuggestionContextLoader`)
+
+| Input | Source |
+|-------|--------|
+| Org scheduling policy | `OrganizationSchedulingPolicy` → `OrganizationSchedulingSolverPolicy` |
+| Department employees | Active branch membership + department membership |
+| Active shifts | `ShiftDefinition` for schedule department |
+| Submitted preferences | `SchedulePreferenceSubmission` status **Submitted** only |
+| Existing assignments | Current `ShiftAssignment` rows (locked slots on re-suggest) |
+| Availabilities | `EmployeeAvailability` |
+| History | Published assignments, last 4 weeks |
+
+### Suggest → context → apply → publish
 
 ```mermaid
 sequenceDiagram
-    participant M as Manager
+    participant M as Admin/Manager
     participant API as Schedule API
-    participant H as HeuristicScheduleSuggestionService
+    participant L as ScheduleSuggestionContextLoader
+    participant C as CpSatScheduleSuggestionService
+    participant I as ScheduleInsightService
 
     M->>API: POST /schedules/{id}/suggest
-    API->>H: GenerateAsync read-only
-    alt history < 3 assignments
-        H-->>API: empty + insufficient_history
-    else
-        H-->>API: ranked suggestions
-    end
-    API-->>M: 200 no DB change
+    API->>L: Load org policy, employees, shifts, submitted prefs, assignments, history
+    L->>C: GenerateAsync (read-only)
+    C-->>API: Suggestions DTO + reason
+    API->>I: GenerateContextAsync (JSON snapshot, no Bedrock)
+    API-->>M: 200 suggestions only — no DB assignment write
 
     M->>API: POST /schedules/{id}/apply-suggestions
-    API->>API: Validate all rows
-    API->>API: Transaction insert all
-    API-->>M: 201 assignments
+    API->>API: Validate all rows, one transaction
+    API-->>M: 201 ShiftAssignment rows (Draft)
+
+    M->>API: POST /schedules/{id}/publish
+    API-->>M: Published schedule; preferences read-only
 ```
+
+**No auto-apply, no auto-rebalance** when preferences change after apply (BR-086). Admin uses the same **Tạo gợi ý AI** button to re-suggest; CP-SAT keeps existing assignment slots locked until Admin removes conflicts on the grid.
+
+### Draft leave request (before publish)
+
+```mermaid
+sequenceDiagram
+    participant E as Employee
+    participant API as Leave API
+    participant M as Manager
+
+    E->>API: POST /self/leave-requests
+    M->>API: POST /leave-requests/{id}/approve
+    API->>API: Upsert preference Unavailable + delete conflicting assignment
+    Note over M: Amber banner on Lịch ca — review before re-suggest
+```
+
+See BR-087. Not available after publish.
 
 ### Schedule insight assistant (Bedrock advisory)
 

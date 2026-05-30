@@ -183,6 +183,22 @@ public static class AppMessages
         public static readonly AppMessage ChatUnavailable = new("SCHEDULE_INSIGHT_CHAT_UNAVAILABLE", "Schedule insight assistant is unavailable. Scheduling is not affected.", StatusCodes.Status503ServiceUnavailable);
     }
 
+    public static class ScheduleLeaveRequest
+    {
+        public static readonly AppMessage Created = new("SCHEDULE_LEAVE_REQUEST_CREATED", "Leave request submitted.", StatusCodes.Status201Created);
+        public static readonly AppMessage Listed = new("SCHEDULE_LEAVE_REQUEST_LISTED", "Leave requests listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("SCHEDULE_LEAVE_REQUEST_NOT_FOUND", "Leave request not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("SCHEDULE_LEAVE_REQUEST_FORBIDDEN", "You cannot access this leave request.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage Approved = new("SCHEDULE_LEAVE_REQUEST_APPROVED", "Leave request approved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Rejected = new("SCHEDULE_LEAVE_REQUEST_REJECTED", "Leave request rejected.", StatusCodes.Status200OK);
+        public static readonly AppMessage Cancelled = new("SCHEDULE_LEAVE_REQUEST_CANCELLED", "Leave request cancelled.", StatusCodes.Status200OK);
+        public static readonly AppMessage DuplicatePending = new("SCHEDULE_LEAVE_REQUEST_DUPLICATE_PENDING", "A pending leave request already exists for this shift.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage InvalidTransition = new("SCHEDULE_LEAVE_REQUEST_INVALID_TRANSITION", "Leave request cannot be updated in its current state.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ReasonRequired = new("SCHEDULE_LEAVE_REQUEST_REASON_REQUIRED", "Leave reason is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidDate = new("SCHEDULE_LEAVE_REQUEST_INVALID_DATE", "Leave date is invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ScheduleRequired = new("SCHEDULE_LEAVE_REQUEST_SCHEDULE_REQUIRED", "Schedule id is required.", StatusCodes.Status400BadRequest);
+    }
+
     public static class Chat
     {
         public static readonly AppMessage Listed = new("CHAT_CHANNELS_LISTED", "Channels listed.", StatusCodes.Status200OK);
@@ -353,6 +369,8 @@ public static class AppMessages
         public static readonly AppMessage SchedulingPolicyFound = new("ORG_SCHEDULING_POLICY_FOUND", "Organization scheduling policy found.", StatusCodes.Status200OK);
         public static readonly AppMessage SchedulingPolicyUpdated = new("ORG_SCHEDULING_POLICY_UPDATED", "Organization scheduling policy updated.", StatusCodes.Status200OK);
         public static readonly AppMessage SchedulingPolicyInvalid = new("ORG_SCHEDULING_POLICY_INVALID", "Organization scheduling policy is invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage SchedulingPolicyInfeasible = new("ORG_SCHEDULING_POLICY_INFEASIBLE", "Organization scheduling policy is not feasible.", StatusCodes.Status422UnprocessableEntity);
+        public static readonly AppMessage SchedulingPolicyWizardDraftCreated = new("ORG_SCHEDULING_POLICY_WIZARD_DRAFT", "Scheduling policy wizard draft created.", StatusCodes.Status200OK);
     }
 
     public static class Validation

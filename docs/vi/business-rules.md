@@ -138,6 +138,8 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-077 | Chat insight dùng Bedrock chỉ mang tính hỗ trợ. Nó có thể tóm tắt, giải thích và gợi ý Manager cân nhắc, nhưng không được tạo, cập nhật, apply hoặc publish phân ca. | `ScheduleInsightService.ChatAsync` |
 | BR-078 | Bedrock lỗi, hết quota, trả rỗng hoặc timeout không được ảnh hưởng `suggest` hay `apply-suggestions`; chat insight lỗi độc lập bằng response service-unavailable. | `ScheduleInsightService`, `IBedrockService` |
 | BR-079 | Tạo/refresh context insight không gọi Bedrock; chỉ serialize lịch, luật, preference, phân ca, gợi ý và metadata tóm tắt hiện có. | `GenerateContextAsync` |
+| BR-086 | Gợi ý CP-SAT qua `ScheduleSuggestionContextLoader`. Không auto-apply / auto-rebalance khi đăng ký hoặc xin nghỉ thay đổi sau apply — `rebalanceHints` trên `GET /schedules/{id}`; Admin dùng lại **Tạo gợi ý AI**. | `ScheduleRebalanceAnalyzer`, `CpSatScheduleSuggestionService` |
+| BR-087 | **Xin nghỉ chỉ Draft:** NV gửi `/self/leave-requests`, Manager duyệt → Unavailable + xóa phân ca conflict; không auto CP-SAT. Published → chặn form/API. | `ScheduleLeaveRequestService` |
 
 ---
 

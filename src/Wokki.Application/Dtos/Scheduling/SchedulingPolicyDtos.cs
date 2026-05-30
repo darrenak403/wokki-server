@@ -31,7 +31,7 @@ public sealed record OrganizationSchedulingPolicyResponse(
 
 public sealed record UpsertOrganizationSchedulingPolicyRequest(
     IReadOnlyList<SchedulingRuleUpsertDto> Rules,
-    string SchemaVersion = "org-scheduling-policy.v1");
+    string SchemaVersion = "org-scheduling-policy.v1.1");
 
 public sealed record SchedulingRuleDto(
     string Key,
@@ -53,7 +53,14 @@ public sealed record SchedulingRuleUpsertDto(
     string InputLabel,
     string ValueType,
     JsonElement? Value,
-    bool Enabled = true,
+    bool Enabled = false,
     bool IsDefault = false,
     bool IsRequired = false,
     int SortOrder = 0);
+
+public sealed record SchedulingPolicyWizardRequest(int AverageEmployees, int ShiftsPerDay);
+
+public sealed record SchedulingPolicyWizardDraftResponse(
+    string SchemaVersion,
+    IReadOnlyList<SchedulingRuleDto> SuggestedRules,
+    string Summary);

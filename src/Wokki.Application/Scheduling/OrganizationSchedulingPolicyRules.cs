@@ -123,15 +123,19 @@ public static class OrganizationSchedulingPolicyRules
 
     public static int GetInt(OrganizationSchedulingPolicy? policy, string key, int fallback)
     {
-        var rule = FindRule(policy, key);
-        return rule is null ? fallback : ReadInt(rule.Value, fallback);
+        var rule = FindRule(policy, key, requireEnabled: false);
+        return rule is null || !rule.Enabled ? fallback : ReadIntValue(rule.Value, fallback);
     }
 
     public static bool GetBool(OrganizationSchedulingPolicy? policy, string key, bool fallback)
     {
         var rule = FindRule(policy, key, requireEnabled: false);
-        return rule is null ? fallback : rule.Enabled && ReadBool(rule.Value, fallback);
+        return rule is null || !rule.Enabled ? false : ReadBoolValue(rule.Value, fallback);
     }
+
+    public static int ReadIntValue(JsonElement? value, int fallback) => ReadInt(value, fallback);
+
+    public static bool ReadBoolValue(JsonElement? value, bool fallback) => ReadBool(value, fallback);
 
     private static SchedulingRuleDto? FindRule(
         OrganizationSchedulingPolicy? policy,

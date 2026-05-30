@@ -9,7 +9,8 @@ namespace Wokki.Application.Services.OrganizationSchedulingPolicy.Implementation
 
 public sealed class OrganizationSchedulingPolicyService(
     IUnitOfWork unitOfWork,
-    IOrganizationScopeService organizationScope) : Interfaces.IOrganizationSchedulingPolicyService
+    IOrganizationScopeService organizationScope,
+    OrganizationSchedulingPolicyFeasibilityValidator feasibilityValidator) : Interfaces.IOrganizationSchedulingPolicyService
 {
     public Task<ApiResponse<SchedulingRuleCatalogResponse>> GetCatalogAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(ApiResponse<SchedulingRuleCatalogResponse>.SuccessResponse(
@@ -39,6 +40,21 @@ public sealed class OrganizationSchedulingPolicyService(
             return ApiResponse<OrganizationSchedulingPolicyResponse>.FailureResponse(
                 AppMessages.Organization.SchedulingPolicyInvalid);
 
+        var normalizedRules = OrganizationSchedulingPolicyRules.NormalizeUpsert(request.Rules);
+        var feasibilityErrors = await feasibilityValidator.ValidateAsync(
+            organizationId,
+            normalizedRules,
+            cancellationToken);
+        if (feasibilityErrors.Count > 0)
+        {
+            var errors = feasibilityErrors
+                .Select(message => new ErrorDetail("rules", message))
+                .ToList();
+            return ApiResponse<OrganizationSchedulingPolicyResponse>.FailureResponse(
+                AppMessages.Organization.SchedulingPolicyInfeasible,
+                errors);
+        }
+
         var policy = await unitOfWork.OrganizationSchedulingPolicies.GetByOrganizationIdAsync(
             organizationId,
             track: true,
@@ -60,6 +76,25 @@ public sealed class OrganizationSchedulingPolicyService(
         return ApiResponse<OrganizationSchedulingPolicyResponse>.SuccessResponse(
             ToResponse(organizationId, policy),
             AppMessages.Organization.SchedulingPolicyUpdated);
+    }
+
+    public Task<ApiResponse<SchedulingPolicyWizardDraftResponse>> BuildWizardDraftAsync(
+        SchedulingPolicyWizardRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = organizationScope.RequireOrganizationId();
+        if (request.AverageEmployees < 1 || request.ShiftsPerDay < 1)
+        {
+            return Task.FromResult(
+                ApiResponse<SchedulingPolicyWizardDraftResponse>.FailureResponse(
+                    AppMessages.Organization.SchedulingPolicyInvalid));
+        }
+
+        var draft = OrganizationSchedulingPolicyWizard.BuildDraft(request);
+        return Task.FromResult(
+            ApiResponse<SchedulingPolicyWizardDraftResponse>.SuccessResponse(
+                draft,
+                AppMessages.Organization.SchedulingPolicyWizardDraftCreated));
     }
 
     private static void ApplyPolicy(OrgSchedulingPolicyEntity policy, UpsertOrganizationSchedulingPolicyRequest request)

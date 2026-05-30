@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Attendance.Implementations;
 using Wokki.Application.Services.LocationMembership.Implementations;
 using Wokki.Application.Services.LocationMembership.Interfaces;
@@ -61,6 +62,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShiftDefinitionService, ShiftDefinitionService>();
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<ISchedulePreferenceService, SchedulePreferenceService>();
+        services.AddScoped<IScheduleRebalanceAnalyzer, ScheduleRebalanceAnalyzer>();
+        services.AddScoped<IScheduleLeaveRequestService, ScheduleLeaveRequestService>();
         services.AddScoped<IScheduleInsightService, ScheduleInsightService>();
         services.AddScoped<ISwapRequestService, SwapRequestService>();
         services.AddScoped<IAutoCloseAttendanceService, AutoCloseAttendanceService>();
@@ -73,6 +76,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationScopeService, LocationScopeService>();
         services.AddScoped<IOrganizationScopeService, OrganizationScopeService>();
         services.AddScoped<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
+        services.AddScoped<OrganizationSchedulingPolicyFeasibilityValidator>();
         services.AddScoped<IOrganizationSchedulingPolicyService, OrganizationSchedulingPolicyService>();
         services.AddScoped<IPlatformAdminService, PlatformAdminService>();
         services.AddScoped<IStatsService, StatsService>();

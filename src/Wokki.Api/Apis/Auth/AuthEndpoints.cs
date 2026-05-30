@@ -44,8 +44,8 @@ public static class AuthEndpoints
 
         group.MapPost("/refresh-token", RefreshTokenAsync)
             .WithName("RefreshToken")
-            .WithDescription("Làm mới access token (Cần xác thực)")
-            .RequireAuthorization()
+            .WithDescription("Làm mới access token bằng refresh token (không cần access token còn hạn).")
+            .AllowAnonymous()
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)

@@ -21,6 +21,7 @@ public interface IUnitOfWork : IAsyncDisposable
     IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships { get; }
     ISchedulePreferenceRepository SchedulePreferences { get; }
     IScheduleInsightContextRepository ScheduleInsightContexts { get; }
+    IScheduleLeaveRequestRepository ScheduleLeaveRequests { get; }
     IOvertimeRequestRepository OvertimeRequests { get; }
     ILocationMembershipRepository LocationMemberships { get; }
     ILocationManagerRepository LocationManagers { get; }
