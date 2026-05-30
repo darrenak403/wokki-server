@@ -17,4 +17,7 @@ public interface IShiftDefinitionService
         UpdateShiftDefinitionRequest request,
         CancellationToken cancellationToken = default);
     Task<ApiResponse<object>> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<ApiResponse<CopyShiftDefinitionsResponse>> CopyAsync(
+        CopyShiftDefinitionsRequest request,
+        CancellationToken cancellationToken = default);
 }

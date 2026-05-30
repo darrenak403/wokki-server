@@ -110,6 +110,10 @@ public static class AppMessages
         public static readonly AppMessage Deleted = new("SHIFT_DELETED", "Shift definition deactivated.", StatusCodes.Status200OK);
         public static readonly AppMessage LocationNotFound = new("SHIFT_LOCATION_NOT_FOUND", "Location not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage InvalidTimeRange = new("SHIFT_INVALID_TIME_RANGE", "End time must be after start time.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage Copied = new("SHIFT_COPIED", "Shift definitions copied.", StatusCodes.Status200OK);
+        public static readonly AppMessage CopySourceNotFound = new("SHIFT_COPY_SOURCE_NOT_FOUND", "Source department or shifts not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage CopyTargetInvalid = new("SHIFT_COPY_TARGET_INVALID", "One or more target departments are invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CopyNothingToCopy = new("SHIFT_COPY_NOTHING_TO_COPY", "No active shifts to copy from the source department.", StatusCodes.Status400BadRequest);
     }
 
     public static class Schedule

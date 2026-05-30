@@ -67,6 +67,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Read latest context snapshot                                           |
 | POST                | `/schedules/{id}/insights/chat`              | Admin, Manager | Ask optional Bedrock assistant about the context; no schedule mutation |
 | GET/POST/PUT/DELETE | `/shifts`                                    | Admin, Manager | Shift definitions                                                      |
+| POST                | `/shifts/copy`                               | Admin, Manager | Copy active shifts from source department to target departments (same location; skips duplicates by name+time) |
 
 ## Employee self-service (`/api/v1/self`) — User (+ employee profile)
 

@@ -43,4 +43,23 @@ public static class ShiftDefinitionMapper
         shift.Color = request.Color.Trim();
         shift.IsActive = request.IsActive;
     }
+
+    public static string DedupeKey(ShiftDefinition shift) =>
+        $"{shift.Name.Trim()}|{shift.StartTime}|{shift.EndTime}";
+
+    public static ShiftDefinition CloneToDepartment(ShiftDefinition source, Guid targetDepartmentId) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = source.OrganizationId,
+            LocationId = source.LocationId,
+            DepartmentId = targetDepartmentId,
+            Name = source.Name,
+            StartTime = source.StartTime,
+            EndTime = source.EndTime,
+            RequiredRole = source.RequiredRole,
+            Color = source.Color,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
 }

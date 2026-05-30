@@ -67,6 +67,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Đọc context snapshot mới nhất                                   |
 | POST                | `/schedules/{id}/insights/chat`              | Admin, Manager | Hỏi trợ lý Bedrock tùy chọn dựa trên context; không mutate lịch |
 | GET/POST/PUT/DELETE | `/shifts`                                    | Admin, Manager | Mẫu ca (shift definition)                                       |
+| POST                | `/shifts/copy`                               | Admin, Manager | Sao chép ca active từ phòng ban nguồn sang phòng ban đích (cùng chi nhánh; bỏ qua trùng tên+giờ) |
 
 ## Self-service nhân viên (`/api/v1/self`) — User (cần Employee)
 
