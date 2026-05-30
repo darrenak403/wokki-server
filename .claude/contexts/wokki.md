@@ -37,8 +37,8 @@ Org staff creation is a single workflow: `POST /api/v1/employees` creates both t
 
 ```text
 Create schedule (Draft, Monday weekStart)
-  → add/edit/delete assignments (Draft only)
-  → optional: copy preferences, suggest, apply-suggestions (Draft)
+  → employees submit preferences (advisory; /self/schedule-preferences/*)
+  → Admin views preference-board → suggest/assign (Draft)
   → Publish → Published (employees see via /self/schedule, swaps allowed)
   → Unpublish → Draft
 ```

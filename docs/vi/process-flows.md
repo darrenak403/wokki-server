@@ -95,6 +95,34 @@ sequenceDiagram
     API-->>M: 200 Published
 ```
 
+### Luồng đăng ký ca (tuần Draft)
+
+Đăng ký ca **chỉ tham khảo**; lịch chính thức = `ShiftAssignment` sau khi Admin publish.
+
+```mermaid
+sequenceDiagram
+    participant A as Admin/Manager
+    participant E as Nhân viên
+    participant API as Schedule API
+    participant P as SchedulePreferenceService
+
+    A->>API: POST /schedules (Draft, phòng ban + thứ Hai)
+    E->>API: GET /self/schedule-preferences/week/{week}
+    API-->>E: Lịch Draft + danh sách ca
+    E->>API: PUT /self/schedule-preferences/{id}
+    E->>API: POST /self/schedule-preferences/{id}/submit
+    A->>API: GET /schedules/{id}/preference-board
+    API-->>A: NV × ca × ô đăng ký + submittedCount
+    A->>API: POST /schedules/{id}/suggest (tuỳ chọn)
+    A->>API: POST /schedules/{id}/apply-suggestions (tuỳ chọn)
+    A->>API: POST /schedules/{id}/assignments (thủ công)
+    A->>API: POST /schedules/{id}/publish
+    E->>API: GET /self/schedule
+    API-->>E: Chỉ phân ca Published
+```
+
+**UI:** Admin **Lịch ca** — stepper + **Bảng đăng ký ca** + **Công bố lịch**. NV **Lịch của tôi → Đăng ký ca** — chọn ô → **Lưu nháp** → **Gửi đăng ký**; tuần Published → chỉ xem; lịch chính thức ở tab **Lịch đã công bố**.
+
 ---
 
 ## 3. Tạo phân ca

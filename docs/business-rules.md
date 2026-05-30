@@ -53,6 +53,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-027 | `GET /api/v1/self/schedule` returns only the caller's assignments for the next **28 days** on **published** schedules. | `GetMyScheduleAsync` |
 | BR-028 | Schedule preferences are **advisory only**. They are separate from official `ShiftAssignment` rows; Admin/Manager may change Draft assignments after preferences are copied/submitted, and the published assignments are the final work schedule. | `SchedulePreferenceService`, `ScheduleService` |
 | BR-029 | Employees may save/update their own schedule preferences while the schedule is **Draft**. After the schedule is **Published**, preferences remain viewable but are read-only. | `SaveMineAsync`, `SubmitMineAsync`, self preference APIs |
+| BR-080 | **Main flow (F&B SMB):** Admin creates Draft schedule → employees submit preferences (`/self/schedule-preferences/*`) → Admin views `GET /schedules/{id}/preference-board` → suggest/assign → publish. Preferences never auto-create assignments. Web clients must normalize `ScheduleStatus` from API (BE may serialize enum as string `"Draft"`/`"Published"`). | `SchedulePanel`, `SchedulePreferenceService`, FE `normalizeScheduleStatus` |
 
 ---
 

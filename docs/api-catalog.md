@@ -65,6 +65,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | DELETE              | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Remove assignment                                                      |
 | POST                | `/schedules/{id}/suggest`                    | Admin, Manager | Schedule suggestions (no write; Bedrock not used)                      |
 | POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Apply suggestions (Draft only)                                         |
+| GET                 | `/schedules/{id}/preference-board`           | Admin, Manager | Read-only grid: all dept employees × shifts × days with preference cells; includes `submittedCount` / `employeeCount` |
 | POST                | `/schedules/{id}/insights/context`           | Admin, Manager | Generate/refresh JSON context snapshot for schedule insight            |
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Read latest context snapshot                                           |
 | POST                | `/schedules/{id}/insights/chat`              | Admin, Manager | Ask optional Bedrock assistant about the context; no schedule mutation |
@@ -78,6 +79,10 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | Method | Path                  | Description                                  |
 | ------ | --------------------- | -------------------------------------------- |
 | GET    | `/self/schedule`      | Own upcoming published assignments (28 days) |
+| GET    | `/self/schedule-preferences/week/{weekStartDate}` | Draft schedule + shifts for employee's dept/week (null if no schedule) |
+| GET    | `/self/schedule-preferences/{scheduleId}` | Own preference submission (Draft/Submitted) |
+| PUT    | `/self/schedule-preferences/{scheduleId}` | Save preference lines (Draft schedule only) |
+| POST   | `/self/schedule-preferences/{scheduleId}/submit` | Submit preferences to Admin board (Draft schedule only) |
 | GET    | `/self/swap-requests` | Swap requests sent/received                  |
 | GET    | `/self/attendance`    | Own attendance history                       |
 | GET    | `/self/profile`       | Own employee profile (name, phone, org context) |

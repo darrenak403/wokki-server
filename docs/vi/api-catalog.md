@@ -63,6 +63,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | DELETE              | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Xóa phân ca                                                     |
 | POST                | `/schedules/{id}/suggest`                    | Admin, Manager | Gợi ý phân ca (không ghi DB; không dùng Bedrock)                |
 | POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Áp dụng gợi ý (chỉ Draft)                                       |
+| GET                 | `/schedules/{id}/preference-board`           | Admin, Manager | Bảng đăng ký ca (read-only): NV × ca × ngày; có `submittedCount` / `employeeCount` |
 | POST                | `/schedules/{id}/insights/context`           | Admin, Manager | Tạo/refresh snapshot JSON cho insight lịch                      |
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Đọc context snapshot mới nhất                                   |
 | POST                | `/schedules/{id}/insights/chat`              | Admin, Manager | Hỏi trợ lý Bedrock tùy chọn dựa trên context; không mutate lịch |
@@ -76,6 +77,10 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 | Method | Path                       | Mô tả                                                                       |
 | ------ | -------------------------- | --------------------------------------------------------------------------- |
 | GET    | `/self/schedule`           | Lịch ca của mình (28 ngày, published)                                       |
+| GET    | `/self/schedule-preferences/week/{weekStartDate}` | Lịch Draft + ca cho phòng ban/tuần (null nếu chưa có lịch) |
+| GET    | `/self/schedule-preferences/{scheduleId}` | Đăng ký ca của mình (Draft/Submitted) |
+| PUT    | `/self/schedule-preferences/{scheduleId}` | Lưu dòng đăng ký (chỉ lịch Draft) |
+| POST   | `/self/schedule-preferences/{scheduleId}/submit` | Gửi đăng ký cho Admin (chỉ lịch Draft) |
 | GET    | `/self/swap-requests`      | Yêu cầu đổi ca gửi/nhận                                                     |
 | GET    | `/self/attendance`         | Lịch sử chấm công                                                           |
 | GET    | `/self/profile`            | Hồ sơ nhân viên của user đang đăng nhập                                     |

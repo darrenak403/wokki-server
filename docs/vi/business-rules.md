@@ -51,6 +51,9 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-025 | Từ chối trùng `(schedule, shiftDefinition, employee, date)`. | `ExistsAsync` |
 | BR-026 | Khi publish, gửi thông báo `schedule.published` cho nhân viên được phân ca (không rollback nếu gửi lỗi). | `PublishAsync` |
 | BR-027 | `GET /api/v1/self/schedule` chỉ trả phân ca của user trong **28 ngày** tới trên lịch **Published**. | `GetMyScheduleAsync` |
+| BR-028 | Đăng ký ca **chỉ mang tính tham khảo** — tách khỏi `ShiftAssignment`; Admin/Manager quyết định phân ca cuối trước khi publish. | `SchedulePreferenceService`, `ScheduleService` |
+| BR-029 | Nhân viên lưu/cập nhật đăng ký ca khi lịch **Draft**; sau **Published** chỉ xem, không sửa. | `SaveMineAsync`, `SubmitMineAsync` |
+| BR-080 | **Luồng chính (F&B):** Admin tạo Draft → NV gửi đăng ký (`/self/schedule-preferences/*`) → Admin xem `preference-board` → gợi ý/phân ca → publish. Đăng ký không tự thành phân ca. FE phải chuẩn hóa `ScheduleStatus` (BE có thể trả string `"Draft"`/`"Published"`). | `SchedulePanel`, `SchedulePreferenceService`, FE `normalizeScheduleStatus` |
 
 ---
 

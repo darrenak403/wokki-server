@@ -95,6 +95,34 @@ sequenceDiagram
     API-->>M: 200 Published
 ```
 
+### Schedule preference flow (Draft week)
+
+Employee **preferences** are advisory; official work schedule = `ShiftAssignment` after Admin publish.
+
+```mermaid
+sequenceDiagram
+    participant A as Admin/Manager
+    participant E as Employee
+    participant API as Schedule API
+    participant P as SchedulePreferenceService
+
+    A->>API: POST /schedules (Draft, dept + Monday weekStart)
+    E->>API: GET /self/schedule-preferences/week/{week}
+    API-->>E: Draft schedule + shifts
+    E->>API: PUT /self/schedule-preferences/{id} (lines)
+    E->>API: POST /self/schedule-preferences/{id}/submit
+    A->>API: GET /schedules/{id}/preference-board
+    API-->>A: employees × shifts × preference cells + submittedCount
+    A->>API: POST /schedules/{id}/suggest (optional)
+    A->>API: POST /schedules/{id}/apply-suggestions (optional)
+    A->>API: POST /schedules/{id}/assignments (manual)
+    A->>API: POST /schedules/{id}/publish
+    E->>API: GET /self/schedule
+    API-->>E: Published assignments only
+```
+
+**UI mapping:** Admin **Lịch ca** — stepper + **Bảng đăng ký ca** + **Công bố lịch**. Employee **Lịch của tôi → Đăng ký ca** — click cells → **Lưu nháp** → **Gửi đăng ký**; published week → read-only preferences, official schedule on **Lịch đã công bố**.
+
 ---
 
 ## 3. Assignment creation
