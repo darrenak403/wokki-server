@@ -2,6 +2,7 @@ using Wokki.Application.Common;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Mappings.Schedules;
+using Wokki.Application.Notifications;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
@@ -150,14 +151,26 @@ public sealed class ScheduleService(
         unitOfWork.Schedules.Update(schedule);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var assignments = await unitOfWork.ShiftAssignments.ListByScheduleAsync(id, cancellationToken);
-        foreach (var employeeId in assignments.Select(a => a.EmployeeId).Distinct())
+        var assignmentResponses = await BuildAssignmentResponsesAsync(id, cancellationToken);
+        foreach (var group in assignmentResponses.GroupBy(a => a.EmployeeId))
         {
-            await NotifyEmployeeSafeAsync(
-                employeeId,
-                "schedule.published",
-                new { scheduleId = schedule.Id, schedule.WeekStartDate },
-                cancellationToken);
+            var employee = await unitOfWork.Employees.GetByIdAsync(group.Key, cancellationToken: cancellationToken);
+            if (employee is null)
+                continue;
+
+            var sample = group.First();
+            var payload = new SchedulePublishedNotificationPayload(
+                employee.FirstName,
+                schedule.WeekStartDate,
+                sample.LocationName,
+                sample.DepartmentName,
+                group
+                    .OrderBy(a => a.Date)
+                    .ThenBy(a => a.StartTime)
+                    .Select(a => new SchedulePublishedShiftLine(a.Date, a.ShiftName, a.StartTime, a.EndTime))
+                    .ToList());
+
+            await NotifyEmployeeSafeAsync(employee.Id, "schedule.published", payload, cancellationToken);
         }
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(schedule.ToResponse(), AppMessages.Schedule.Published);

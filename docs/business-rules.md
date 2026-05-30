@@ -49,7 +49,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-023 | Assignments may be created/updated/deleted only when schedule is **`Draft`**. | `CreateAssignmentAsync`, delete assignment |
 | BR-024 | One employee cannot have **overlapping** shift times on the same date within one schedule. | `HasTimeOverlapAsync` |
 | BR-025 | Duplicate tuple `(schedule, shiftDefinition, employee, date)` is rejected. | `ExistsAsync` |
-| BR-026 | On publish, assigned employees receive notification `schedule.published` (non-blocking). | `ScheduleService.PublishAsync` |
+| BR-026 | On publish, assigned employees receive notification `schedule.published` (non-blocking). Email subject and body are **Vietnamese**: week range in subject; body lists each assigned day as **Thứ …, dd/MM/yyyy** with shift name and time (not raw JSON). | `ScheduleService.PublishAsync`, `NotificationEmailComposer` |
 | BR-027 | `GET /api/v1/self/schedule` returns only the caller's assignments for the next **28 days** on **published** schedules. | `GetMyScheduleAsync` |
 | BR-028 | Schedule preferences are **advisory only**. They are separate from official `ShiftAssignment` rows; Admin/Manager may change Draft assignments after preferences are copied/submitted, and the published assignments are the final work schedule. | `SchedulePreferenceService`, `ScheduleService` |
 | BR-029 | Employees may save/update their own schedule preferences while the schedule is **Draft**. After the schedule is **Published**, preferences remain viewable but are read-only. | `SaveMineAsync`, `SubmitMineAsync`, self preference APIs |

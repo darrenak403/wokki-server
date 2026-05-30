@@ -49,7 +49,7 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 | BR-023 | Chỉ tạo/sửa/xóa phân ca khi lịch ở trạng thái **`Draft`**. | `CreateAssignmentAsync`, xóa phân ca |
 | BR-024 | Một nhân viên không được trùng **khung giờ** trên cùng ngày trong một lịch. | `HasTimeOverlapAsync` |
 | BR-025 | Từ chối trùng `(schedule, shiftDefinition, employee, date)`. | `ExistsAsync` |
-| BR-026 | Khi publish, gửi thông báo `schedule.published` cho nhân viên được phân ca (không rollback nếu gửi lỗi). | `PublishAsync` |
+| BR-026 | Khi publish, gửi thông báo `schedule.published` cho nhân viên được phân ca (không rollback nếu gửi lỗi). Email **tiếng Việt**: tiêu đề có khoảng tuần; nội dung liệt kê từng ngày **Thứ …, dd/MM/yyyy** kèm tên ca và giờ (không gửi JSON thô). | `PublishAsync`, `NotificationEmailComposer` |
 | BR-027 | `GET /api/v1/self/schedule` chỉ trả phân ca của user trong **28 ngày** tới trên lịch **Published**. | `GetMyScheduleAsync` |
 | BR-028 | Đăng ký ca **chỉ mang tính tham khảo** — tách khỏi `ShiftAssignment`; Admin/Manager quyết định phân ca cuối trước khi publish. | `SchedulePreferenceService`, `ScheduleService` |
 | BR-029 | Nhân viên lưu/cập nhật đăng ký ca khi lịch **Draft**; sau **Published** chỉ xem, không sửa. | `SaveMineAsync`, `SubmitMineAsync` |
