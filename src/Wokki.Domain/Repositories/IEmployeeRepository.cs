@@ -14,6 +14,7 @@ public interface IEmployeeRepository
         Guid? locationId = null,
         bool includeTerminated = false,
         IReadOnlySet<Guid>? locationIds = null,
+        string? search = null,
         CancellationToken cancellationToken = default);
     Task<Employee?> GetSwapHoldByOrganizationAsync(Guid organizationId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Employee>> GetByIdsAsync(

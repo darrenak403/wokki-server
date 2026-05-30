@@ -82,6 +82,7 @@ public sealed class EmployeeService(
             request.LocationId,
             request.IncludeTerminated,
             locationIds,
+            request.Search,
             cancellationToken);
 
         var responses = new List<EmployeeResponse>(items.Count);

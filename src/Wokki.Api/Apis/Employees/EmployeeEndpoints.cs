@@ -28,7 +28,7 @@ public static class EmployeeEndpoints
     {
         group.MapGet("/", ListAsync)
             .WithName("ListEmployees")
-            .WithDescription("Danh sách nhân viên (phân trang, lọc theo department/location).")
+            .WithDescription("Danh sách nhân viên (phân trang, lọc theo department/location, tìm theo tên/email/SĐT).")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<PagedResponse<EmployeeResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)

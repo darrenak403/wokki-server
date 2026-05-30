@@ -25,6 +25,7 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         Guid? locationId = null,
         bool includeTerminated = false,
         IReadOnlySet<Guid>? locationIds = null,
+        string? search = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Employees.AsNoTracking().AsQueryable();
@@ -69,6 +70,22 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
                         m.EmployeeId == e.Id &&
                         m.Status == LocationMembershipStatus.Active &&
                         allowedLocationIds.Contains(m.LocationId)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var pattern = $"%{term}%";
+            query = query.Where(e =>
+                EF.Functions.ILike(e.FirstName, pattern) ||
+                EF.Functions.ILike(e.LastName, pattern) ||
+                EF.Functions.ILike(e.FirstName + " " + e.LastName, pattern) ||
+                EF.Functions.ILike(e.LastName + " " + e.FirstName, pattern) ||
+                EF.Functions.ILike(e.Phone, pattern) ||
+                EF.Functions.ILike(e.Position, pattern) ||
+                context.Users.Any(u =>
+                    u.Id == e.UserId &&
+                    EF.Functions.ILike(u.Email, pattern)));
         }
 
         query = query.OrderByDescending(e => e.CreatedAt);

@@ -5,4 +5,5 @@ public sealed record EmployeeListRequest(
     int PageSize = 20,
     Guid? DepartmentId = null,
     Guid? LocationId = null,
-    bool IncludeTerminated = false);
+    bool IncludeTerminated = false,
+    string? Search = null);
