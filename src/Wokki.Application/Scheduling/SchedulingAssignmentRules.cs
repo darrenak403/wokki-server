@@ -13,7 +13,7 @@ public static class SchedulingAssignmentRules
         SchedulingSolverDefaults.MaxShiftsPerEmployeePerDaySafetyCap;
 
     public static int MinShiftsPerEmployeePerWeek(ScheduleSuggestionContext context) =>
-        LocationSchedulingPolicyRules.GetInt(context.LocationSchedulingPolicy, "min_shifts_per_week", 0);
+        SchedulingSolverDefaults.MinShiftsPerWeek;
 
     public static bool MeetsWeeklyCap(
         Guid employeeId,

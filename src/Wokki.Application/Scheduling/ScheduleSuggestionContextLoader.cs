@@ -63,8 +63,8 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
                 l.PreferenceType)))
             .ToList();
 
-        var locationPolicy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
-            department.LocationId,
+        var orgPolicy = await unitOfWork.OrganizationSchedulingPolicies.GetByOrganizationIdAsync(
+            department.OrganizationId,
             cancellationToken: cancellationToken);
 
         return (new ScheduleSuggestionContext
@@ -77,7 +77,7 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             HistoricalAssignments = historical,
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
-            LocationSchedulingPolicy = locationPolicy
+            OrganizationSchedulingPolicy = orgPolicy
         }, null);
     }
 }

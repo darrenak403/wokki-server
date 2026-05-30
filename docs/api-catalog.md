@@ -31,7 +31,9 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | Resource    | Base           | Manager                                       | Admin | Notes                                                                                                                                                                |
 | ----------- | -------------- | --------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Employees   | `/employees`   | Scoped list/read                              | Full  | Creates User + Employee together; same-org legacy User without Employee is linked. Manager sees employees with Active membership in assigned branches. Soft delete = terminate. List/detail includes employee self-service **payment profile** (bank + QR URL) for payroll transfer |
-| Locations   | `/locations`   | Scoped read; `PUT /{id}` in assigned branches | Full  | Manager sees assigned locations only; may update branch metadata in scope (workspace drawer). `GET/PUT /locations/{id}/scheduling-policy` — policy write Admin only. |
+| Locations   | `/locations`   | Scoped read; `PUT /{id}` in assigned branches | Full  | Manager sees assigned locations only; may update branch metadata in scope (workspace drawer). |
+| Scheduling  | `/scheduling`  | Authenticated org users | — | `GET /scheduling/rule-catalog` — platform rule catalog (enforced + categories). |
+| Organization | `/org`        | Admin + Manager (read policy) | Full | `GET/PUT /org/scheduling-policy` — org-wide scheduling rules (PUT Admin only). |
 | Departments | `/departments` | Scoped read; `PUT /{id}` in assigned branches | Full  | Manager sees departments in assigned locations only; may update department in scope.                                                                                 |
 
 ## Branch membership (`/api/v1/location-memberships`)

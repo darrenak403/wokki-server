@@ -65,13 +65,13 @@ Cutoff: `SwapCutoffRules` (location timezone). Notifications must not roll back 
 
 ### Auto-scheduling & Bedrock
 
-1. **Branch policy** `LocationSchedulingPolicy` (`location-scheduling-policy.v5`) — minimal solver rules + optional custom (not read by solver yet). Map via `LocationSchedulingSolverPolicy`; caps/weights in `SchedulingSolverDefaults`. Hierarchy: location → department → employee (no job positions).
+1. **Org policy** `OrganizationSchedulingPolicy` (`org-scheduling-policy.v1`) — catalog `GET /scheduling/rule-catalog`; org Admin configures `GET/PUT /org/scheduling-policy` (Manager read-only). **4 enforced rules** (SMB F&B: preferences, min staff/shift, role match) + up to 20 advisory customs. Coverage/rest/caps in `SchedulingSolverDefaults`. Map via `OrganizationSchedulingSolverPolicy`.
 2. **Department** `DepartmentSchedulingConfig` — overrides.
 3. `POST .../suggest` — heuristic only, no DB write; may refresh insight context (`BR-070`).
 4. `POST .../apply-suggestions` — Draft only; all rows validated then one transaction (`BR-075`).
 5. **Bedrock** — `ScheduleInsightService` + context snapshot + chat; **never** mutates assignments (`BR-077`–`BR-079`).
 
-Missing setup returns explicit reasons: `missing_location_rules`, `no_employees`, `no_shifts`, `missing_preferences` (`BR-072`).
+Missing setup returns explicit reasons: `no_employees`, `no_shifts`, `missing_preferences` (`BR-072`).
 
 Use **department membership** for guards when employee spans multiple departments (`BR-074`).
 

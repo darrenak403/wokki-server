@@ -21,16 +21,13 @@ public sealed class BedrockScheduleSuggestionService(
         if (context is null)
             return new ScheduleSuggestionGenerationResult([], reason, Provider: "bedrock");
 
-        if (context.LocationSchedulingPolicy is null)
-            return new ScheduleSuggestionGenerationResult([], "missing_location_rules", Provider: "bedrock");
-
         if (context.Employees.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_employees", Provider: "bedrock");
 
         if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts", Provider: "bedrock");
 
-        var solverPolicy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
+        var solverPolicy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
         if (solverPolicy.RequireSubmittedPreferences && context.SubmittedPreferences.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "missing_preferences", Provider: "bedrock");
 

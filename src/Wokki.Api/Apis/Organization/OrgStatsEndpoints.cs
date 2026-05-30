@@ -17,6 +17,8 @@ public static class OrgStatsEndpoints
         orgGroup.MapOrgSubscriptionRoutes()
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager, RoleConstants.User));
 
+        orgGroup.MapOrgSchedulingPolicyRoutes();
+
         return builder;
     }
 

@@ -6,7 +6,7 @@ public sealed class ScheduleSuggestionPromptBuilder
 {
     public string Build(ScheduleSuggestionContext context)
     {
-        var policy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
+        var policy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
         var weekEnd = context.Schedule.WeekStartDate.AddDays(6);
         var sb = new StringBuilder();
 

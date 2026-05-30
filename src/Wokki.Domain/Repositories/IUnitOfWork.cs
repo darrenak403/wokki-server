@@ -17,7 +17,7 @@ public interface IUnitOfWork : IAsyncDisposable
     IChannelRepository Channels { get; }
     IMessageRepository Messages { get; }
     IEmployeeAvailabilityRepository EmployeeAvailabilities { get; }
-    ILocationSchedulingPolicyRepository LocationSchedulingPolicies { get; }
+    IOrganizationSchedulingPolicyRepository OrganizationSchedulingPolicies { get; }
     IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships { get; }
     ISchedulePreferenceRepository SchedulePreferences { get; }
     IScheduleInsightContextRepository ScheduleInsightContexts { get; }

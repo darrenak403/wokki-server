@@ -19,16 +19,13 @@ public sealed class CpSatScheduleSuggestionService(
         if (context is null)
             return new ScheduleSuggestionGenerationResult([], reason, Provider: "cpsat");
 
-        if (context.LocationSchedulingPolicy is null)
-            return new ScheduleSuggestionGenerationResult([], "missing_location_rules", Provider: "cpsat");
-
         if (context.Employees.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_employees", Provider: "cpsat");
 
         if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts", Provider: "cpsat");
 
-        var solverPolicy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
+        var solverPolicy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
 
         if (solverPolicy.RequireSubmittedPreferences && context.SubmittedPreferences.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "missing_preferences", Provider: "cpsat");

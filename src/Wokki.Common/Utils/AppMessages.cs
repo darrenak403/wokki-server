@@ -349,6 +349,10 @@ public static class AppMessages
         public static readonly AppMessage Disabled = new("ORG_DISABLED", "Organization is disabled.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage PackageNotActivated = new("ORG_PACKAGE_NOT_ACTIVATED", "Organization package is not activated.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage PackageExpired = new("ORG_PACKAGE_EXPIRED", "Organization package has expired.", StatusCodes.Status402PaymentRequired);
+        public static readonly AppMessage SchedulingCatalogFound = new("ORG_SCHEDULING_CATALOG_FOUND", "Scheduling rule catalog found.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyFound = new("ORG_SCHEDULING_POLICY_FOUND", "Organization scheduling policy found.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyUpdated = new("ORG_SCHEDULING_POLICY_UPDATED", "Organization scheduling policy updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyInvalid = new("ORG_SCHEDULING_POLICY_INVALID", "Organization scheduling policy is invalid.", StatusCodes.Status400BadRequest);
     }
 
     public static class Validation

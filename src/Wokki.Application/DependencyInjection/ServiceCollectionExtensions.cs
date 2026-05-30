@@ -9,6 +9,8 @@ using Wokki.Application.Services.LocationScope.Implementations;
 using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Implementations;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
+using Wokki.Application.Services.OrganizationSchedulingPolicy.Implementations;
+using Wokki.Application.Services.OrganizationSchedulingPolicy.Interfaces;
 using Wokki.Application.Services.OrganizationSubscription.Implementations;
 using Wokki.Application.Services.OrganizationSubscription.Interfaces;
 using Wokki.Application.Services.OvertimeRequest.Implementations;
@@ -71,6 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILocationScopeService, LocationScopeService>();
         services.AddScoped<IOrganizationScopeService, OrganizationScopeService>();
         services.AddScoped<IOrganizationSubscriptionService, OrganizationSubscriptionService>();
+        services.AddScoped<IOrganizationSchedulingPolicyService, OrganizationSchedulingPolicyService>();
         services.AddScoped<IPlatformAdminService, PlatformAdminService>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();

@@ -62,25 +62,6 @@ public static class LocationEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
-        group.MapGet("/{id:guid}/scheduling-policy", GetSchedulingPolicyAsync)
-            .WithName("GetLocationSchedulingPolicy")
-            .WithDescription("Luật phân ca tổng của chi nhánh.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
-            .Produces<ApiResponse<LocationSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
-        group.MapPut("/{id:guid}/scheduling-policy", UpsertSchedulingPolicyAsync)
-            .WithName("UpsertLocationSchedulingPolicy")
-            .WithDescription("Cập nhật luật phân ca tổng của chi nhánh.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
-            .Produces<ApiResponse<LocationSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
         return group;
     }
 
@@ -141,33 +122,6 @@ public static class LocationEndpoints
             return validationResult!;
 
         var response = await service.UpdateAsync(id, request, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> GetSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromServices] ILocationService service,
-        [FromServices] ILocationScopeService scopeService,
-        [FromServices] ICurrentUserService currentUser,
-        CancellationToken cancellationToken = default)
-    {
-        if (currentUser.UserId is null || currentUser.Role is null)
-            return Results.Json(ApiResponse<LocationSchedulingPolicyResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
-
-        if (!await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
-            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
-
-        var response = await service.GetSchedulingPolicyAsync(id, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> UpsertSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromBody] UpsertLocationSchedulingPolicyRequest request,
-        [FromServices] ILocationService service,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await service.UpsertSchedulingPolicyAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 }

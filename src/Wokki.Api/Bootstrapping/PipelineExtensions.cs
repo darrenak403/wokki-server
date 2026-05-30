@@ -20,6 +20,7 @@ using Wokki.Api.Apis.SwapRequests;
 using Wokki.Api.Apis.Users;
 using Wokki.Api.Apis.Organization;
 using Wokki.Api.Apis.Platform;
+using Wokki.Api.Apis.Scheduling;
 using Wokki.Api.Apis.Workspace;
 
 namespace Wokki.Api.Bootstrapping;
@@ -93,6 +94,7 @@ public static class PipelineExtensions
         app.MapWorkspaceApi();
         app.MapPlatformApi();
         app.MapOrgStatsApi();
+        app.MapSchedulingCatalogApi();
 
         return app;
     }
