@@ -1,7 +1,9 @@
 # Usage: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d
-# CI/CD: GitHub Actions → Docker Hub → Dokploy
-# Deploy BE trước FE — tạo network wokki-network
-# DbGate (optional): --profile tools
+# task docker:prod
+#
+# CI/CD: GitHub Actions → Docker Hub → Dokploy pull
+# GitHub repo secrets (chỉ 2): DOCKER_USERNAME, DOCKER_PASSWORD
+# Còn lại: env trên Dokploy hoặc docker/.env
 
 name: wokki
 
@@ -11,20 +13,12 @@ x-logging: &wokki-logging
     max-size: "10m"
     max-file: "3"
 
-x-security: &wokki-security
-  init: true
-  security_opt:
-    - no-new-privileges:true
-
 services:
   wokki_api:
     container_name: wokki_api
-    image: ${DOCKER_USERNAME}/wokki-backend:${IMAGE_TAG:-latest}
     pull_policy: always
-    restart: unless-stopped
-    <<: *wokki-security
-    cap_drop:
-      - ALL
+    image: ${DOCKER_USERNAME}/wokki-backend:${IMAGE_TAG:-latest}
+    init: true
     logging: *wokki-logging
     ports:
       - "${API_PORT:-8386}:8386"
@@ -32,11 +26,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8386
       - DOTNET_gcServer=1
-      - DOTNET_ThreadPool_UnfairSemaphoreSpinLimit=6
       - ASPNETCORE_Kestrel__Limits__MaxConcurrentConnections=1000
       - ASPNETCORE_Kestrel__Limits__MaxConcurrentUpgradedConnections=256
-      - ConnectionStrings__DefaultConnection=Host=wokki_postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Pooling=true;Minimum Pool Size=5;Maximum Pool Size=100;Connection Idle Lifetime=300;Connection Pruning Interval=10
-      - ConnectionStrings__Redis=wokki_redis:6379,abortConnect=false,connectRetry=3,connectTimeout=5000
+      - ConnectionStrings__DefaultConnection=Host=wokki_postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Pooling=true;Minimum Pool Size=5;Maximum Pool Size=100
+      - ConnectionStrings__Redis=wokki_redis:6379,abortConnect=false,connectRetry=3
       - Database__AutoMigrate=${DATABASE_AUTOMIGRATE:-false}
       - ApiDocs__Enabled=${APIDOCS_ENABLED:-false}
       - Jwt__Issuer=${JWT_ISSUER}
@@ -63,34 +56,29 @@ services:
         condition: service_healthy
       wokki_redis:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "${API_CPU_LIMIT:-2.0}"
-          memory: ${API_MEMORY_LIMIT:-1024M}
-        reservations:
-          memory: 256M
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8386/health/"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMORY_LIMIT:-1024M}
+    restart: unless-stopped
     networks:
       - wokki-network
 
   wokki_postgres:
     container_name: wokki_postgres
     image: postgres:16-alpine
-    restart: unless-stopped
-    <<: *wokki-security
     logging: *wokki-logging
     shm_size: 256mb
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
     command:
       - postgres
       - -c
@@ -101,12 +89,6 @@ services:
       - effective_cache_size=512MB
       - -c
       - work_mem=8MB
-      - -c
-      - maintenance_work_mem=64MB
-      - -c
-      - wal_buffers=16MB
-      - -c
-      - random_page_cost=1.1
     volumes:
       - wokki_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -118,16 +100,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${POSTGRES_CPU_LIMIT:-1.0}"
           memory: ${POSTGRES_MEMORY_LIMIT:-768M}
+    restart: unless-stopped
     networks:
       - wokki-network
 
   wokki_redis:
     container_name: wokki_redis
     image: redis:7-alpine
-    restart: unless-stopped
-    <<: *wokki-security
     logging: *wokki-logging
     command:
       - redis-server
@@ -141,10 +121,6 @@ services:
       - allkeys-lru
       - --tcp-backlog
       - "511"
-      - --timeout
-      - "300"
-      - --tcp-keepalive
-      - "60"
       - --protected-mode
       - "no"
     volumes:
@@ -158,17 +134,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "${REDIS_CPU_LIMIT:-0.5}"
           memory: ${REDIS_MEMORY_LIMIT:-384M}
+    restart: unless-stopped
     networks:
       - wokki-network
 
   wokki_dbgate:
-    profiles: ["tools"]
     container_name: wokki_dbgate
     image: dbgate/dbgate:latest
-    restart: unless-stopped
-    <<: *wokki-security
     logging: *wokki-logging
     ports:
       - "127.0.0.1:${DBGATE_PORT:-5050}:3000"
@@ -187,6 +160,7 @@ services:
       resources:
         limits:
           memory: 256M
+    restart: unless-stopped
     networks:
       - wokki-network
 
@@ -197,4 +171,3 @@ volumes:
 networks:
   wokki-network:
     name: wokki-network
-    driver: bridge
