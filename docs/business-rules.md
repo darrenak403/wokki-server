@@ -13,7 +13,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-001 | Roles are fixed: `Admin`, `Manager`, `User`, and platform-only `PlatformOperator`. No dynamic permission matrix in MVP. | JWT claims + endpoint `RequireRole` |
 | BR-002 | `User` may not access manager schedule APIs (`/api/v1/schedules/*` except via published data indirectly). Own schedule only via `/api/v1/self/schedule`. | Route authorization |
 | BR-003 | `Admin` may manage users, payroll export, and soft-delete any chat message. | `ChannelService`, `PayrollEndpoints` |
-| BR-004 | `Manager` may manage schedules, assignments, swap audit, attendance adjust, and create chat channels. | Route authorization |
+| BR-004 | `Manager` may manage schedules, assignments, swap audit, attendance adjust, and open **direct messages** with org members (same rules as other roles). | Route authorization |
 | BR-005 | Every employee-facing action requires an `Employee` row linked to the authenticated `User`. | Services return `*_NO_EMPLOYEE` / 404 |
 | BR-006 | `Admin` has full branch scope **within their organization** and may list/manage all `Location` workspaces in that org. | `LocationScopeService`, `IOrganizationScopeService` |
 | BR-007 | `Manager` scope is only the locations assigned through `LocationManager`. Do not infer Manager access from role alone, user global role, or the Manager's own employee/department memberships. | `LocationScopeService`, scoped list queries |
@@ -32,7 +32,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-013 | `ShiftDefinition` must match schedule scope: same `LocationId`; if `DepartmentId` set, must equal schedule department. | `TryPrepareAssignmentAsync` |
 | BR-014 | Tenant root is `Organization`. Business data carries `OrganizationId`; org users must have JWT claim `organization_id`. Never accept `organizationId` from request body for authorization. | `OrganizationContextMiddleware`, `IOrganizationScopeService` |
 | BR-015 | `PlatformOperator` (`admin@gmail.com` seed) has `OrganizationId = null`, may use platform routes (`/api/v1/platform/*`) only — not org business routes. | `StatsService`, `PlatformAdminService`, route auth |
-| BR-016 | `POST /register` atomically creates `Organization` + Org Admin (`Admin` role) + JWT. One email = one org; duplicate email → 409. New orgs start without an activated package until Wokki admin enables them. | `AuthService.RegisterAsync` |
+| BR-016 | `POST /register` atomically creates `Organization` + Org Admin (`Admin` role) + **linked `Employee` profile** (org channel member) + JWT. Org Admin **`Employee` has no `DepartmentId`** — org-wide scope over all branches; chat/UI show **Quản trị viên · Toàn chi nhánh**, not a branch department. **Never downgrade org creator / Admin via `POST /employees`**; chat member list auto-repairs demoted org creator (role → Admin, clears department). One email = one org; duplicate email → 409. New orgs start without an activated package until Wokki admin enables them. Legacy org Admins without Employee are auto-provisioned on first chat/self-profile access. | `AuthService.RegisterAsync`, `OrgAdminEmployeeProvisioner`, `ChannelService.ListOrgMembersAsync` |
 | BR-017 | Branch transfer validates `location.OrganizationId == employee.organizationId`. Cross-tenant location access returns 404. | `WorkspaceService`, `EmployeeService` |
 | BR-018 | Org stats (`GET /api/v1/org/stats`) for `Admin` + `Manager` only; platform stats for `PlatformOperator` only. | `StatsService`, endpoint auth |
 | BR-019 | Wokki admin (`PlatformOperator`) may list platform users/orgs and enable, disable, or renew an org package. Package length is set via `durationDays` in the platform console (admin-chosen; FE must not assume a fixed default such as 30 days). On renew, omitted `durationDays` reuses the org’s stored `subscriptionDurationDays`. Org users cannot log in, refresh, or call org APIs when the package is not activated (`ORG_PACKAGE_NOT_ACTIVATED`) or expired (`ORG_PACKAGE_EXPIRED`). | `PlatformAdminService`, `OrganizationSubscriptionService`, `OrganizationContextMiddleware`, `AuthService` |
@@ -121,11 +121,13 @@ Legacy table `swap_requests` is retained read-only for historical rows; API `/ap
 | BR-060 | Only **channel members** may list/send messages; non-member → **403**. | `ChannelService` |
 | BR-061 | `Admin` may read any channel history without membership. | `ResolveMemberAccessAsync` |
 | BR-062 | Direct channel: exactly **two** members; reuse existing DM if present. | `CreateAsync` + `FindDirectChannelAsync` |
-| BR-063 | Group channel requires non-empty **name**. | `CreateAsync` |
+| BR-063 | Custom **Group** channel creation is **disabled** (`403`); legacy Group rows may remain in DB but are **hidden** from `ListMineAsync`. | `ChannelService.CreateAsync`, `ListMineAsync` |
 | BR-064 | Message body: plain text, max **4000** chars; HTML tags stripped. | `SanitizeBody` |
 | BR-065 | Soft-delete sets `DeletedAt` and body placeholder `[Message deleted]` (thread preserved). | `DeleteMessageAsync` |
 | BR-066 | Persist message first; SignalR `ReceiveMessage` is best-effort (no rollback on push failure). | `SendMessageAsync` |
 | BR-067 | WebSocket `/ws/chat` requires JWT (`access_token` query); logs must **redact** token. | JwtBearer + Serilog enricher |
+| BR-088 | Each org has exactly one **Organization** channel (`ChannelType.Organization`); created at **`POST /register`** (org bootstrap) and ensured on chat list for legacy orgs; display name = org name or `"Toàn công ty"`. **All active employees** are auto-added (`SyncAllActiveMembers`); new employees on create/provision join immediately; **terminate** removes membership. | `AuthService.RegisterAsync`, `OrgChannelService`, `EmployeeService` |
+| BR-089 | `ListMineAsync` returns **Organization + Direct** only. `GET /api/v1/channels/org/members` lists active org employees (max 200) for starting DMs. `POST /channels` accepts **Direct only** for any authenticated user with an `Employee` profile (same org; reuses existing DM). | `ChannelService`, `ChannelEndpoints` |
 
 ---
 

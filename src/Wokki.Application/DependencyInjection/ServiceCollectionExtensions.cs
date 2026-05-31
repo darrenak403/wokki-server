@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+        services.AddScoped<IOrgAdminEmployeeProvisioner, OrgAdminEmployeeProvisioner>();
         services.AddScoped<IEmployeeSelfProfileService, EmployeeSelfProfileService>();
         services.AddScoped<ILocationService, LocationService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
@@ -72,6 +73,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOvertimeRequestService, OvertimeRequestService>();
         services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
         services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<IOrgChannelService, OrgChannelService>();
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<ILocationMembershipService, LocationMembershipService>();
         services.AddScoped<ILocationManagerService, LocationManagerService>();

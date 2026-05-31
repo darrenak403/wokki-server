@@ -140,8 +140,9 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 | Method | Path                     | Roles                      | Description                    |
 | ------ | ------------------------ | -------------------------- | ------------------------------ |
-| GET    | `/`                      | Authenticated              | Channels for caller's employee |
-| POST   | `/`                      | Admin, Manager             | Create Direct/Group            |
+| GET    | `/`                      | Authenticated (Employee)   | Org channel + Direct DMs only  |
+| GET    | `/org/members`           | Authenticated (Employee)   | Active org employees for DM    |
+| POST   | `/`                      | Authenticated (Employee)   | Create **Direct** only (403 Group) |
 | GET    | `/{id}/messages`         | Member (Admin bypass read) | Cursor: `?before=&limit=`      |
 | POST   | `/{id}/messages`         | Member                     | Send + SignalR push            |
 | DELETE | `/{id}/messages/{msgId}` | Sender or Admin            | Soft delete                    |

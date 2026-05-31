@@ -8,6 +8,9 @@ public interface IChannelService
     Task<ApiResponse<IReadOnlyList<ChannelResponse>>> ListMineAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+    Task<ApiResponse<IReadOnlyList<OrgChatMemberResponse>>> ListOrgMembersAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
     Task<ApiResponse<ChannelResponse>> CreateAsync(
         CreateChannelRequest request,
         Guid createdByUserId,

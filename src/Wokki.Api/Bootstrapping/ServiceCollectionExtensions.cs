@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Wokki.Api.Services;
@@ -25,7 +26,11 @@ public static class ServiceCollectionExtensions
             });
         });
 
-        services.AddSignalR();
+        services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            });
         services.AddScoped<IChatRealtimeNotifier, SignalRChatNotifier>();
 
         services.AddRateLimiter(options =>

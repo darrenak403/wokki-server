@@ -41,4 +41,21 @@ public sealed class MessageRepository(AppDbContext context) : IMessageRepository
         await context.Messages.AddAsync(message, cancellationToken);
 
     public void Update(Message message) => context.Messages.Update(message);
+
+    public async Task<IReadOnlyDictionary<Guid, DateTime>> GetLatestCreatedAtByChannelsAsync(
+        IEnumerable<Guid> channelIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = channelIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return new Dictionary<Guid, DateTime>();
+
+        var rows = await context.Messages.AsNoTracking()
+            .Where(m => ids.Contains(m.ChannelId))
+            .GroupBy(m => m.ChannelId)
+            .Select(g => new { ChannelId = g.Key, Latest = g.Max(m => m.CreatedAt) })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(r => r.ChannelId, r => r.Latest);
+    }
 }

@@ -131,8 +131,9 @@ Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 | Method | Path                     | Vai trò                          | Mô tả                                |
 | ------ | ------------------------ | -------------------------------- | ------------------------------------ |
-| GET    | `/`                      | Đã đăng nhập                     | Kênh của employee hiện tại           |
-| POST   | `/`                      | Admin, Manager                   | Tạo Direct / Group                   |
+| GET    | `/`                      | Đã đăng nhập (có Employee)       | Kênh org + DM (ẩn Group cũ)          |
+| GET    | `/org/members`           | Đã đăng nhập (có Employee)       | NV active trong org để nhắn riêng    |
+| POST   | `/`                      | Đã đăng nhập (có Employee)       | Chỉ tạo **Direct** (Group → 403)     |
 | GET    | `/{id}/messages`         | Member (Admin đọc được mọi kênh) | Phân trang cursor: `?before=&limit=` |
 | POST   | `/{id}/messages`         | Member                           | Gửi + đẩy SignalR                    |
 | DELETE | `/{id}/messages/{msgId}` | Người gửi hoặc Admin             | Xóa mềm                              |

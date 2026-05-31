@@ -34,10 +34,18 @@ public static class ChannelEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/org/members", ListOrgMembersAsync)
+            .WithName("ListOrgChatMembers")
+            .WithDescription("Danh sách nhân viên trong org để nhắn riêng.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<OrgChatMemberResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPost("/", CreateAsync)
             .WithName("CreateChannel")
-            .WithDescription("Tạo kênh Direct hoặc Group (Admin/Manager).")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .WithDescription("Tạo kênh Direct 1-1.")
+            .RequireAuthorization()
             .Produces<ApiResponse<ChannelResponse>>(StatusCodes.Status201Created)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
@@ -85,25 +93,30 @@ public static class ChannelEndpoints
         return response.ToHttpResult();
     }
 
+    private static async Task<IResult> ListOrgMembersAsync(
+        [FromServices] IChannelService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<OrgChatMemberResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.ListOrgMembersAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
     private static async Task<IResult> CreateAsync(
         [FromBody] CreateChannelRequest request,
         [FromServices] IChannelService service,
-        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<CreateChannelRequest> validator,
         CancellationToken cancellationToken = default)
     {
-        if (currentUser.UserId is null || currentUser.Role is null)
+        if (currentUser.UserId is null)
             return Results.Json(ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
-
-        foreach (var employeeId in request.MemberEmployeeIds.Distinct())
-        {
-            if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, employeeId, cancellationToken))
-                return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
-        }
 
         var response = await service.CreateAsync(request, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();

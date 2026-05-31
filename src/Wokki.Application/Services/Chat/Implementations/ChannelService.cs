@@ -2,9 +2,15 @@ using System.Text.RegularExpressions;
 using Wokki.Application.Dtos.Chat;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Services.Chat.Interfaces;
+using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
-using Wokki.Domain.Entities;
+using Wokki.Domain.Constants;
+using DepartmentEntity = Wokki.Domain.Entities.Department;
+using LocationEntity = Wokki.Domain.Entities.Location;
+using ChannelEntity = Wokki.Domain.Entities.Channel;
+using ChannelMemberEntity = Wokki.Domain.Entities.ChannelMember;
+using MessageEntity = Wokki.Domain.Entities.Message;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 
@@ -12,26 +18,138 @@ namespace Wokki.Application.Services.Chat.Implementations;
 
 public sealed partial class ChannelService(
     IUnitOfWork unitOfWork,
+    IOrgChannelService orgChannelService,
     IChatRealtimeNotifier realtime,
-    IOrganizationScopeService organizationScope) : IChannelService
+    IOrganizationScopeService organizationScope,
+    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner) : IChannelService
 {
     private const int MaxBodyLength = 4000;
+    private const int MaxOrgMembers = 200;
     private const string DeletedPlaceholder = "[Message deleted]";
+
+    private async Task<Domain.Entities.Employee?> ResolveEmployeeAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is not null)
+            return employee;
+
+        return await orgAdminEmployeeProvisioner.EnsureByUserIdAsync(userId, cancellationToken);
+    }
 
     public async Task<ApiResponse<IReadOnlyList<ChannelResponse>>> ListMineAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        var employee = await ResolveEmployeeAsync(userId, cancellationToken);
         if (employee is null)
             return ApiResponse<IReadOnlyList<ChannelResponse>>.FailureResponse(AppMessages.Chat.NoEmployeeProfile);
 
-        var channels = await unitOfWork.Channels.ListByEmployeeAsync(employee.Id, cancellationToken);
-        var responses = new List<ChannelResponse>(channels.Count);
-        foreach (var channel in channels)
-            responses.Add(await MapChannelAsync(channel, cancellationToken));
+        await orgChannelService.EnsureOrgChannelAsync(employee.OrganizationId, userId, cancellationToken);
+        await orgChannelService.EnsureMemberAsync(employee.OrganizationId, employee.Id, cancellationToken);
 
-        return ApiResponse<IReadOnlyList<ChannelResponse>>.SuccessResponse(responses, AppMessages.Chat.Listed);
+        var channels = await unitOfWork.Channels.ListByEmployeeAsync(employee.Id, cancellationToken);
+        var filtered = channels
+            .Where(c => c.Type is ChannelType.Organization or ChannelType.Direct)
+            .ToList();
+
+        var latestByChannel = await unitOfWork.Messages.GetLatestCreatedAtByChannelsAsync(
+            filtered.Select(c => c.Id),
+            cancellationToken);
+
+        var responses = new List<ChannelResponse>(filtered.Count);
+        foreach (var channel in filtered)
+            responses.Add(await MapChannelAsync(channel, latestByChannel, cancellationToken));
+
+        var ordered = responses
+            .OrderByDescending(c => c.Type == ChannelType.Organization)
+            .ThenByDescending(c => c.LastMessageAt ?? c.CreatedAt)
+            .ToList();
+
+        return ApiResponse<IReadOnlyList<ChannelResponse>>.SuccessResponse(ordered, AppMessages.Chat.Listed);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<OrgChatMemberResponse>>> ListOrgMembersAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await ResolveEmployeeAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<IReadOnlyList<OrgChatMemberResponse>>.FailureResponse(AppMessages.Chat.NoEmployeeProfile);
+
+        await orgChannelService.EnsureOrgChannelAsync(employee.OrganizationId, userId, cancellationToken);
+
+        await orgAdminEmployeeProvisioner.RepairOrgAdminMemberAsync(
+            employee.OrganizationId,
+            employee.UserId,
+            employee.Id,
+            cancellationToken);
+
+        var orgCreator = await unitOfWork.Users.GetOldestByOrganizationIdAsync(
+            employee.OrganizationId,
+            cancellationToken);
+
+        var (items, _) = await unitOfWork.Employees.ListAsync(
+            page: 1,
+            pageSize: MaxOrgMembers,
+            organizationId: employee.OrganizationId,
+            includeTerminated: false,
+            cancellationToken: cancellationToken);
+
+        if (orgCreator is not null)
+        {
+            var creatorEmployee = items.FirstOrDefault(e => e.UserId == orgCreator.Id);
+            if (creatorEmployee is not null)
+            {
+                await orgAdminEmployeeProvisioner.RepairOrgAdminMemberAsync(
+                    employee.OrganizationId,
+                    orgCreator.Id,
+                    creatorEmployee.Id,
+                    cancellationToken);
+            }
+        }
+
+        var responses = new List<OrgChatMemberResponse>(items.Count);
+        foreach (var member in items
+                     .Where(m => m.Id != employee.Id)
+                     .OrderBy(e => e.LastName)
+                     .ThenBy(e => e.FirstName))
+        {
+            var user = await unitOfWork.Users.GetByIdAsync(member.UserId, cancellationToken: cancellationToken);
+            var role = user?.Role ?? RoleConstants.User;
+            var isOrgAdmin =
+                string.Equals(role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase)
+                || (orgCreator is not null && orgCreator.Id == member.UserId);
+
+            DepartmentEntity? department = null;
+            LocationEntity? location = null;
+            if (!isOrgAdmin && member.DepartmentId.HasValue)
+            {
+                department = await unitOfWork.Departments.GetByIdAsync(
+                    member.DepartmentId.Value,
+                    cancellationToken: cancellationToken);
+                if (department is not null)
+                {
+                    location = await unitOfWork.Locations.GetByIdAsync(
+                        department.LocationId,
+                        cancellationToken: cancellationToken);
+                }
+            }
+
+            responses.Add(new OrgChatMemberResponse(
+                member.Id,
+                member.FirstName,
+                member.LastName,
+                role,
+                isOrgAdmin,
+                isOrgAdmin ? null : department?.Name,
+                isOrgAdmin ? null : location?.Name));
+        }
+
+        return ApiResponse<IReadOnlyList<OrgChatMemberResponse>>.SuccessResponse(
+            responses,
+            AppMessages.Chat.OrgMembersListed);
     }
 
     public async Task<ApiResponse<ChannelResponse>> CreateAsync(
@@ -39,6 +157,12 @@ public sealed partial class ChannelService(
         Guid createdByUserId,
         CancellationToken cancellationToken = default)
     {
+        if (request.Type == ChannelType.Group)
+            return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.GroupNotAllowed);
+
+        if (request.Type == ChannelType.Organization)
+            return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.Forbidden);
+
         if (request.MemberEmployeeIds.Count == 0)
             return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.MembersRequired);
 
@@ -60,6 +184,10 @@ public sealed partial class ChannelService(
 
         if (request.Type == ChannelType.Direct)
         {
+            if (request.MemberEmployeeIds.Any(id => id == creator.Id)
+                && request.MemberEmployeeIds.Distinct().Count() <= 1)
+                return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.CannotMessageSelf);
+
             if (memberIds.Count != 2)
                 return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.DirectRequiresTwoMembers);
 
@@ -69,27 +197,23 @@ public sealed partial class ChannelService(
                 cancellationToken);
             if (existing is not null)
                 return ApiResponse<ChannelResponse>.SuccessResponse(
-                    await MapChannelAsync(existing, cancellationToken),
+                    await MapChannelAsync(existing, cancellationToken: cancellationToken),
                     AppMessages.Chat.Found);
         }
-        else if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            return ApiResponse<ChannelResponse>.FailureResponse(AppMessages.Chat.GroupNameRequired);
-        }
 
-        var channel = new Channel
+        var channel = new ChannelEntity
         {
             Id = Guid.NewGuid(),
             OrganizationId = creator.OrganizationId,
-            Name = request.Type == ChannelType.Group ? request.Name!.Trim() : null,
-            Type = request.Type,
+            Name = null,
+            Type = ChannelType.Direct,
             CreatedBy = createdByUserId,
             CreatedAt = DateTime.UtcNow
         };
 
         await unitOfWork.Channels.AddAsync(channel, cancellationToken);
 
-        var members = memberIds.Select(id => new ChannelMember
+        var members = memberIds.Select(id => new ChannelMemberEntity
         {
             Id = Guid.NewGuid(),
             OrganizationId = creator.OrganizationId,
@@ -102,7 +226,7 @@ public sealed partial class ChannelService(
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<ChannelResponse>.SuccessResponse(
-            await MapChannelAsync(channel, cancellationToken),
+            await MapChannelAsync(channel, cancellationToken: cancellationToken),
             AppMessages.Chat.Created);
     }
 
@@ -154,7 +278,7 @@ public sealed partial class ChannelService(
         if (channel is null || !organizationScope.IsSameOrganization(channel.OrganizationId))
             return ApiResponse<MessageResponse>.FailureResponse(AppMessages.Chat.ChannelNotFound);
 
-        var message = new Message
+        var message = new MessageEntity
         {
             Id = Guid.NewGuid(),
             OrganizationId = channel.OrganizationId,
@@ -211,7 +335,10 @@ public sealed partial class ChannelService(
         return ApiResponse<object>.SuccessResponse(new { }, AppMessages.Chat.MessageDeleted);
     }
 
-    private async Task<ChannelResponse> MapChannelAsync(Channel channel, CancellationToken cancellationToken)
+    private async Task<ChannelResponse> MapChannelAsync(
+        ChannelEntity channel,
+        IReadOnlyDictionary<Guid, DateTime>? latestByChannel = null,
+        CancellationToken cancellationToken = default)
     {
         var members = await unitOfWork.Channels.ListMembersAsync(channel.Id, cancellationToken);
         var memberResponses = new List<ChannelMemberResponse>(members.Count);
@@ -228,16 +355,29 @@ public sealed partial class ChannelService(
                 member.JoinedAt));
         }
 
+        DateTime? lastMessageAt = null;
+        if (latestByChannel is not null && latestByChannel.TryGetValue(channel.Id, out var latest))
+            lastMessageAt = latest;
+        else
+            lastMessageAt = await GetLatestMessageAtAsync(channel.Id, cancellationToken);
+
         return new ChannelResponse(
             channel.Id,
             channel.Name,
             channel.Type,
             channel.CreatedBy,
             channel.CreatedAt,
+            lastMessageAt,
             memberResponses);
     }
 
-    private async Task<MessageResponse> MapMessageAsync(Message message, CancellationToken cancellationToken)
+    private async Task<DateTime?> GetLatestMessageAtAsync(Guid channelId, CancellationToken cancellationToken)
+    {
+        var map = await unitOfWork.Messages.GetLatestCreatedAtByChannelsAsync([channelId], cancellationToken);
+        return map.TryGetValue(channelId, out var latest) ? latest : null;
+    }
+
+    private async Task<MessageResponse> MapMessageAsync(MessageEntity message, CancellationToken cancellationToken)
     {
         var sender = await unitOfWork.Employees.GetByIdAsync(message.SenderId, cancellationToken: cancellationToken);
         var senderName = sender is null ? "Unknown" : $"{sender.FirstName} {sender.LastName}".Trim();

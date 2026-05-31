@@ -2,6 +2,8 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Auth;
 using Wokki.Application.Services.Auth;
 using Wokki.Application.Services.Auth.Interfaces;
+using Wokki.Application.Services.Chat.Interfaces;
+using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.OrganizationSubscription.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -18,7 +20,9 @@ public sealed class AuthService(
     IPasswordHasher passwordHasher,
     IOrganizationSubscriptionService organizationSubscription,
     ITransactionalEmailSender emailSender,
-    IAuthOtpStore otpStore) : IAuthService
+    IAuthOtpStore otpStore,
+    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner,
+    IOrgChannelService orgChannelService) : IAuthService
 {
     private readonly IPasswordHasher _passwordHasher = passwordHasher;
 
@@ -83,6 +87,12 @@ public sealed class AuthService(
             await unitOfWork.Organizations.AddAsync(organization, cancellationToken);
             await unitOfWork.Users.AddAsync(user, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var adminEmployee = await orgAdminEmployeeProvisioner.EnsureAsync(user, cancellationToken);
+            await orgChannelService.EnsureOrgChannelAsync(organization.Id, user.Id, cancellationToken);
+            if (adminEmployee is not null)
+                await orgChannelService.EnsureMemberAsync(organization.Id, adminEmployee.Id, cancellationToken);
+
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
         catch

@@ -16,6 +16,15 @@ public sealed class UserRepository(AppDbContext context) : IUserRepository
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) =>
         await context.Users.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
 
+    public async Task<User?> GetOldestByOrganizationIdAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default) =>
+        await context.Users
+            .AsNoTracking()
+            .Where(u => u.OrganizationId == organizationId)
+            .OrderBy(u => u.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<(IReadOnlyList<User> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,

@@ -4,6 +4,7 @@ using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Mappings.Employees;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Common.Utils;
+using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
@@ -13,7 +14,8 @@ namespace Wokki.Application.Services.Employee.Implementations;
 
 public sealed class EmployeeSelfProfileService(
     IUnitOfWork unitOfWork,
-    IImageStorageService imageStorage) : IEmployeeSelfProfileService
+    IImageStorageService imageStorage,
+    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner) : IEmployeeSelfProfileService
 {
     private const long MaxPaymentQrBytes = 5 * 1024 * 1024;
 
@@ -21,7 +23,8 @@ public sealed class EmployeeSelfProfileService(
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken)
+                       ?? await orgAdminEmployeeProvisioner.EnsureByUserIdAsync(userId, cancellationToken);
         if (employee is null)
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Self.NoEmployeeProfile);
 
@@ -127,7 +130,8 @@ public sealed class EmployeeSelfProfileService(
                    ?? throw new InvalidOperationException($"User {employee.UserId} not found for employee {employee.Id}.");
 
         DepartmentEntity? department = null;
-        if (employee.DepartmentId.HasValue)
+        if (!string.Equals(user.Role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase)
+            && employee.DepartmentId.HasValue)
             department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         LocationEntity? location = null;
         if (department is not null)

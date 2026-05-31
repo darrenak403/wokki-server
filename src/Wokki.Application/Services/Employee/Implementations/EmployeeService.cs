@@ -3,6 +3,7 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Mappings.Employees;
 using Wokki.Application.Services.Employee.Interfaces;
+using Wokki.Application.Services.Chat.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -20,6 +21,8 @@ public sealed class EmployeeService(
     IUnitOfWork unitOfWork,
     IPasswordHasher passwordHasher,
     IOrganizationScopeService organizationScope,
+    IOrgChannelService orgChannelService,
+    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner,
     ICurrentUserService currentUser) : IEmployeeService
 {
     public async Task<ApiResponse<EmployeeResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -112,6 +115,20 @@ public sealed class EmployeeService(
             var linkedEmployee = await unitOfWork.Employees.GetByUserIdAsync(existingUser.Id, cancellationToken);
             if (linkedEmployee is not null)
                 return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.UserAlreadyLinked);
+
+            if (string.Equals(existingUser.Role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase))
+            {
+                var provisioned = await orgAdminEmployeeProvisioner.EnsureAsync(existingUser, cancellationToken);
+                if (provisioned is null)
+                    return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Employee.NotFound);
+
+                var adminCreateData = new CreateEmployeeResponse(
+                    provisioned.Id,
+                    existingUser.Id,
+                    existingUser.Email,
+                    string.Empty);
+                return ApiResponse<CreateEmployeeResponse>.SuccessResponse(adminCreateData, AppMessages.Employee.Created);
+            }
         }
 
         var requiresDepartment = request.Role == RoleConstants.User;
@@ -152,7 +169,8 @@ public sealed class EmployeeService(
         };
 
         user.PasswordHash = passwordHasher.HashPassword(temporaryPassword);
-        user.Role = request.Role;
+        if (!string.Equals(existingUser?.Role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase))
+            user.Role = request.Role;
         user.MustChangePassword = string.IsNullOrWhiteSpace(request.Password);
 
         var employee = request.ToEntity(user.Id, organizationId);
@@ -209,6 +227,9 @@ public sealed class EmployeeService(
             throw;
         }
 
+        await orgChannelService.EnsureOrgChannelAsync(organizationId, user.Id, cancellationToken);
+        await orgChannelService.EnsureMemberAsync(organizationId, employee.Id, cancellationToken);
+
         var data = new CreateEmployeeResponse(employee.Id, user.Id, user.Email, temporaryPassword);
         return ApiResponse<CreateEmployeeResponse>.SuccessResponse(data, AppMessages.Employee.Created);
     }
@@ -221,6 +242,11 @@ public sealed class EmployeeService(
         var employee = await unitOfWork.Employees.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
         if (employee is null || employee.TerminatedAt is not null || !organizationScope.IsSameOrganization(employee.OrganizationId))
             return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.NotFound);
+
+        var linkedUser = await unitOfWork.Users.GetByIdAsync(employee.UserId, cancellationToken: cancellationToken);
+        if (linkedUser is not null
+            && string.Equals(linkedUser.Role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase))
+            return ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Employee.OrgAdminNoDepartment);
 
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
         if (department is null || !department.IsActive || department.OrganizationId != employee.OrganizationId)
@@ -262,6 +288,7 @@ public sealed class EmployeeService(
         employee.TerminatedAt = DateTime.UtcNow;
         unitOfWork.Employees.Update(employee);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        await orgChannelService.RemoveMemberAsync(employee.OrganizationId, employee.Id, cancellationToken);
 
         return ApiResponse<object>.SuccessResponse(new { }, AppMessages.Employee.Deleted);
     }
@@ -272,7 +299,8 @@ public sealed class EmployeeService(
                    ?? throw new InvalidOperationException($"User {employee.UserId} not found for employee {employee.Id}.");
 
         DepartmentEntity? department = null;
-        if (employee.DepartmentId.HasValue)
+        if (!string.Equals(user.Role, RoleConstants.Admin, StringComparison.OrdinalIgnoreCase)
+            && employee.DepartmentId.HasValue)
             department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         LocationEntity? location = null;
         if (department is not null)

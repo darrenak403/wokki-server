@@ -51,7 +51,8 @@ public static class PipelineExtensions
         app.UseMiddleware<Middleware.OrganizationContextMiddleware>();
         app.UseAuthorization();
 
-        app.MapHub<ChatHub>("/ws/chat");
+        app.MapHub<ChatHub>("/ws/chat")
+            .RequireCors(CorsSettings.FrontendPolicy);
 
         return app;
     }

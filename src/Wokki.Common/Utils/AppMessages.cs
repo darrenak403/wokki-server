@@ -64,6 +64,10 @@ public static class AppMessages
         public static readonly AppMessage ManagerLocationsRequired = new("EMPLOYEE_MANAGER_LOCATIONS_REQUIRED", "At least one branch must be assigned when creating a Manager.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage ManagerLocationNotFound = new("EMPLOYEE_MANAGER_LOCATION_NOT_FOUND", "One or more assigned branches were not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage DepartmentMembershipsListed = new("EMPLOYEE_DEPT_MEMBERSHIPS_LISTED", "Employee department membership history listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgAdminNoDepartment = new(
+            "EMPLOYEE_ORG_ADMIN_NO_DEPARTMENT",
+            "Org Admin is not assigned to a branch department.",
+            StatusCodes.Status400BadRequest);
     }
 
     public static class Self
@@ -215,7 +219,10 @@ public static class AppMessages
         public static readonly AppMessage MembersRequired = new("CHAT_MEMBERS_REQUIRED", "At least one member is required.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MemberNotFound = new("CHAT_MEMBER_NOT_FOUND", "One or more members were not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage DirectRequiresTwoMembers = new("CHAT_DIRECT_TWO_MEMBERS", "Direct channels require exactly two members.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CannotMessageSelf = new("CHAT_CANNOT_MESSAGE_SELF", "You cannot start a direct chat with yourself.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage GroupNameRequired = new("CHAT_GROUP_NAME_REQUIRED", "Group channels require a name.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage GroupNotAllowed = new("CHAT_GROUP_NOT_ALLOWED", "Custom group channels are not allowed.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage OrgMembersListed = new("CHAT_ORG_MEMBERS_LISTED", "Organization chat members listed.", StatusCodes.Status200OK);
         public static readonly AppMessage BodyRequired = new("CHAT_BODY_REQUIRED", "Message body is required.", StatusCodes.Status400BadRequest);
     }
 
