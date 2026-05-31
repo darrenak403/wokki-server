@@ -1,11 +1,6 @@
-# Build & push wokki-backend to Docker Hub (or compatible registry).
-#
-# Required GitHub repository secrets:
-#   DOCKER_USERNAME — Docker Hub / registry username
-#   DOCKER_PASSWORD — Docker Hub access token or registry password
-#
-# Prod server docker/.env: set DOCKER_USERNAME (same value) for compose image name.
-# Dokploy injects env at deploy — no docker/.env file required on server.
+# Build & push wokki-backend to Docker Hub.
+# GitHub repo secrets (chỉ 2): DOCKER_USERNAME, DOCKER_PASSWORD
+# Mọi config runtime khác → env Dokploy / docker/.env
 
 name: Docker publish
 
