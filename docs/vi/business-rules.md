@@ -57,28 +57,20 @@ Tham chiếu: [process-flows.md](./process-flows.md), [api-catalog.md](./api-cat
 
 ---
 
-## Đổi ca (Swap)
+## Bảng tin đổi ca (chỉ Draft)
 
 | ID | Quy tắc | Thực thi |
 |----|---------|---------|
-| BR-030 | Chỉ đổi ca trên phân ca thuộc lịch **`Published`**. | `CreateAsync` |
-| BR-031 | Người gửi phải sở hữu phân ca đề xuất. | `NotOwner` |
-| BR-032 | Không đổi ca với chính mình. | `SameEmployee` |
-| BR-033 | Tối đa một yêu cầu `Pending` cho mỗi phân ca gửi. | `HasOpenSwapForAssignmentAsync` |
-| BR-034 | **Cutoff** (múi giờ location): ca tuần sau — tạo trước hết thứ Sáu; accept/decline trước 00:00 thứ Hai. | `SwapCutoffRules` |
-| BR-035 | Chuyển trạng thái hợp lệ; không hợp lệ → **409**. | Guard từng action |
-| BR-036 | Khi đồng nghiệp **accept**: `Pending` → `PeerAccepted` → đổi phân ca **trong một transaction** → `ManagerApproved`. | `AcceptAsync` |
-| BR-037 | Thông báo (`swap.*`, `schedule.published`) **không** được làm rollback transaction chính nếu gửi thất bại. | try/catch `INotificationService` |
+| BR-030 | Marketplace chỉ hoạt động khi lịch **`Draft`**. Lịch **Published** khóa mọi đổi ca. | `SwapPostService`, `PublishAsync` |
+| BR-031 | Khi **publish**, mọi bài `Pending` → **`Hidden`** (giữ DB, ẩn feed). | `HidePendingByScheduleAsync` |
+| BR-032 | Phạm vi feed: cùng **chi nhánh** + **phòng ban**. | `ListFeedAsync`, scope validators |
+| BR-033 | **`Cover`**: nhường ca — người nhận chỉ bấm nhận nếu lịch còn **chỗ trống** (không chọn ca của mình). **`CrossSwap`**: đổi chéo — người nhận **chọn ca của họ** để hoán đổi. | `SwapPostType`, `AcceptAsync` |
+| BR-034 | **FCFS** — ai accept hợp lệ trước thắng; không cần Admin duyệt. | Row lock + transaction |
+| BR-035 | Accept kiểm tra policy org (role, trùng ca, nghỉ, max ca/ngày/tuần). | `SwapPostPolicyValidator` |
+| BR-036 | **Admin/Manager** chỉ xem audit; không đăng/nhận trên feed. | Role guards |
+| BR-037 | Email `swap_post.completed` **không** rollback transaction nếu SMTP lỗi. | try/catch |
 
-### Chuyển trạng thái swap (cho phép)
-
-| Từ | Hành động | Đến |
-|----|-----------|-----|
-| `Pending` | Đối tác accept | `ManagerApproved` (auto-apply) |
-| `Pending` | Đối tác decline | `PeerDeclined` |
-| `Pending` | Người gửi cancel | `Cancelled` |
-| `Pending` | Manager override approve | `ManagerApproved` |
-| `Pending` | Manager override reject | `ManagerRejected` |
+Bảng `swap_requests` cũ giữ read-only; API `/api/v1/swap-requests` đã gỡ.
 
 ---
 

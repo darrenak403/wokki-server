@@ -13,6 +13,12 @@ public sealed class ScheduleRepository(AppDbContext context) : IScheduleReposito
         return await query.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 
+    public async Task<Schedule?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await context.Schedules
+            .FromSqlInterpolated($"""SELECT * FROM schedules WHERE "Id" = {id} FOR UPDATE""")
+            .AsTracking()
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<Schedule?> GetByDepartmentAndWeekAsync(
         Guid departmentId,
         DateOnly weekStartDate,

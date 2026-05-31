@@ -17,7 +17,7 @@ using Wokki.Api.Apis.Payroll;
 using Wokki.Api.Apis.Schedules;
 using Wokki.Api.Apis.ScheduleLeaveRequest;
 using Wokki.Api.Apis.Shifts;
-using Wokki.Api.Apis.SwapRequests;
+using Wokki.Api.Apis.SwapPosts;
 using Wokki.Api.Apis.Users;
 using Wokki.Api.Apis.Organization;
 using Wokki.Api.Apis.Platform;
@@ -86,7 +86,7 @@ public static class PipelineExtensions
         app.MapScheduleApi();
         app.MapScheduleLeaveRequestApi();
         app.MapEmployeeSelfApi();
-        app.MapSwapRequestApi();
+        app.MapSwapPostApi();
         app.MapAttendanceApi();
         app.MapPayrollApi();
         app.MapChannelApi();

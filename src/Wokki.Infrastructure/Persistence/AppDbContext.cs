@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Schedule> Schedules => Set<Schedule>();
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<SwapRequest> SwapRequests => Set<SwapRequest>();
+    public DbSet<SwapPost> SwapPosts => Set<SwapPost>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
     public DbSet<PayPeriod> PayPeriods => Set<PayPeriod>();
     public DbSet<PayrollLine> PayrollLines => Set<PayrollLine>();

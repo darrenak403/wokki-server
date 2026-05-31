@@ -6,15 +6,16 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Dtos.Employee;
 using Wokki.Application.Dtos.Schedule;
-using Wokki.Application.Dtos.SwapRequest;
+using Wokki.Application.Dtos.SwapPost;
 using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
-using Wokki.Application.Services.SwapRequest.Interfaces;
+using Wokki.Application.Services.SwapPost.Interfaces;
 using Wokki.Application.Validators.Employee;
 using Wokki.Application.Validators.Schedule;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
+using Wokki.Domain.Enums;
 
 namespace Wokki.Api.Apis.EmployeeSelf;
 
@@ -58,11 +59,19 @@ public static class EmployeeSelfEndpoints
 
     public static RouteGroupBuilder MapEmployeeSelfRoutes(this RouteGroupBuilder group)
     {
-        group.MapGet("/swap-requests", GetMySwapRequestsAsync)
-            .WithName("GetMySwapRequests")
-            .WithDescription("Yêu cầu đổi ca gửi/nhận của nhân viên đang đăng nhập.")
+        group.MapGet("/swap-posts/feed", GetMySwapPostFeedAsync)
+            .WithName("GetMySwapPostFeed")
+            .WithDescription("Bảng tin đổi ca phòng ban (alias self-service).")
             .RequireAuthorization()
-            .Produces<ApiResponse<IReadOnlyList<SwapRequestResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<PagedResponse<SwapPostResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/swap-posts/mine", GetMySwapPostsAsync)
+            .WithName("GetMySwapPosts")
+            .WithDescription("Bài đổi ca của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<PagedResponse<SwapPostResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
@@ -71,6 +80,15 @@ public static class EmployeeSelfEndpoints
             .WithDescription("Lịch ca của nhân viên đang đăng nhập (4 tuần tới).")
             .RequireAuthorization()
             .Produces<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/schedule/draft/{weekStartDate}/assignments", GetMyDraftWeekAssignmentsAsync)
+            .WithName("GetMyDraftWeekAssignments")
+            .WithDescription("Phân ca Draft của nhân viên cho tuần (thứ Hai weekStartDate yyyy-MM-dd).")
+            .RequireAuthorization()
+            .Produces<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
@@ -167,15 +185,48 @@ public static class EmployeeSelfEndpoints
         return group;
     }
 
-    private static async Task<IResult> GetMySwapRequestsAsync(
-        [FromServices] ISwapRequestService service,
-        [FromServices] ICurrentUserService currentUser,
+    private static async Task<IResult> GetMySwapPostFeedAsync(
+        [FromQuery] Guid scheduleId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromServices] ISwapPostService service = null!,
+        [FromServices] ICurrentUserService currentUser = null!,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<PagedResponse<SwapPostResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.ListFeedAsync(
+            scheduleId,
+            currentUser.UserId.Value,
+            currentUser.Role,
+            page,
+            pageSize,
+            cancellationToken);
+
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMySwapPostsAsync(
+        [FromQuery] Guid? scheduleId,
+        [FromQuery] SwapPostStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromServices] ISwapPostService service = null!,
+        [FromServices] ICurrentUserService currentUser = null!,
         CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
-            return Results.Json(ApiResponse<IReadOnlyList<SwapRequestResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+            return Results.Json(ApiResponse<PagedResponse<SwapPostResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
-        var response = await service.ListMineAsync(currentUser.UserId.Value, cancellationToken);
+        var response = await service.ListMineAsync(
+            currentUser.UserId.Value,
+            scheduleId,
+            status,
+            page,
+            pageSize,
+            cancellationToken);
+
         return response.ToHttpResult();
     }
 
@@ -188,6 +239,25 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.GetMyScheduleAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyDraftWeekAssignmentsAsync(
+        [FromRoute] string weekStartDate,
+        [FromServices] IScheduleService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!DateOnly.TryParse(weekStartDate, out var parsedWeekStartDate))
+            return Results.Json(ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.WeekNotMonday), statusCode: 400);
+
+        var response = await service.GetMyDraftWeekAssignmentsAsync(
+            currentUser.UserId.Value,
+            parsedWeekStartDate,
+            cancellationToken);
         return response.ToHttpResult();
     }
 

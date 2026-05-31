@@ -1081,6 +1081,85 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.ToTable("shift_definitions", (string)null);
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.SwapPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcceptedByEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AcceptorAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AcceptedByEmployeeId");
+
+                    b.HasIndex("AcceptorAssignmentId");
+
+                    b.HasIndex("AuthorAssignmentId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_swap_posts_author_assignment_pending_unique")
+                        .HasFilter("\"Status\" = 0");
+
+                    b.HasIndex("AuthorEmployeeId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("LocationId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ScheduleId", "DepartmentId", "Status");
+
+                    b.ToTable("swap_posts", (string)null);
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.SwapRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1627,6 +1706,55 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.HasOne("Wokki.Domain.Entities.Organization", null)
                         .WithMany()
                         .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.SwapPost", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("AcceptedByEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Wokki.Domain.Entities.ShiftAssignment", null)
+                        .WithMany()
+                        .HasForeignKey("AcceptorAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Wokki.Domain.Entities.ShiftAssignment", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Location", null)
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Schedule", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

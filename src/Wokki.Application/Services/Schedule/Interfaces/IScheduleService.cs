@@ -40,6 +40,10 @@ public interface IScheduleService
     Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyScheduleAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
+    Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyDraftWeekAssignmentsAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default);
     Task<ApiResponse<ScheduleSuggestionsResponse>> SuggestAsync(
         Guid scheduleId,
         SuggestScheduleRequest request,

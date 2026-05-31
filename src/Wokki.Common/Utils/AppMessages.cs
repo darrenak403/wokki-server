@@ -153,6 +153,7 @@ public static class AppMessages
         public static readonly AppMessage EmployeeWrongLocation = new("SCHEDULE_EMPLOYEE_WRONG_LOCATION", "Employee does not have an active membership in this schedule location.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage ShiftWrongScope = new("SCHEDULE_SHIFT_WRONG_SCOPE", "Shift definition does not apply to this schedule.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MyScheduleListed = new("ME_SCHEDULE_LISTED", "Your schedule listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage MyDraftWeekAssignmentsListed = new("ME_DRAFT_WEEK_ASSIGNMENTS_LISTED", "Draft week assignments listed.", StatusCodes.Status200OK);
         public static readonly AppMessage NoEmployeeProfile = new("ME_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
         public static readonly AppMessage SuggestionsGenerated = new("SCHEDULE_SUGGESTIONS_GENERATED", "Schedule suggestions generated.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsApplied = new("SCHEDULE_SUGGESTIONS_APPLIED", "Schedule suggestions applied.", StatusCodes.Status200OK);
@@ -239,6 +240,37 @@ public static class AppMessages
         public static readonly AppMessage OpenSwapExists = new("SWAP_OPEN_EXISTS", "A pending swap already exists for this assignment.", StatusCodes.Status409Conflict);
         public static readonly AppMessage PeerAcceptedExists = new("SWAP_PEER_ACCEPTED_EXISTS", "Another swap is already accepted for this assignment.", StatusCodes.Status409Conflict);
         public static readonly AppMessage NoEmployeeProfile = new("SWAP_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+    }
+
+    public static class SwapPost
+    {
+        public static readonly AppMessage Found = new("SWAP_POST_FOUND", "Swap post found.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("SWAP_POST_LISTED", "Swap posts listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Created = new("SWAP_POST_CREATED", "Swap post created.", StatusCodes.Status201Created);
+        public static readonly AppMessage Accepted = new("SWAP_POST_ACCEPTED", "Swap post accepted and applied.", StatusCodes.Status200OK);
+        public static readonly AppMessage Cancelled = new("SWAP_POST_CANCELLED", "Swap post cancelled.", StatusCodes.Status200OK);
+        public static readonly AppMessage PreviewValid = new("SWAP_POST_PREVIEW_VALID", "Swap post accept preview is valid.", StatusCodes.Status200OK);
+        public static readonly AppMessage AuditListed = new("SWAP_POST_AUDIT_LISTED", "Swap post audit entries listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("SWAP_POST_NOT_FOUND", "Swap post not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("SWAP_POST_FORBIDDEN", "You are not allowed to access this swap post.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage OpenExists = new("SWAP_POST_OPEN_EXISTS", "A pending swap post already exists for this assignment.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyTaken = new("SWAP_POST_ALREADY_TAKEN", "This swap post is no longer available.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage StaleAssignment = new("SWAP_POST_STALE_ASSIGNMENT", "The offered assignment is no longer valid for this swap post.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ScopeMismatch = new("SWAP_POST_SCOPE_MISMATCH", "Swap post is outside your branch or department scope.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage SelfAccept = new("SWAP_POST_SELF_ACCEPT", "You cannot accept your own swap post.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AcceptorAssignmentRequired = new("SWAP_POST_ACCEPTOR_ASSIGNMENT_REQUIRED", "An acceptor assignment is required for cross-swap posts.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CoverAcceptorAssignmentNotAllowed = new("SWAP_POST_COVER_ACCEPTOR_ASSIGNMENT_NOT_ALLOWED", "Cover posts do not take an acceptor assignment — only cross-swap does.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CoverNoOpenSlot = new("SWAP_POST_COVER_NO_OPEN_SLOT", "You cannot take this cover shift because your schedule has no open slot (conflict, rest, or shift cap).", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AcceptorAssignmentHasOpenPost = new("SWAP_POST_ACCEPTOR_ASSIGNMENT_HAS_OPEN_POST", "The selected assignment already has a pending swap post.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage PolicyRoleMismatch = new("SWAP_POST_POLICY_ROLE_MISMATCH", "Swap would violate role match policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyRestConflict = new("SWAP_POST_POLICY_REST_CONFLICT", "Swap would violate rest between shifts policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyWeeklyCap = new("SWAP_POST_POLICY_WEEKLY_CAP", "Swap would violate weekly shift cap policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyDailyCap = new("SWAP_POST_POLICY_DAILY_CAP", "Swap would violate daily shift cap policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyOverlap = new("SWAP_POST_POLICY_OVERLAP", "Swap would cause a shift overlap or duplicate assignment.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage NoEmployeeProfile = new("SWAP_POST_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ManagerNotAllowed = new("SWAP_POST_MANAGER_NOT_ALLOWED", "Managers and admins cannot participate in the swap marketplace.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage AssignmentNotFound = new("SWAP_POST_ASSIGNMENT_NOT_FOUND", "Shift assignment not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ScheduleNotDraft = new("SWAP_POST_SCHEDULE_NOT_DRAFT", "Swap marketplace is only available while the schedule is draft.", StatusCodes.Status400BadRequest);
     }
 
     public static class Attendance

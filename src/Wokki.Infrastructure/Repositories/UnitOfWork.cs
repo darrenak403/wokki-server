@@ -15,6 +15,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IScheduleRepository? _schedules;
     private IShiftAssignmentRepository? _shiftAssignments;
     private ISwapRequestRepository? _swapRequests;
+    private ISwapPostRepository? _swapPosts;
+    private IAuditLogRepository? _auditLogs;
     private IAttendanceRepository? _attendance;
     private IPayPeriodRepository? _payPeriods;
     private IPayrollLineRepository? _payrollLines;
@@ -40,6 +42,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IScheduleRepository Schedules => _schedules ??= new ScheduleRepository(context);
     public IShiftAssignmentRepository ShiftAssignments => _shiftAssignments ??= new ShiftAssignmentRepository(context);
     public ISwapRequestRepository SwapRequests => _swapRequests ??= new SwapRequestRepository(context);
+    public ISwapPostRepository SwapPosts => _swapPosts ??= new SwapPostRepository(context);
+    public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(context);
     public IAttendanceRepository Attendance => _attendance ??= new AttendanceRepository(context);
     public IPayPeriodRepository PayPeriods => _payPeriods ??= new PayPeriodRepository(context);
     public IPayrollLineRepository PayrollLines => _payrollLines ??= new PayrollLineRepository(context);

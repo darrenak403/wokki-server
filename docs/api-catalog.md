@@ -96,24 +96,26 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | POST   | `/self/leave-requests` | Submit draft-week leave request (shift + date + reason) |
 | GET    | `/self/leave-requests` | List own leave requests (`?scheduleId=` optional) |
 | DELETE | `/self/leave-requests/{id}` | Cancel pending leave request |
-| GET    | `/self/swap-requests` | Swap requests sent/received                  |
+| GET    | `/self/schedule/draft/{weekStartDate}/assignments` | Own Draft-week assignments (swap create/accept picker) |
+| GET    | `/self/swap-posts/feed` | Swap marketplace feed (Draft schedule; `?scheduleId=`) |
+| GET    | `/self/swap-posts/mine` | Own swap posts (`?scheduleId=`, `?status=`) |
 | GET    | `/self/attendance`    | Own attendance history                       |
 | GET    | `/self/profile`       | Own employee profile (name, phone, org context) |
 | PUT    | `/self/profile`       | Update own profile: name, phone, bank account fields; optional `removePaymentQr` |
 | POST   | `/self/profile/payment-qr` | Upload payment QR image (multipart `file`, Cloudinary, max 5MB) |
 
-## Swap requests (`/api/v1/swap-requests`)
+## Swap marketplace (`/api/v1/swap-posts`)
 
-| Method | Path                     | Roles            | Description           |
-| ------ | ------------------------ | ---------------- | --------------------- |
-| POST   | `/`                      | User             | Create swap           |
-| GET    | `/`                      | Admin, Manager   | List (filters)        |
-| GET    | `/{id}`                  | Authenticated    | Detail (access rules) |
-| POST   | `/{id}/accept`           | User (target)    | Accept + auto-apply   |
-| POST   | `/{id}/decline`          | User (target)    | Decline               |
-| POST   | `/{id}/cancel`           | User (requester) | Cancel                |
-| POST   | `/{id}/override-approve` | Admin, Manager   | Manager override      |
-| POST   | `/{id}/override-reject`  | Admin, Manager   | Manager override      |
+| Method | Path | Roles | Description |
+| ------ | ---- | ----- | ----------- |
+| GET | `/feed` | User | Pending posts for department (`?scheduleId=`) |
+| GET | `/mine` | User | Own posts |
+| POST | `/` | User | Create Cover or CrossSwap post |
+| GET | `/{id}` | Authenticated | Detail |
+| POST | `/{id}/accept` | User | FCFS accept (CrossSwap: body `acceptorAssignmentId`) |
+| POST | `/{id}/accept/preview` | User | Dry-run policy validation |
+| POST | `/{id}/cancel` | User (author) | Cancel Pending post |
+| GET | `/audit` | Admin, Manager | Completed swap log |
 
 ## Attendance (`/api/v1/attendance`)
 

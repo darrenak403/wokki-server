@@ -81,24 +81,32 @@ Khác `GET /api/v1/auth/me` (tài khoản đăng nhập). Các route này cần 
 | GET    | `/self/schedule-preferences/{scheduleId}` | Đăng ký ca của mình (Draft/Submitted) |
 | PUT    | `/self/schedule-preferences/{scheduleId}` | Lưu dòng đăng ký (chỉ lịch Draft) |
 | POST   | `/self/schedule-preferences/{scheduleId}/submit` | Gửi đăng ký cho Admin (chỉ lịch Draft) |
-| GET    | `/self/swap-requests`      | Yêu cầu đổi ca gửi/nhận                                                     |
+| GET    | `/self/schedule/draft/{weekStartDate}/assignments` | Phân ca Draft của mình trong tuần (đăng/accept đổi ca) |
+| GET    | `/self/swap-posts/feed`    | Bảng tin đổi ca (`?scheduleId=`, lịch Draft)                                  |
+| GET    | `/self/swap-posts/mine`    | Bài đổi ca của mình (`?scheduleId=`, `?status=`)                              |
 | GET    | `/self/attendance`         | Lịch sử chấm công                                                           |
 | GET    | `/self/profile`            | Hồ sơ nhân viên của user đang đăng nhập                                     |
 | PUT    | `/self/profile`            | Cập nhật hồ sơ: họ tên, SĐT, STK ngân hàng; `removePaymentQr` để xóa ảnh QR |
 | POST   | `/self/profile/payment-qr` | Upload ảnh QR chuyển khoản (multipart `file`, Cloudinary, tối đa 5MB)       |
 
-## Đổi ca (`/api/v1/swap-requests`)
+## Bảng tin đổi ca (`/api/v1/swap-posts`)
 
-| Method | Path                     | Vai trò          | Mô tả                   |
-| ------ | ------------------------ | ---------------- | ----------------------- |
-| POST   | `/`                      | User             | Tạo yêu cầu             |
-| GET    | `/`                      | Admin, Manager   | Danh sách (lọc)         |
-| GET    | `/{id}`                  | Đã đăng nhập     | Chi tiết (theo quyền)   |
-| POST   | `/{id}/accept`           | User (đối tác)   | Chấp nhận + auto đổi ca |
-| POST   | `/{id}/decline`          | User (đối tác)   | Từ chối                 |
-| POST   | `/{id}/cancel`           | User (người gửi) | Hủy                     |
-| POST   | `/{id}/override-approve` | Admin, Manager   | Manager duyệt           |
-| POST   | `/{id}/override-reject`  | Admin, Manager   | Manager từ chối         |
+Chỉ khi lịch tuần **`Draft`**. FCFS — accept áp dụng ngay; publish ẩn bài Pending.
+
+| Method | Path                     | Vai trò          | Mô tả                                      |
+| ------ | ------------------------ | ---------------- | ------------------------------------------ |
+| GET    | `/feed`                  | User             | Bài Pending cùng phòng ban (`?scheduleId=`) |
+| GET    | `/mine`                  | User             | Bài của mình                               |
+| POST   | `/`                      | User             | Đăng Cover hoặc CrossSwap                  |
+| GET    | `/{id}`                  | Đã đăng nhập     | Chi tiết                                   |
+| POST   | `/{id}/accept`           | User             | Nhận ca / đổi chéo (body `acceptorAssignmentId` nếu CrossSwap) |
+| POST   | `/{id}/accept/preview`   | User             | Kiểm tra policy trước accept               |
+| POST   | `/{id}/cancel`           | User (tác giả)   | Huỷ bài Pending                            |
+| GET    | `/audit`                 | Admin, Manager   | Nhật ký đã hoàn thành                      |
+
+Alias self: `GET /self/swap-posts/feed`, `GET /self/swap-posts/mine`.
+
+API cũ `/api/v1/swap-requests` đã gỡ. Chi tiết FE: [fe/swap-marketplace-handoff.md](../fe/swap-marketplace-handoff.md).
 
 ## Chấm công (`/api/v1/attendance`)
 

@@ -11,6 +11,8 @@ public interface IUnitOfWork : IAsyncDisposable
     IScheduleRepository Schedules { get; }
     IShiftAssignmentRepository ShiftAssignments { get; }
     ISwapRequestRepository SwapRequests { get; }
+    ISwapPostRepository SwapPosts { get; }
+    IAuditLogRepository AuditLogs { get; }
     IAttendanceRepository Attendance { get; }
     IPayPeriodRepository PayPeriods { get; }
     IPayrollLineRepository PayrollLines { get; }

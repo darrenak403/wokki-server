@@ -252,7 +252,7 @@ Detailed diagrams: **[process-flows.md](./process-flows.md)**.
 | Location, Department            | Org structure                       |
 | ShiftDefinition                 | Shift template                      |
 | Schedule, ShiftAssignment       | Weekly plan                         |
-| SwapRequest                     | Swap workflow                       |
+| SwapPost                        | Draft-only swap marketplace (Cover/CrossSwap, FCFS) |
 | AttendanceRecord                | Time tracking                       |
 | PayPeriod, PayrollLine          | Payroll                             |
 | Channel, ChannelMember, Message | Chat                                |

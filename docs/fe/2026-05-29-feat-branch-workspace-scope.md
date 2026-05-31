@@ -13,7 +13,9 @@
 - `GET /api/v1/employees?locationId=&departmentId=` — list employees; Manager sees only employees with Active branch membership in assigned branches.
 - `GET /api/v1/schedules?departmentId=&weekStartDate=` — list schedules; Manager is server-scoped.
 - `GET /api/v1/attendance?employeeId=&fromDate=&toDate=` — list attendance; Manager is server-scoped.
-- `GET /api/v1/swap-requests?status=&departmentId=&weekStartDate=` — list swap requests; Manager is server-scoped.
+> **Swap (2026-05-31):** `/api/v1/swap-requests` removed. Use `/api/v1/swap-posts` and [swap-marketplace-handoff.md](./swap-marketplace-handoff.md). Ignore swap-request lines below.
+
+- `GET /api/v1/swap-posts/audit?locationId=&weekStartDate=` — completed swap log; Admin/Manager.
 - `GET /api/v1/overtime-requests?departmentId=&month=&year=` — list OT requests; Manager is server-scoped.
 - `GET /api/v1/overtime-requests/pending?departmentId=` — pending OT requests; Manager is server-scoped.
 - `POST /api/v1/channels` — create chat channel; Manager may include only employees in managed branches.
@@ -261,7 +263,7 @@ The following list endpoints are now server-scoped for Manager even when FE omit
 |----------|--------------|
 | `GET /api/v1/schedules` | `page`, `pageSize`, `departmentId`, `weekStartDate` |
 | `GET /api/v1/attendance` | `page`, `pageSize`, `employeeId`, `fromDate`, `toDate` |
-| `GET /api/v1/swap-requests` | `page`, `pageSize`, `status`, `departmentId`, `weekStartDate` |
+| ~~`GET /api/v1/swap-requests`~~ | Superseded — `GET /api/v1/swap-posts/audit` |
 | `GET /api/v1/overtime-requests` | `departmentId`, `month`, `year`, `page`, `pageSize` |
 | `GET /api/v1/overtime-requests/pending` | `departmentId`, `page`, `pageSize` |
 

@@ -13,7 +13,7 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 | BR-001 | Roles are fixed: `Admin`, `Manager`, `User`, and platform-only `PlatformOperator`. No dynamic permission matrix in MVP. | JWT claims + endpoint `RequireRole` |
 | BR-002 | `User` may not access manager schedule APIs (`/api/v1/schedules/*` except via published data indirectly). Own schedule only via `/api/v1/self/schedule`. | Route authorization |
 | BR-003 | `Admin` may manage users, payroll export, and soft-delete any chat message. | `ChannelService`, `PayrollEndpoints` |
-| BR-004 | `Manager` may manage schedules, assignments, swap overrides, attendance adjust, and create chat channels. | Route authorization |
+| BR-004 | `Manager` may manage schedules, assignments, swap audit, attendance adjust, and create chat channels. | Route authorization |
 | BR-005 | Every employee-facing action requires an `Employee` row linked to the authenticated `User`. | Services return `*_NO_EMPLOYEE` / 404 |
 | BR-006 | `Admin` has full branch scope **within their organization** and may list/manage all `Location` workspaces in that org. | `LocationScopeService`, `IOrganizationScopeService` |
 | BR-007 | `Manager` scope is only the locations assigned through `LocationManager`. Do not infer Manager access from role alone, user global role, or the Manager's own employee/department memberships. | `LocationScopeService`, scoped list queries |
@@ -57,28 +57,30 @@ Cross-reference: [process-flows.md](./process-flows.md), [api-catalog.md](./api-
 
 ---
 
-## Shift swap
+## Shift swap marketplace (Draft only)
 
 | ID | Rule | Enforcement |
 |----|------|-------------|
-| BR-030 | Swaps allowed only on assignments belonging to **`Published`** schedules. | `SwapRequestService.CreateAsync` |
-| BR-031 | Requester must own the offered assignment. | `NotOwner` |
-| BR-032 | Cannot swap with self. | `SameEmployee` |
-| BR-033 | At most one open (`Pending`) swap per requester assignment. | `HasOpenSwapForAssignmentAsync` |
-| BR-034 | **Cutoff** (location timezone): for next-week shifts, create before Friday end; accept/decline before Monday 00:00. | `SwapCutoffRules` |
-| BR-035 | Valid transitions enforced; invalid → **409**. | Status guards per action |
-| BR-036 | On peer **accept**: `Pending` → `PeerAccepted` → atomic assignment swap → `ManagerApproved` in **one transaction**. | `AcceptAsync` |
-| BR-037 | Notifications (`swap.*`, `schedule.published`) must **not** roll back the core transaction if delivery fails. | try/catch around `INotificationService` |
+| BR-030 | Swap marketplace operates only while the schedule is **`Draft`**. Published schedules lock all swap activity. | `SwapPostService`, `ScheduleService.PublishAsync` |
+| BR-031 | On **publish**, all `Pending` swap posts become **`Hidden`** (retained in DB, not shown on feed). | `HidePendingByScheduleAsync` in publish transaction |
+| BR-032 | Feed scope: same **location** + **department**; employees outside scope cannot view or accept. | `ListFeedAsync`, scope validators |
+| BR-033 | Post types: **`Cover`** (author gives up a shift; accepter takes it only if they have an **open schedule slot** — no acceptor assignment) and **`CrossSwap`** (accepter selects **their** assignment to exchange with the author's). | `SwapPostType`, `AcceptAsync` |
+| BR-034 | **FCFS** open accept — first valid accept wins; no admin approval. | Row lock + `SWAP_POST_ALREADY_TAKEN` |
+| BR-035 | Accept validates enabled org policy: role match, overlap, rest, max shifts/day/week. | `SwapPostPolicyValidator` |
+| BR-036 | **Admin/Manager** read audit log only; they do not create or accept marketplace posts. | Role guards on endpoints |
+| BR-037 | Notifications (`swap_post.completed`, `schedule.published`) must **not** roll back the core transaction if delivery fails. | try/catch around `INotificationService` |
 
-### Swap status transitions (allowed)
+### Swap post status (marketplace)
 
-| From | Action | To |
-|------|--------|-----|
-| `Pending` | Target accept | `ManagerApproved` (via peer accept + auto-apply) |
-| `Pending` | Target decline | `PeerDeclined` |
-| `Pending` | Requester cancel | `Cancelled` |
-| `Pending` | Manager override approve | `ManagerApproved` |
-| `Pending` | Manager override reject | `ManagerRejected` |
+| Status | Meaning |
+|--------|---------|
+| `Pending` | Visible on feed, awaiting accept |
+| `Completed` | Accept applied to Draft assignments |
+| `Hidden` | Schedule published while still pending |
+| `Cancelled` | Author cancelled before accept |
+| `Expired` | Author no longer owns offered assignment |
+
+Legacy table `swap_requests` is retained read-only for historical rows; API `/api/v1/swap-requests` removed.
 
 ---
 

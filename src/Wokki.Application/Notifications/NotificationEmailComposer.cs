@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Wokki.Domain.Enums;
 
 namespace Wokki.Application.Notifications;
 
@@ -12,6 +13,9 @@ public static class NotificationEmailComposer
     {
         if (eventName == "schedule.published" && payload is SchedulePublishedNotificationPayload schedulePayload)
             return ComposeSchedulePublished(schedulePayload);
+
+        if (eventName == "swap_post.completed" && payload is SwapPostCompletedNotificationPayload swapPayload)
+            return ComposeSwapPostCompleted(swapPayload);
 
         return ComposeFallback(eventName, payload);
     }
@@ -67,6 +71,72 @@ public static class NotificationEmailComposer
             </body>
             </html>
             """);
+
+        return new ComposedEmail(subject, plain.ToString().TrimEnd(), html.ToString());
+    }
+
+    private static ComposedEmail ComposeSwapPostCompleted(SwapPostCompletedNotificationPayload payload)
+    {
+        var weekRange = FormatWeekRange(payload.WeekStartDate);
+        var location = string.IsNullOrWhiteSpace(payload.LocationName) ? "chi nhánh" : payload.LocationName.Trim();
+        var department = string.IsNullOrWhiteSpace(payload.DepartmentName) ? "phòng ban" : payload.DepartmentName.Trim();
+        var greetingName = string.IsNullOrWhiteSpace(payload.RecipientFirstName)
+            ? "bạn"
+            : payload.RecipientFirstName.Trim();
+
+        var actionLabel = payload.Type == SwapPostType.Cover ? "nhường ca" : "đổi chéo ca";
+        var subject = $"Wokki: Đổi ca ({actionLabel}) đã hoàn tất";
+
+        var plain = new StringBuilder();
+        plain.AppendLine($"Xin chào {greetingName},");
+        plain.AppendLine();
+        plain.AppendLine($"Yêu cầu {actionLabel} trên lịch Draft tuần {weekRange} tại {location} — {department} đã được áp dụng.");
+        plain.AppendLine();
+        plain.AppendLine($"Ca đưa ra: {FormatVietnameseDayLabel(payload.OfferedShift.Date)} — {payload.OfferedShift.ShiftName} ({FormatTimeRange(payload.OfferedShift.StartTime, payload.OfferedShift.EndTime)})");
+        if (payload.AcceptedShift is not null)
+        {
+            plain.AppendLine($"Ca nhận lại: {FormatVietnameseDayLabel(payload.AcceptedShift.Date)} — {payload.AcceptedShift.ShiftName} ({FormatTimeRange(payload.AcceptedShift.StartTime, payload.AcceptedShift.EndTime)})");
+        }
+
+        plain.AppendLine();
+        plain.AppendLine("Đăng nhập Wokki để xem lịch cập nhật.");
+
+        var html = new StringBuilder();
+        html.Append("""
+            <!DOCTYPE html>
+            <html lang="vi">
+            <head><meta charset="utf-8" /></head>
+            <body style="margin:0;padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#f8fafc;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;">
+            """);
+
+        html.Append("<p style=\"margin:0 0 12px;font-size:15px;line-height:1.5;\">Xin chào <strong>")
+            .Append(WebUtility.HtmlEncode(greetingName))
+            .Append("</strong>,</p>");
+
+        html.Append("<p style=\"margin:0 0 16px;font-size:15px;line-height:1.5;\">Yêu cầu <strong>")
+            .Append(WebUtility.HtmlEncode(actionLabel))
+            .Append("</strong> trên lịch Draft tuần <strong>")
+            .Append(WebUtility.HtmlEncode(weekRange))
+            .Append("</strong> tại <strong>")
+            .Append(WebUtility.HtmlEncode(location))
+            .Append("</strong> — <strong>")
+            .Append(WebUtility.HtmlEncode(department))
+            .Append("</strong> đã được áp dụng.</p>");
+
+        html.Append("<ul style=\"margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.6;\">")
+            .Append("<li>Ca đưa ra: <strong>")
+            .Append(WebUtility.HtmlEncode($"{FormatVietnameseDayLabel(payload.OfferedShift.Date)} — {payload.OfferedShift.ShiftName}"))
+            .Append("</strong></li>");
+
+        if (payload.AcceptedShift is not null)
+        {
+            html.Append("<li>Ca nhận lại: <strong>")
+                .Append(WebUtility.HtmlEncode($"{FormatVietnameseDayLabel(payload.AcceptedShift.Date)} — {payload.AcceptedShift.ShiftName}"))
+                .Append("</strong></li>");
+        }
+
+        html.Append("</ul><p style=\"margin:0;font-size:13px;color:#64748b;\">Đăng nhập Wokki để xem lịch cập nhật.</p></div></body></html>");
 
         return new ComposedEmail(subject, plain.ToString().TrimEnd(), html.ToString());
     }

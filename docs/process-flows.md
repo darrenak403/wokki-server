@@ -70,7 +70,7 @@ stateDiagram-v2
     [*] --> Draft: Create / Copy week
     Draft --> Published: Publish
     Published --> Draft: Unpublish
-    note right of Published: Employees see /self/schedule\nSwaps allowed
+    note right of Published: Employees see /self/schedule\nSwap marketplace locked
 ```
 
 `ScheduleStatus.Locked` exists in code but **no API sets it yet** (future: lock after payroll close).
@@ -146,39 +146,45 @@ Shared validator: `ScheduleService.TryPrepareAssignmentAsync` (manual assign + a
 
 ---
 
-## 4. Shift swap
+## 4. Shift swap marketplace (Draft)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending: User creates
-    Pending --> PeerDeclined: Target declines
-    Pending --> Cancelled: Requester cancels
-    Pending --> ManagerApproved: Target accepts auto-apply
-    Pending --> ManagerApproved: Manager override approve
-    Pending --> ManagerRejected: Manager override reject
+    [*] --> Pending: User posts Cover/CrossSwap
+    Pending --> Completed: Peer accept FCFS
+    Pending --> Cancelled: Author cancels
+    Pending --> Hidden: Schedule published
+    Pending --> Expired: Assignment stale
+    Completed --> [*]
+    Hidden --> [*]
+    Cancelled --> [*]
+    Expired --> [*]
 ```
 
-### Peer accept (atomic)
+### Accept (atomic, FCFS)
 
 ```mermaid
 sequenceDiagram
-    participant T as Target employee
-    participant API as Swap API
-    participant S as SwapRequestService
+    participant B as Accepter (User)
+    participant API as SwapPost API
+    participant S as SwapPostService
     participant DB as Database
 
-    T->>API: POST /swap-requests/{id}/accept
+    B->>API: POST /swap-posts/{id}/accept
     API->>S: AcceptAsync
-    S->>DB: BEGIN TRANSACTION
-    S->>S: Pending → PeerAccepted
-    S->>S: Swap EmployeeId on both assignments
-    S->>S: → ManagerApproved
+    S->>DB: BEGIN — lock schedule, lock post
+    alt Cover
+        S->>DB: Transfer assignment EmployeeId
+    else CrossSwap
+        S->>DB: SwapEmployeeIdsAsync
+    end
+    S->>DB: post → Completed, audit log
     S->>DB: COMMIT
-    S->>S: Notify requester + target
-    API-->>T: 200
+    S->>S: Email author + accepter (best-effort)
+    API-->>B: 200
 ```
 
-**BR-034** cutoff uses assignment `Date` and `Location.TimeZone`.
+Publish uses the same schedule row lock and hides Pending posts before setting `Published`.
 
 ---
 

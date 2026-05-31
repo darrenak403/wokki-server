@@ -253,7 +253,7 @@ Sơ đồ chi tiết: **[process-flows.md](./process-flows.md)**.
 | Location, Department | Cơ cấu tổ chức |
 | ShiftDefinition | Mẫu ca |
 | Schedule, ShiftAssignment | Kế hoạch tuần |
-| SwapRequest | Quy trình đổi ca |
+| SwapPost | Bảng tin đổi ca (Draft, Cover/CrossSwap, FCFS) |
 | AttendanceRecord | Chấm công |
 | PayPeriod, PayrollLine | Lương |
 | Channel, ChannelMember, Message | Chat |

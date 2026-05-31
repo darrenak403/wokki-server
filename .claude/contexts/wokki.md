@@ -16,7 +16,7 @@ Use this file for **business meaning** and **where code lives**. Locked rules: `
 | -------------------- | -------------- | ----------------------------------------- | --------------------- | -------------- |
 | **PlatformOperator** | Wokki admin    | No org scheduling                         | No                    | No             |
 | **Admin**            | IT/HR          | Full + users                              | If has Employee       | Yes (CSV)      |
-| **Manager**          | Ops lead       | Draft/Publish, assignments, swap override | If has Employee       | View           |
+| **Manager**          | Ops lead       | Draft/Publish, assignments, swap audit | If has Employee       | View           |
 | **User**             | Staff          | No manager schedule APIs                  | Schedule, swap, clock | No             |
 
 `GET /api/v1/auth/me` = login account. `GET /api/v1/self/*` = workforce profile (requires `Employee` row).
@@ -39,24 +39,26 @@ Org staff creation is a single workflow: `POST /api/v1/employees` creates both t
 Create schedule (Draft, Monday weekStart)
   → employees submit preferences (advisory; /self/schedule-preferences/*)
   → Admin views preference-board → suggest/assign (Draft)
-  → Publish → Published (employees see via /self/schedule, swaps allowed)
-  → Unpublish → Draft
+  → Publish → Published (employees see via /self/schedule; swap marketplace locked)
+  → Unpublish → Draft (swap marketplace reopens for that week)
 ```
 
 - One schedule per `(departmentId, weekStartDate)`.
 - Overlap and duplicate assignment guards in `ScheduleService`.
 
-### Swap (published assignments only)
+### Shift swap marketplace (Draft only)
 
 ```text
-User creates swap (Pending)
-  → peer Accept → assignments swapped in one transaction → ManagerApproved
-  → peer Decline → PeerDeclined
-  → requester Cancel → Cancelled
-  → Manager override approve/reject
+While schedule is Draft:
+  User posts Cover or CrossSwap on /api/v1/swap-posts
+  → peers accept FCFS (first valid accept wins)
+  → assignments update immediately on Draft schedule
+  → email author + accepter on success (best-effort)
+On Publish: Pending posts → Hidden; marketplace locked
+Admin/Manager: GET /swap-posts/audit only (no create/accept)
 ```
 
-Cutoff: `SwapCutoffRules` (location timezone). Notifications must not roll back core transaction.
+Rules: `BR-030`–`BR-037`. Services: `SwapPostService`, `SwapPostPolicyValidator`. Legacy `SwapRequest` table read-only; old API removed.
 
 ### Attendance & payroll
 
@@ -102,8 +104,8 @@ Use **department membership** for guards when employee spans multiple department
 | `DepartmentEndpoints`   | `DepartmentService`                                                                                                              |
 | `ShiftEndpoints`        | `ShiftDefinitionService`                                                                                                         |
 | `ScheduleEndpoints`     | `ScheduleService`, `SchedulePreferenceService`, `DepartmentSchedulingConfigService`, `ScheduleInsightService`, suggestion engine |
-| `EmployeeSelfEndpoints` | schedule/swap/attendance read models for self                                                                                    |
-| `SwapRequestEndpoints`  | `SwapRequestService`                                                                                                             |
+| `EmployeeSelfEndpoints` | schedule/swap-posts/attendance self                                                                                    |
+| `SwapPostEndpoints`     | `SwapPostService`                                                                                                      |
 | `AttendanceEndpoints`   | `AttendanceService`                                                                                                              |
 | `PayrollEndpoints`      | `PayrollService`                                                                                                                 |
 | `ChannelEndpoints`      | `ChannelService`                                                                                                                 |
