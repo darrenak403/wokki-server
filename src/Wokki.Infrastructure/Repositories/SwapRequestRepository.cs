@@ -20,6 +20,7 @@ public sealed class SwapRequestRepository(AppDbContext context) : ISwapRequestRe
         SwapStatus? status = null,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.SwapRequests.AsNoTracking().AsQueryable();
@@ -36,6 +37,20 @@ public sealed class SwapRequestRepository(AppDbContext context) : ISwapRequestRe
                         sch.Id == ra.ScheduleId &&
                         (!departmentId.HasValue || sch.DepartmentId == departmentId.Value) &&
                         (!weekStartDate.HasValue || sch.WeekStartDate == weekStartDate.Value))));
+        }
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(s =>
+                    context.ShiftAssignments.Any(ra =>
+                        ra.Id == s.RequesterAssignmentId &&
+                        context.Schedules.Any(sc =>
+                            sc.Id == ra.ScheduleId &&
+                            context.Departments.Any(d =>
+                                d.Id == sc.DepartmentId && allowedLocationIds.Contains(d.LocationId)))));
         }
 
         query = query.OrderByDescending(s => s.CreatedAt);

@@ -16,7 +16,13 @@ public sealed record PayrollEmployeeLineResponse(
     string FirstName,
     string LastName,
     int TotalWorkedMinutes,
+    int RegularMinutes,
     decimal HourlyRate,
     decimal GrossPay,
     int ApprovedOvertimeMinutes,
-    decimal OvertimePay);
+    decimal OvertimePay,
+    bool IsPaid,
+    string? BankAccountNumber = null,
+    string? BankAccountHolderName = null,
+    string? BankName = null,
+    string? PaymentQrImageUrl = null);

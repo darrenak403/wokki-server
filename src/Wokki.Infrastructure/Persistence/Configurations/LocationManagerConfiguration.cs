@@ -29,5 +29,7 @@ public sealed class LocationManagerConfiguration : IEntityTypeConfiguration<Loca
             .WithMany()
             .HasForeignKey(x => x.AssignedById)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

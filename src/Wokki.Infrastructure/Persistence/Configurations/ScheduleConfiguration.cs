@@ -21,5 +21,9 @@ public sealed class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
             .WithMany()
             .HasForeignKey(x => x.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
+
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
     }
 }

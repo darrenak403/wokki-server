@@ -17,5 +17,7 @@ public sealed class DepartmentConfiguration : IEntityTypeConfiguration<Departmen
             .WithMany()
             .HasForeignKey(x => x.LocationId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

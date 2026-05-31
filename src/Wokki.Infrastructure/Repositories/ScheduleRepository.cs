@@ -13,6 +13,12 @@ public sealed class ScheduleRepository(AppDbContext context) : IScheduleReposito
         return await query.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
     }
 
+    public async Task<Schedule?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await context.Schedules
+            .FromSqlInterpolated($"""SELECT * FROM schedules WHERE "Id" = {id} FOR UPDATE""")
+            .AsTracking()
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<Schedule?> GetByDepartmentAndWeekAsync(
         Guid departmentId,
         DateOnly weekStartDate,
@@ -23,14 +29,28 @@ public sealed class ScheduleRepository(AppDbContext context) : IScheduleReposito
     public async Task<(IReadOnlyList<Schedule> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Schedules.AsNoTracking().AsQueryable();
 
+        if (organizationId.HasValue)
+            query = query.Where(s => s.OrganizationId == organizationId.Value);
+
         if (departmentId.HasValue)
             query = query.Where(s => s.DepartmentId == departmentId.Value);
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(s => context.Departments.Any(d =>
+                    d.Id == s.DepartmentId && allowedLocationIds.Contains(d.LocationId)));
+        }
 
         if (weekStartDate.HasValue)
             query = query.Where(s => s.WeekStartDate == weekStartDate.Value);

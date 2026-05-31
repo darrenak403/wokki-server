@@ -11,6 +11,10 @@ public interface IShiftAssignmentRepository
         DateOnly fromDate,
         DateOnly toDate,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ShiftAssignment>> ListByEmployeeAndScheduleAsync(
+        Guid employeeId,
+        Guid scheduleId,
+        CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ShiftAssignment>> ListPublishedByDepartmentInDateRangeAsync(
         Guid departmentId,
         DateOnly fromDate,
@@ -33,5 +37,9 @@ public interface IShiftAssignmentRepository
     Task AddAsync(ShiftAssignment assignment, CancellationToken cancellationToken = default);
     void Update(ShiftAssignment assignment);
     void Remove(ShiftAssignment assignment);
-    Task SwapEmployeeIdsAsync(Guid assignmentId1, Guid assignmentId2, CancellationToken cancellationToken = default);
+    Task SwapEmployeeIdsAsync(
+        Guid assignmentId1,
+        Guid assignmentId2,
+        Guid holdEmployeeId,
+        CancellationToken cancellationToken = default);
 }

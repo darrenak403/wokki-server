@@ -26,5 +26,7 @@ public sealed class SchedulePreferenceSubmissionConfiguration : IEntityTypeConfi
             .WithOne()
             .HasForeignKey(x => x.SubmissionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

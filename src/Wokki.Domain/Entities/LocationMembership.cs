@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class LocationMembership
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid LocationId { get; set; }
     public Location Location { get; set; } = null!;
     public Guid EmployeeId { get; set; }

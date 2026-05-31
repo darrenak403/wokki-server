@@ -6,7 +6,7 @@ public sealed class ScheduleSuggestionPromptBuilder
 {
     public string Build(ScheduleSuggestionContext context)
     {
-        var policy = LocationSchedulingSolverPolicy.FromLocationPolicy(context.LocationSchedulingPolicy);
+        var policy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
         var weekEnd = context.Schedule.WeekStartDate.AddDays(6);
         var sb = new StringBuilder();
 
@@ -36,12 +36,17 @@ public sealed class ScheduleSuggestionPromptBuilder
             sb.AppendLine();
         }
 
-        sb.AppendLine("POLICY");
-        sb.AppendLine($"minStaffPerShift={policy.DefaultMinStaffPerShift}");
-        sb.AppendLine($"requireRoleMatch={policy.RequireRoleMatch}");
-        sb.AppendLine($"minShiftsPerWeek={policy.MinShiftsPerWeek}");
-        sb.AppendLine($"requireFullCoverage={policy.RequireFullCoverage}");
+        sb.AppendLine("POLICY (enabled rules only)");
+        sb.AppendLine($"requireSubmittedPreferences={policy.RequireSubmittedPreferences}");
         sb.AppendLine($"unavailableIsHardBlock={policy.UnavailableIsHardBlock}");
+        sb.AppendLine($"requireRoleMatch={policy.RequireRoleMatch}");
+        sb.AppendLine($"requireFullCoverage={policy.RequireFullCoverage}");
+        sb.AppendLine($"minStaffPerShift={(policy.MinStaffPerShiftEnabled ? policy.MinStaffPerShift.ToString() : "off")}");
+        sb.AppendLine($"maxStaffPerShift={(policy.MaxStaffPerShiftEnabled ? policy.MaxStaffPerShift.ToString() : "off")}");
+        sb.AppendLine($"minRestMinutes={(policy.MinRestMinutesEnabled ? policy.MinRestMinutesBetweenShifts.ToString() : "off")}");
+        sb.AppendLine($"maxShiftsPerDay={(policy.MaxShiftsPerDayEnabled ? policy.MaxShiftsPerEmployeePerDay.ToString() : "off")}");
+        sb.AppendLine($"maxShiftsPerWeek={(policy.MaxShiftsPerWeekEnabled ? policy.MaxShiftsPerEmployeePerWeek.ToString() : "off")}");
+        sb.AppendLine($"anyRuleEnabled={policy.HasAnyEnabledRule}");
         sb.AppendLine();
 
         sb.AppendLine("Respond ONLY with a JSON array. No markdown, no explanation.");

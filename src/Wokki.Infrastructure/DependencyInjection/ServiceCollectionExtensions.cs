@@ -5,7 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Auth;
@@ -14,6 +16,7 @@ using Wokki.Infrastructure.Notifications;
 using Wokki.Infrastructure.Persistence;
 using Wokki.Infrastructure.Repositories;
 using Wokki.Infrastructure.Bedrock;
+using Wokki.Infrastructure.Media;
 using Wokki.Infrastructure.Scheduling;
 using Wokki.Infrastructure.Tenancy;
 using Wokki.Infrastructure.Workers;
@@ -47,11 +50,32 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TenantContext>();
         services.AddScoped<ITenantContext>(sp => sp.GetRequiredService<TenantContext>());
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
+        services.AddSingleton<IImageStorageService, CloudinaryImageStorageService>();
         var smtp = configuration.GetSection(SmtpSettings.SectionName).Get<SmtpSettings>();
         if (smtp?.IsConfigured == true)
             services.AddScoped<INotificationService, EmailNotificationService>();
         else
             services.AddScoped<INotificationService, NoOpNotificationService>();
+
+        services.AddScoped<SmtpTransactionalEmailSender>();
+        services.AddScoped<ITransactionalEmailSender, DevLoggingTransactionalEmailSender>();
+        services.Configure<RedisSettings>(configuration.GetSection(RedisSettings.SectionName));
+        if (environment.IsEnvironment("Testing"))
+        {
+            services.AddSingleton<IAuthOtpStore, InMemoryAuthOtpStore>();
+        }
+        else
+        {
+            var redisConnection = configuration.GetConnectionString("Redis")
+                ?? configuration.GetSection(RedisSettings.SectionName).Get<RedisSettings>()?.ConnectionString;
+            if (string.IsNullOrWhiteSpace(redisConnection))
+                throw new InvalidOperationException("Redis connection string is required (ConnectionStrings:Redis or Redis:ConnectionString).");
+
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnection));
+            services.AddSingleton<IAuthOtpStore, RedisAuthOtpStore>();
+        }
+
         services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddMemoryCache();
         services.AddHttpContextAccessor();

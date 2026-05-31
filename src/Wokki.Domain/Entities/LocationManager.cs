@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class LocationManager
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid LocationId { get; set; }
     public Location Location { get; set; } = null!;
     public Guid UserId { get; set; }

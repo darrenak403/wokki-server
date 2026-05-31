@@ -24,5 +24,7 @@ public sealed class ShiftDefinitionConfiguration : IEntityTypeConfiguration<Shif
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

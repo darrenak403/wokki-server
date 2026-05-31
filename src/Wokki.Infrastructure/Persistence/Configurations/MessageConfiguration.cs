@@ -22,5 +22,7 @@ public sealed class MessageConfiguration : IEntityTypeConfiguration<Message>
             .WithMany()
             .HasForeignKey(x => x.SenderId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

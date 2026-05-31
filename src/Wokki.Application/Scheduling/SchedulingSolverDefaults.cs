@@ -1,7 +1,7 @@
 namespace Wokki.Application.Scheduling;
 
 /// <summary>
-/// Solver parameters fixed in code (not exposed on branch-policy UI). Used by heuristic and future CP-SAT.
+/// Solver technical parameters only — not org business rules (those live in org scheduling policy catalog).
 /// </summary>
 public static class SchedulingSolverDefaults
 {
@@ -15,11 +15,10 @@ public static class SchedulingSolverDefaults
 
     public const int RoleBalancePenaltyPerShift = 3;
     public const int MinShiftsPerWeekBoostPerMissingShift = 8;
-    public const int MaxShiftsPerEmployeePerDaySafetyCap = 2;
-
-    /// <summary>Hard weekly cap per employee (not configurable per department).</summary>
-    public const int MaxShiftsPerEmployeePerWeek = 20;
 
     /// <summary>Apply is always explicit (review sheet + Apply button); never auto-applied from policy.</summary>
     public const bool SuggestionsRequireExplicitApply = true;
+
+    public const int CpSatMaxTimeSeconds = 10;
+    public const int CpSatSearchWorkers = 4;
 }

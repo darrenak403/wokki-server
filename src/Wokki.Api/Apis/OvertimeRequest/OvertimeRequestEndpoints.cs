@@ -192,9 +192,18 @@ public static class OvertimeRequestEndpoints
             !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, departmentId.Value, ct))
             return Forbidden();
 
-        // No departmentId provided — unscoped list is a known scope gap.
         var isAdmin = currentUser.Role == RoleConstants.Admin;
-        return (await service.ListAllAsync(currentUser.UserId.Value, isAdmin, departmentId, effectiveMonth, effectiveYear, page, pageSize, ct)).ToHttpResult();
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(currentUser.UserId.Value, currentUser.Role, ct);
+        return (await service.ListAllAsync(
+            currentUser.UserId.Value,
+            isAdmin,
+            departmentId,
+            effectiveMonth,
+            effectiveYear,
+            page,
+            pageSize,
+            managedLocationIds,
+            ct)).ToHttpResult();
     }
 
     private static async Task<IResult> ListPendingAsync(
@@ -219,9 +228,16 @@ public static class OvertimeRequestEndpoints
             !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, departmentId.Value, ct))
             return Forbidden();
 
-        // No departmentId provided — unscoped list is a known scope gap.
         var isAdmin = currentUser.Role == RoleConstants.Admin;
-        return (await service.ListPendingAsync(currentUser.UserId.Value, isAdmin, departmentId, page, pageSize, ct)).ToHttpResult();
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(currentUser.UserId.Value, currentUser.Role, ct);
+        return (await service.ListPendingAsync(
+            currentUser.UserId.Value,
+            isAdmin,
+            departmentId,
+            page,
+            pageSize,
+            managedLocationIds,
+            ct)).ToHttpResult();
     }
 
     private static async Task<IResult> ApproveAsync(

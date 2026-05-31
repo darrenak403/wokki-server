@@ -28,7 +28,28 @@ public sealed class ShiftDefinitionRepository(AppDbContext context) : IShiftDefi
         if (activeOnly)
             query = query.Where(s => s.IsActive);
 
-        return await query.OrderBy(s => s.Name).ToListAsync(cancellationToken);
+        return await query
+            .OrderBy(s => s.StartTime)
+            .ThenBy(s => s.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ShiftDefinition>> ListByDepartmentAsync(
+        Guid locationId,
+        Guid departmentId,
+        bool activeOnly = true,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.ShiftDefinitions.AsNoTracking()
+            .Where(s => s.LocationId == locationId && s.DepartmentId == departmentId);
+
+        if (activeOnly)
+            query = query.Where(s => s.IsActive);
+
+        return await query
+            .OrderBy(s => s.StartTime)
+            .ThenBy(s => s.Name)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<ShiftDefinition>> GetByIdsAsync(

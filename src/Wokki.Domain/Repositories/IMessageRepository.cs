@@ -12,4 +12,7 @@ public interface IMessageRepository
         CancellationToken cancellationToken = default);
     Task AddAsync(Message message, CancellationToken cancellationToken = default);
     void Update(Message message);
+    Task<IReadOnlyDictionary<Guid, DateTime>> GetLatestCreatedAtByChannelsAsync(
+        IEnumerable<Guid> channelIds,
+        CancellationToken cancellationToken = default);
 }

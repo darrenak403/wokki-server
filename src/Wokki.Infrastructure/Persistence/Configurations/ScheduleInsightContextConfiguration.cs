@@ -20,5 +20,7 @@ public sealed class ScheduleInsightContextConfiguration : IEntityTypeConfigurati
             .WithOne()
             .HasForeignKey<ScheduleInsightContext>(x => x.ScheduleId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

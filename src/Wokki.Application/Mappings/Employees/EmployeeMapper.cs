@@ -24,19 +24,23 @@ public static class EmployeeMapper
             department?.Name,
             location?.Id,
             location?.Name,
+            employee.BankAccountNumber,
+            employee.BankAccountHolderName,
+            employee.BankName,
+            employee.PaymentQrImageUrl,
             employee.EmployedAt,
             employee.TerminatedAt,
             employee.CreatedAt);
 
-    public static Employee ToEntity(this CreateEmployeeRequest request, Guid userId) =>
+    public static Employee ToEntity(this CreateEmployeeRequest request, Guid userId, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             UserId = userId,
             FirstName = request.FirstName.Trim(),
             LastName = request.LastName.Trim(),
-            Phone = request.Phone.Trim(),
-            Position = request.Position.Trim(),
+            Phone = request.Phone?.Trim() ?? string.Empty,
             HourlyRate = request.HourlyRate,
             DepartmentId = request.DepartmentId,
             EmployedAt = DateTime.UtcNow,
@@ -47,9 +51,35 @@ public static class EmployeeMapper
     {
         employee.FirstName = request.FirstName.Trim();
         employee.LastName = request.LastName.Trim();
-        employee.Phone = request.Phone.Trim();
-        employee.Position = request.Position.Trim();
+        employee.Phone = request.Phone?.Trim() ?? string.Empty;
         employee.HourlyRate = request.HourlyRate;
         employee.DepartmentId = request.DepartmentId;
     }
+
+    public static void ApplyMyProfileUpdate(this Employee employee, UpdateMyProfileRequest request)
+    {
+        employee.FirstName = request.FirstName.Trim();
+        employee.LastName = request.LastName.Trim();
+        employee.Phone = request.Phone?.Trim() ?? string.Empty;
+        employee.BankAccountNumber = NormalizeOptional(request.BankAccountNumber);
+        employee.BankAccountHolderName = NormalizeOptional(request.BankAccountHolderName);
+        employee.BankName = NormalizeOptional(request.BankName);
+    }
+
+    public static void ClearPaymentQr(this Employee employee)
+    {
+        employee.PaymentQrImageUrl = null;
+        employee.PaymentQrPublicId = null;
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        return value.Trim();
+    }
+
+    /// <summary>Scheduling solver reads Position — kept in sync with primary department name.</summary>
+    public static void SyncPositionFromDepartment(Employee employee, Department department) =>
+        employee.Position = department.Name.Trim();
 }

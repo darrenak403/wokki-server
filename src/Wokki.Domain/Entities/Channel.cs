@@ -5,6 +5,7 @@ namespace Wokki.Domain.Entities;
 public class Channel
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public string? Name { get; set; }
     public ChannelType Type { get; set; } = ChannelType.Direct;
     public Guid CreatedBy { get; set; }

@@ -11,11 +11,16 @@ public sealed class ChannelConfiguration : IEntityTypeConfiguration<Channel>
         builder.ToTable("channels");
         builder.HasKey(x => x.Id);
         builder.HasIndex(x => x.Type);
+        builder.HasIndex(x => new { x.OrganizationId, x.Type })
+            .IsUnique()
+            .HasFilter("\"Type\" = 2");
         builder.Property(x => x.Name).HasMaxLength(200);
 
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(x => x.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

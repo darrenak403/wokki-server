@@ -34,6 +34,16 @@ public static class ShiftEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
+        group.MapPost("/copy", CopyAsync)
+            .WithName("CopyShifts")
+            .WithDescription("Sao chép ca làm đang hoạt động từ phòng ban nguồn sang các phòng ban đích (cùng chi nhánh).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<CopyShiftDefinitionsResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPost("/", CreateAsync)
             .WithName("CreateShift")
             .WithDescription("Tạo định nghĩa ca.")
@@ -107,6 +117,33 @@ public static class ShiftEndpoints
             return Forbidden();
 
         var response = await service.CreateAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> CopyAsync(
+        [FromBody] CopyShiftDefinitionsRequest request,
+        [FromServices] IShiftDefinitionService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
+        [FromServices] IValidator<CopyShiftDefinitionsRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<CopyShiftDefinitionsResponse>();
+
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        if (!await scopeService.CanManageLocationAsync(
+                currentUser.UserId.Value,
+                currentUser.Role,
+                request.LocationId,
+                cancellationToken))
+        {
+            return Forbidden();
+        }
+
+        var response = await service.CopyAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
 

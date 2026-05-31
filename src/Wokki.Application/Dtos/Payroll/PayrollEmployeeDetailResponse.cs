@@ -12,7 +12,11 @@ public sealed record PayrollEmployeeDetailResponse(
     decimal GrossPay,
     int ApprovedOvertimeMinutes,
     decimal OvertimePay,
-    IReadOnlyList<PayrollAttendanceItemResponse> AttendanceItems);
+    IReadOnlyList<PayrollAttendanceItemResponse> AttendanceItems,
+    string? BankAccountNumber = null,
+    string? BankAccountHolderName = null,
+    string? BankName = null,
+    string? PaymentQrImageUrl = null);
 
 public sealed record PayrollAttendanceItemResponse(
     Guid AttendanceId,

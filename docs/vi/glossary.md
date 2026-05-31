@@ -7,7 +7,7 @@
 | **User** | Nhân viên: self-service (`/self/*`), chấm công, thao tác đổi ca với đồng nghiệp. |
 | **Location** | Địa điểm vật lý, có múi giờ (`TimeZone` IANA). |
 | **Department** | Đơn vị thuộc location; lịch tuần và kỳ lương theo department. |
-| **Employee** | Hồ sơ nhân sự gắn 1:1 với `User`; có `Position`, `HourlyRate`, `DepartmentId`. |
+| **Employee** | Hồ sơ nhân sự gắn 1:1 với `User`; `Position` đồng bộ tên phòng ban chính (xếp lịch); `HourlyRate`, `DepartmentId`. |
 | **Shift definition** | Mẫu ca: tên, giờ bắt đầu/kết thúc, `RequiredRole`, phạm vi location/department. |
 | **Schedule** | Lịch tuần một department; `WeekStartDate` phải là **thứ Hai**. |
 | **Shift assignment** | Một nhân viên trên một mẫu ca trong một ngày của lịch. |

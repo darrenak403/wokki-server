@@ -33,7 +33,9 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
         var employeePage = await unitOfWork.Employees.ListAsync(
             1,
             500,
+            department.OrganizationId,
             schedule.DepartmentId,
+            locationIds: new HashSet<Guid> { department.LocationId },
             cancellationToken: cancellationToken);
         var employees = employeePage.Items.Where(e => e.TerminatedAt is null).ToList();
 
@@ -61,8 +63,8 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
                 l.PreferenceType)))
             .ToList();
 
-        var locationPolicy = await unitOfWork.LocationSchedulingPolicies.GetByLocationIdAsync(
-            department.LocationId,
+        var orgPolicy = await unitOfWork.OrganizationSchedulingPolicies.GetByOrganizationIdAsync(
+            department.OrganizationId,
             cancellationToken: cancellationToken);
 
         return (new ScheduleSuggestionContext
@@ -75,7 +77,8 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             HistoricalAssignments = historical,
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
-            LocationSchedulingPolicy = locationPolicy
+            PreferenceSubmissions = submissions,
+            OrganizationSchedulingPolicy = orgPolicy
         }, null);
     }
 }

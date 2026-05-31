@@ -14,6 +14,11 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.LastName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Phone).HasMaxLength(32);
         builder.Property(x => x.Position).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.BankAccountNumber).HasMaxLength(32);
+        builder.Property(x => x.BankAccountHolderName).HasMaxLength(200);
+        builder.Property(x => x.BankName).HasMaxLength(200);
+        builder.Property(x => x.PaymentQrImageUrl).HasMaxLength(500);
+        builder.Property(x => x.PaymentQrPublicId).HasMaxLength(300);
         builder.Property(x => x.HourlyRate).HasPrecision(18, 2);
         builder.HasIndex(x => x.UserId).IsUnique();
 
@@ -25,6 +30,11 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasOne<Department>()
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
+
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
     }
 }

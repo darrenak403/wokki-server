@@ -9,10 +9,14 @@ public interface IEmployeeRepository
     Task<(IReadOnlyList<Employee> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         Guid? locationId = null,
         bool includeTerminated = false,
+        IReadOnlySet<Guid>? locationIds = null,
+        string? search = null,
         CancellationToken cancellationToken = default);
+    Task<Employee?> GetSwapHoldByOrganizationAsync(Guid organizationId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Employee>> GetByIdsAsync(
         IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Guid>> GetIdsByDepartmentIdsAsync(

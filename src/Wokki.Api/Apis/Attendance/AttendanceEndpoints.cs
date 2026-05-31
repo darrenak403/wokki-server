@@ -103,14 +103,18 @@ public static class AttendanceEndpoints
     private static async Task<IResult> ListAsync(
         [AsParameters] AttendanceListRequest request,
         [FromServices] IAttendanceService service,
+        [FromServices] ILocationScopeService scopeService,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null || currentUser.Role is null)
             return Unauthorized<PagedResponse<AttendanceResponse>>();
 
-        // No locationId filter in AttendanceListRequest — unfiltered list is a known scope gap.
-        var response = await service.ListAsync(request, cancellationToken);
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(request, managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 

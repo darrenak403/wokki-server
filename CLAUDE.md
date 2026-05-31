@@ -1,3 +1,5 @@
 # Wokki Server — Claude Code
 
 @AGENTS.md
+
+Branch workspace rule lives in AGENTS.md: selected branch URL scopes workspace/sidebar actions; Admin creates staff only through `/employees` (User + Employee together; same-org legacy orphan Users are linked there) with department → auto Active LocationMembership; no standalone `/users` staff and no self-serve join. Manager only `LocationManager`-assigned locations. Org package gate: register creates org pending package; PlatformOperator activates/renews via `/api/v1/platform/organizations/{id}/subscription`, otherwise org users get `ORG_PACKAGE_NOT_ACTIVATED` / `ORG_PACKAGE_EXPIRED`. Schedule suggestions apply by exact `(shiftDefinitionId, employeeId, date)` tuple. Shift swap marketplace: Draft-only feed at `/api/v1/swap-posts`, FCFS accept, `GET /self/schedule/draft/{week}/assignments` for picker; publish hides pending posts; legacy `/api/v1/swap-requests` removed. FE: `user/swap` (`SwapMarketplacePanel`), admin/manager audit (`SwapAuditPanel`).

@@ -28,7 +28,7 @@ public static class EmployeeEndpoints
     {
         group.MapGet("/", ListAsync)
             .WithName("ListEmployees")
-            .WithDescription("Danh sách nhân viên (phân trang, lọc theo department/location).")
+            .WithDescription("Danh sách nhân viên (phân trang, lọc theo department/location, tìm theo tên/email/SĐT).")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<PagedResponse<EmployeeResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
@@ -39,6 +39,15 @@ public static class EmployeeEndpoints
             .WithDescription("Chi tiết nhân viên.")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<EmployeeResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapGet("/{id:guid}/department-memberships", ListDepartmentMembershipsAsync)
+            .WithName("ListEmployeeDepartmentMemberships")
+            .WithDescription("Lịch sử thuộc phòng ban của nhân viên (JoinedAt, LeftAt, trạng thái).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<IReadOnlyList<EmployeeDepartmentMembershipResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
@@ -101,8 +110,11 @@ public static class EmployeeEndpoints
             !await scopeService.CanManageDepartmentAsync(currentUser.UserId.Value, currentUser.Role, request.DepartmentId.Value, cancellationToken))
             return Forbidden();
 
-        // No filter provided — unscoped list is a known scope gap (same as Attendance/Schedule ListAsync without filter param).
-        var response = await service.ListAsync(request, cancellationToken);
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(request, managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -120,6 +132,23 @@ public static class EmployeeEndpoints
             return Forbidden();
 
         var response = await service.GetByIdAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListDepartmentMembershipsAsync(
+        [FromRoute] Guid id,
+        [FromServices] IEmployeeService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<IReadOnlyList<EmployeeDepartmentMembershipResponse>>();
+
+        if (!await scopeService.CanManageEmployeeAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Forbidden();
+
+        var response = await service.ListDepartmentMembershipsAsync(id, cancellationToken);
         return response.ToHttpResult();
     }
 

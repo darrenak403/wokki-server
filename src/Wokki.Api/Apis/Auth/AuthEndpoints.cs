@@ -31,27 +31,30 @@ public static class AuthEndpoints
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status402PaymentRequired)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
         group.MapPost("/register", RegisterUserAsync)
             .WithName("Register")
-            .WithDescription("Tự đăng ký tài khoản (Anonymous); luôn tạo role User — Admin tạo user qua POST /api/v1/users")
+            .WithDescription("Tự đăng ký tổ chức: email + password + organizationName → Org Admin + JWT.")
             .AllowAnonymous()
-            .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status201Created)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
         group.MapPost("/refresh-token", RefreshTokenAsync)
             .WithName("RefreshToken")
-            .WithDescription("Làm mới access token (Cần xác thực)")
-            .RequireAuthorization()
+            .WithDescription("Làm mới access token bằng refresh token (không cần access token còn hạn).")
+            .AllowAnonymous()
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized);
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status402PaymentRequired)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
-        group.MapPut("/change-password", ChangePasswordAsync)
-            .WithName("ChangePassword")
-            .WithDescription("Đổi mật khẩu người dùng (Cần xác thực)")
+        group.MapPost("/reset-password", ResetPasswordAsync)
+            .WithName("ResetPassword")
+            .WithDescription("Đổi mật khẩu khi đã đăng nhập: mật khẩu cũ + mới + xác nhận.")
             .RequireAuthorization()
             .Produces<ApiResponse<UserSimpleResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
@@ -59,14 +62,22 @@ public static class AuthEndpoints
 
         group.MapPost("/forgot-password", ForgotPasswordAsync)
             .WithName("ForgotPassword")
-            .WithDescription("Yêu cầu đặt lại mật khẩu (Không cần xác thực)")
+            .WithDescription("Gửi mã OTP về email để đặt lại mật khẩu.")
+            .AllowAnonymous()
+            .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status429TooManyRequests);
+
+        group.MapPost("/forgot-password/verify-otp", VerifyForgotPasswordOtpAsync)
+            .WithName("VerifyForgotPasswordOtp")
+            .WithDescription("Xác minh mã OTP sau bước forgot-password.")
             .AllowAnonymous()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest);
 
-        group.MapPost("/reset-password", ResetPasswordAsync)
-            .WithName("ResetPassword")
-            .WithDescription("Đặt lại mật khẩu người dùng (Không cần xác thực)")
+        group.MapPost("/forgot-password/complete", CompleteForgotPasswordAsync)
+            .WithName("CompleteForgotPassword")
+            .WithDescription("Đặt mật khẩu mới sau khi OTP đã được xác minh.")
             .AllowAnonymous()
             .Produces<ApiResponse<bool>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest);
@@ -128,11 +139,11 @@ public static class AuthEndpoints
         return response.ToHttpResult();
     }
 
-    private static async Task<IResult> ChangePasswordAsync(
-        [FromBody] ChangePasswordRequest request,
+    private static async Task<IResult> ResetPasswordAsync(
+        [FromBody] ResetPasswordRequest request,
         [FromServices] IAuthService authService,
         [FromServices] ICurrentUserService currentUser,
-        [FromServices] IValidator<ChangePasswordRequest> validator,
+        [FromServices] IValidator<ResetPasswordRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
@@ -141,7 +152,7 @@ public static class AuthEndpoints
         if (currentUser.UserId is null)
             return ApiResponse<object>.FailureResponse(AppMessages.Auth.NotLoggedIn).ToHttpResult();
 
-        var response = await authService.ChangePasswordAsync(currentUser.UserId.Value, request, cancellationToken);
+        var response = await authService.ResetPasswordAsync(currentUser.UserId.Value, request, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -158,16 +169,29 @@ public static class AuthEndpoints
         return response.ToHttpResult();
     }
 
-    private static async Task<IResult> ResetPasswordAsync(
-        [FromBody] ResetPasswordRequest request,
+    private static async Task<IResult> VerifyForgotPasswordOtpAsync(
+        [FromBody] VerifyForgotPasswordOtpRequest request,
         [FromServices] IAuthService authService,
-        [FromServices] IValidator<ResetPasswordRequest> validator,
+        [FromServices] IValidator<VerifyForgotPasswordOtpRequest> validator,
         CancellationToken cancellationToken = default)
     {
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
-        var response = await authService.ResetPasswordAsync(request, cancellationToken);
+        var response = await authService.VerifyForgotPasswordOtpAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> CompleteForgotPasswordAsync(
+        [FromBody] CompleteForgotPasswordRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<CompleteForgotPasswordRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await authService.CompleteForgotPasswordAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -183,14 +207,15 @@ public static class AuthEndpoints
         return response.ToHttpResult();
     }
 
-    private static Task<IResult> GetCurrentUserAsync([FromServices] ICurrentUserService currentUser)
+    private static async Task<IResult> GetCurrentUserAsync(
+        [FromServices] IAuthService authService,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
     {
-        if (!currentUser.IsAuthenticated)
-            return Task.FromResult(ApiResponse<object>.FailureResponse(AppMessages.Auth.NotLoggedIn).ToHttpResult());
+        if (!currentUser.IsAuthenticated || currentUser.UserId is null)
+            return ApiResponse<object>.FailureResponse(AppMessages.Auth.NotLoggedIn).ToHttpResult();
 
-        return Task.FromResult(
-            ApiResponse<object>.SuccessResponse(
-                new { id = currentUser.UserId, email = currentUser.Email, role = currentUser.Role },
-                AppMessages.Auth.Me).ToHttpResult());
+        var response = await authService.GetMeAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
     }
 }

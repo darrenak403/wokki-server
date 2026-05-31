@@ -2,10 +2,12 @@ using Wokki.Application.Common;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Mappings.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using AttendanceEntity = Wokki.Domain.Entities.AttendanceRecord;
+using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
 using ScheduleEntity = Wokki.Domain.Entities.Schedule;
@@ -14,7 +16,10 @@ using ShiftDefinitionEntity = Wokki.Domain.Entities.ShiftDefinition;
 
 namespace Wokki.Application.Services.Attendance.Implementations;
 
-public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendanceService autoCloseService) : IAttendanceService
+public sealed class AttendanceService(
+    IUnitOfWork unitOfWork,
+    IAutoCloseAttendanceService autoCloseService,
+    IOrganizationScopeService organizationScope) : IAttendanceService
 {
     public async Task<ApiResponse<AttendanceResponse>> ClockInAsync(
         Guid userId,
@@ -33,7 +38,18 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
                 return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.OpenRecordExists);
         }
 
-        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId, cancellationToken);
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NoEmployeeProfile);
+
+        return await ClockInAssignmentAsync(employee, request, cancellationToken);
+    }
+
+    private async Task<ApiResponse<AttendanceResponse>> ClockInAssignmentAsync(
+        EmployeeEntity employee,
+        ClockInRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId!.Value, cancellationToken);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone));
         var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeInDateRangeAsync(
             employee.Id,
@@ -66,8 +82,11 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
         var record = new AttendanceEntity
         {
             Id = Guid.NewGuid(),
+            OrganizationId = employee.OrganizationId,
             EmployeeId = employee.Id,
             AssignmentId = assignmentId,
+            Mode = AttendanceMode.Assignment,
+            PayrollEligible = true,
             ClockIn = DateTimeOffset.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
@@ -111,6 +130,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
 
     public async Task<ApiResponse<PagedResponse<AttendanceResponse>>> ListAsync(
         AttendanceListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -119,9 +139,13 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
         var (items, total) = await unitOfWork.Attendance.ListAsync(
             page,
             pageSize,
+            organizationScope.GetCurrentOrganizationId(),
             request.EmployeeId,
             request.FromDate,
             request.ToDate,
+            locationIds,
+            request.Mode,
+            request.PayrollEligible,
             cancellationToken);
 
         return ApiResponse<PagedResponse<AttendanceResponse>>.SuccessPagedResponse(
@@ -161,7 +185,7 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Validation.Failed);
 
         var record = await unitOfWork.Attendance.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (record is null)
+        if (record is null || !organizationScope.IsSameOrganization(record.OrganizationId))
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NotFound);
 
         if (await IsPayPeriodLockedForRecordAsync(record, cancellationToken))
@@ -370,8 +394,11 @@ public sealed class AttendanceService(IUnitOfWork unitOfWork, IAutoCloseAttendan
         if (employee is null)
             return false;
 
+        if (!employee.DepartmentId.HasValue)
+            return false;
+
         var clockDate = DateOnly.FromDateTime(record.ClockIn.UtcDateTime);
-        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId, clockDate, cancellationToken);
+        var period = await unitOfWork.PayPeriods.GetContainingDateAsync(employee.DepartmentId.Value, clockDate, cancellationToken);
         return period?.Status == PayPeriodStatus.Locked;
     }
 

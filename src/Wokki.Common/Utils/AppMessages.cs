@@ -31,6 +31,22 @@ public static class AppMessages
         public static readonly AppMessage NotFound = new("USER_NOT_FOUND", "User not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage Created = new("USER_CREATED", "User created.", StatusCodes.Status201Created);
         public static readonly AppMessage Exists = new("USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage EmployeeProfileRequired = new(
+            "USER_EMPLOYEE_PROFILE_REQUIRED",
+            "Create org accounts through the employee workflow so every account has an employee profile.",
+            StatusCodes.Status400BadRequest);
+    }
+
+    public static class Platform
+    {
+        public static readonly AppMessage UsersListed = new("PLATFORM_USERS_LISTED", "Platform users listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationsListed = new("PLATFORM_ORGS_LISTED", "Platform organizations listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationUpdated = new("PLATFORM_ORG_UPDATED", "Organization subscription updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrganizationNotFound = new("PLATFORM_ORG_NOT_FOUND", "Organization not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage SubscriptionDurationRequired = new(
+            "SUBSCRIPTION_DURATION_REQUIRED",
+            "durationDays is required (1–3650) when enabling or renewing an org package.",
+            StatusCodes.Status400BadRequest);
     }
 
     public static class Employee
@@ -44,6 +60,24 @@ public static class AppMessages
         public static readonly AppMessage AlreadyTerminated = new("EMPLOYEE_ALREADY_TERMINATED", "Employee is already terminated.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage UserAlreadyLinked = new("EMPLOYEE_USER_EXISTS", "Email already registered.", StatusCodes.Status409Conflict);
         public static readonly AppMessage DepartmentNotFound = new("EMPLOYEE_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DepartmentRequiredForUser = new("EMPLOYEE_DEPARTMENT_REQUIRED", "Department is required for employee (User) role.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ManagerLocationsRequired = new("EMPLOYEE_MANAGER_LOCATIONS_REQUIRED", "At least one branch must be assigned when creating a Manager.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ManagerLocationNotFound = new("EMPLOYEE_MANAGER_LOCATION_NOT_FOUND", "One or more assigned branches were not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage DepartmentMembershipsListed = new("EMPLOYEE_DEPT_MEMBERSHIPS_LISTED", "Employee department membership history listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgAdminNoDepartment = new(
+            "EMPLOYEE_ORG_ADMIN_NO_DEPARTMENT",
+            "Org Admin is not assigned to a branch department.",
+            StatusCodes.Status400BadRequest);
+    }
+
+    public static class Self
+    {
+        public static readonly AppMessage ProfileFound = new("SELF_PROFILE_FOUND", "Personal profile found.", StatusCodes.Status200OK);
+        public static readonly AppMessage ProfileUpdated = new("SELF_PROFILE_UPDATED", "Personal profile updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage PaymentQrUploaded = new("SELF_PAYMENT_QR_UPLOADED", "Payment QR image uploaded.", StatusCodes.Status200OK);
+        public static readonly AppMessage PaymentQrInvalid = new("SELF_PAYMENT_QR_INVALID", "Invalid payment QR image.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CloudinaryNotConfigured = new("CLOUDINARY_NOT_CONFIGURED", "Image upload is not configured.", StatusCodes.Status503ServiceUnavailable);
+        public static readonly AppMessage NoEmployeeProfile = new("SELF_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
     }
 
     public static class Location
@@ -80,6 +114,10 @@ public static class AppMessages
         public static readonly AppMessage Deleted = new("SHIFT_DELETED", "Shift definition deactivated.", StatusCodes.Status200OK);
         public static readonly AppMessage LocationNotFound = new("SHIFT_LOCATION_NOT_FOUND", "Location not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage InvalidTimeRange = new("SHIFT_INVALID_TIME_RANGE", "End time must be after start time.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage Copied = new("SHIFT_COPIED", "Shift definitions copied.", StatusCodes.Status200OK);
+        public static readonly AppMessage CopySourceNotFound = new("SHIFT_COPY_SOURCE_NOT_FOUND", "Source department or shifts not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage CopyTargetInvalid = new("SHIFT_COPY_TARGET_INVALID", "One or more target departments are invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CopyNothingToCopy = new("SHIFT_COPY_NOTHING_TO_COPY", "No active shifts to copy from the source department.", StatusCodes.Status400BadRequest);
     }
 
     public static class Schedule
@@ -116,8 +154,10 @@ public static class AppMessages
         public static readonly AppMessage ShiftInactive = new("SCHEDULE_SHIFT_INACTIVE", "Shift definition is inactive.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage EmployeeNotFound = new("SCHEDULE_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage EmployeeWrongDepartment = new("SCHEDULE_EMPLOYEE_WRONG_DEPT", "Employee does not belong to this schedule department.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage EmployeeWrongLocation = new("SCHEDULE_EMPLOYEE_WRONG_LOCATION", "Employee does not have an active membership in this schedule location.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage ShiftWrongScope = new("SCHEDULE_SHIFT_WRONG_SCOPE", "Shift definition does not apply to this schedule.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MyScheduleListed = new("ME_SCHEDULE_LISTED", "Your schedule listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage MyDraftWeekAssignmentsListed = new("ME_DRAFT_WEEK_ASSIGNMENTS_LISTED", "Draft week assignments listed.", StatusCodes.Status200OK);
         public static readonly AppMessage NoEmployeeProfile = new("ME_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
         public static readonly AppMessage SuggestionsGenerated = new("SCHEDULE_SUGGESTIONS_GENERATED", "Schedule suggestions generated.", StatusCodes.Status200OK);
         public static readonly AppMessage SuggestionsApplied = new("SCHEDULE_SUGGESTIONS_APPLIED", "Schedule suggestions applied.", StatusCodes.Status200OK);
@@ -148,6 +188,22 @@ public static class AppMessages
         public static readonly AppMessage ChatUnavailable = new("SCHEDULE_INSIGHT_CHAT_UNAVAILABLE", "Schedule insight assistant is unavailable. Scheduling is not affected.", StatusCodes.Status503ServiceUnavailable);
     }
 
+    public static class ScheduleLeaveRequest
+    {
+        public static readonly AppMessage Created = new("SCHEDULE_LEAVE_REQUEST_CREATED", "Leave request submitted.", StatusCodes.Status201Created);
+        public static readonly AppMessage Listed = new("SCHEDULE_LEAVE_REQUEST_LISTED", "Leave requests listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("SCHEDULE_LEAVE_REQUEST_NOT_FOUND", "Leave request not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("SCHEDULE_LEAVE_REQUEST_FORBIDDEN", "You cannot access this leave request.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage Approved = new("SCHEDULE_LEAVE_REQUEST_APPROVED", "Leave request approved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Rejected = new("SCHEDULE_LEAVE_REQUEST_REJECTED", "Leave request rejected.", StatusCodes.Status200OK);
+        public static readonly AppMessage Cancelled = new("SCHEDULE_LEAVE_REQUEST_CANCELLED", "Leave request cancelled.", StatusCodes.Status200OK);
+        public static readonly AppMessage DuplicatePending = new("SCHEDULE_LEAVE_REQUEST_DUPLICATE_PENDING", "A pending leave request already exists for this shift.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage InvalidTransition = new("SCHEDULE_LEAVE_REQUEST_INVALID_TRANSITION", "Leave request cannot be updated in its current state.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ReasonRequired = new("SCHEDULE_LEAVE_REQUEST_REASON_REQUIRED", "Leave reason is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage InvalidDate = new("SCHEDULE_LEAVE_REQUEST_INVALID_DATE", "Leave date is invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage ScheduleRequired = new("SCHEDULE_LEAVE_REQUEST_SCHEDULE_REQUIRED", "Schedule id is required.", StatusCodes.Status400BadRequest);
+    }
+
     public static class Chat
     {
         public static readonly AppMessage Listed = new("CHAT_CHANNELS_LISTED", "Channels listed.", StatusCodes.Status200OK);
@@ -163,7 +219,10 @@ public static class AppMessages
         public static readonly AppMessage MembersRequired = new("CHAT_MEMBERS_REQUIRED", "At least one member is required.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage MemberNotFound = new("CHAT_MEMBER_NOT_FOUND", "One or more members were not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage DirectRequiresTwoMembers = new("CHAT_DIRECT_TWO_MEMBERS", "Direct channels require exactly two members.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CannotMessageSelf = new("CHAT_CANNOT_MESSAGE_SELF", "You cannot start a direct chat with yourself.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage GroupNameRequired = new("CHAT_GROUP_NAME_REQUIRED", "Group channels require a name.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage GroupNotAllowed = new("CHAT_GROUP_NOT_ALLOWED", "Custom group channels are not allowed.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage OrgMembersListed = new("CHAT_ORG_MEMBERS_LISTED", "Organization chat members listed.", StatusCodes.Status200OK);
         public static readonly AppMessage BodyRequired = new("CHAT_BODY_REQUIRED", "Message body is required.", StatusCodes.Status400BadRequest);
     }
 
@@ -190,6 +249,37 @@ public static class AppMessages
         public static readonly AppMessage NoEmployeeProfile = new("SWAP_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
     }
 
+    public static class SwapPost
+    {
+        public static readonly AppMessage Found = new("SWAP_POST_FOUND", "Swap post found.", StatusCodes.Status200OK);
+        public static readonly AppMessage Listed = new("SWAP_POST_LISTED", "Swap posts listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Created = new("SWAP_POST_CREATED", "Swap post created.", StatusCodes.Status201Created);
+        public static readonly AppMessage Accepted = new("SWAP_POST_ACCEPTED", "Swap post accepted and applied.", StatusCodes.Status200OK);
+        public static readonly AppMessage Cancelled = new("SWAP_POST_CANCELLED", "Swap post cancelled.", StatusCodes.Status200OK);
+        public static readonly AppMessage PreviewValid = new("SWAP_POST_PREVIEW_VALID", "Swap post accept preview is valid.", StatusCodes.Status200OK);
+        public static readonly AppMessage AuditListed = new("SWAP_POST_AUDIT_LISTED", "Swap post audit entries listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("SWAP_POST_NOT_FOUND", "Swap post not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("SWAP_POST_FORBIDDEN", "You are not allowed to access this swap post.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage OpenExists = new("SWAP_POST_OPEN_EXISTS", "A pending swap post already exists for this assignment.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyTaken = new("SWAP_POST_ALREADY_TAKEN", "This swap post is no longer available.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage StaleAssignment = new("SWAP_POST_STALE_ASSIGNMENT", "The offered assignment is no longer valid for this swap post.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage ScopeMismatch = new("SWAP_POST_SCOPE_MISMATCH", "Swap post is outside your branch or department scope.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage SelfAccept = new("SWAP_POST_SELF_ACCEPT", "You cannot accept your own swap post.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AcceptorAssignmentRequired = new("SWAP_POST_ACCEPTOR_ASSIGNMENT_REQUIRED", "An acceptor assignment is required for cross-swap posts.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CoverAcceptorAssignmentNotAllowed = new("SWAP_POST_COVER_ACCEPTOR_ASSIGNMENT_NOT_ALLOWED", "Cover posts do not take an acceptor assignment — only cross-swap does.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage CoverNoOpenSlot = new("SWAP_POST_COVER_NO_OPEN_SLOT", "You cannot take this cover shift because your schedule has no open slot (conflict, rest, or shift cap).", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AcceptorAssignmentHasOpenPost = new("SWAP_POST_ACCEPTOR_ASSIGNMENT_HAS_OPEN_POST", "The selected assignment already has a pending swap post.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage PolicyRoleMismatch = new("SWAP_POST_POLICY_ROLE_MISMATCH", "Swap would violate role match policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyRestConflict = new("SWAP_POST_POLICY_REST_CONFLICT", "Swap would violate rest between shifts policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyWeeklyCap = new("SWAP_POST_POLICY_WEEKLY_CAP", "Swap would violate weekly shift cap policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyDailyCap = new("SWAP_POST_POLICY_DAILY_CAP", "Swap would violate daily shift cap policy.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PolicyOverlap = new("SWAP_POST_POLICY_OVERLAP", "Swap would cause a shift overlap or duplicate assignment.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage NoEmployeeProfile = new("SWAP_POST_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ManagerNotAllowed = new("SWAP_POST_MANAGER_NOT_ALLOWED", "Managers and admins cannot participate in the swap marketplace.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage AssignmentNotFound = new("SWAP_POST_ASSIGNMENT_NOT_FOUND", "Shift assignment not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage ScheduleNotDraft = new("SWAP_POST_SCHEDULE_NOT_DRAFT", "Swap marketplace is only available while the schedule is draft.", StatusCodes.Status400BadRequest);
+    }
+
     public static class Attendance
     {
         public static readonly AppMessage Found = new("ATTENDANCE_FOUND", "Attendance record found.", StatusCodes.Status200OK);
@@ -205,6 +295,9 @@ public static class AppMessages
         public static readonly AppMessage NoEmployeeProfile = new("ATTENDANCE_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
         public static readonly AppMessage PeriodLocked = new("ATTENDANCE_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AdjustmentNoteRequired = new("ATTENDANCE_NOTE_REQUIRED", "Adjustment note is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage FlexibleNotAllowed = new("ATTENDANCE_FLEXIBLE_NOT_ALLOWED", "Flexible clock-in is not allowed for this department.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage AssignmentRequired = new("ATTENDANCE_ASSIGNMENT_REQUIRED", "This department requires clock-in on a published shift.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage EligibleUpdated = new("ATTENDANCE_ELIGIBLE_UPDATED", "Payroll eligibility updated.", StatusCodes.Status200OK);
     }
 
     public static class Payroll
@@ -213,6 +306,11 @@ public static class AppMessages
         public static readonly AppMessage EmployeeSummary = new("PAYROLL_EMPLOYEE_SUMMARY", "Employee payroll breakdown.", StatusCodes.Status200OK);
         public static readonly AppMessage Exported = new("PAYROLL_EXPORTED", "Payroll CSV exported.", StatusCodes.Status200OK);
         public static readonly AppMessage PeriodLocked = new("PAYROLL_PERIOD_LOCKED", "Pay period locked.", StatusCodes.Status200OK);
+        public static readonly AppMessage PeriodNotFound = new("PAYROLL_PERIOD_NOT_FOUND", "Pay period not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PeriodAlreadyLocked = new("PAYROLL_PERIOD_ALREADY_LOCKED", "Pay period is already locked.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage LineNotFound = new("PAYROLL_LINE_NOT_FOUND", "Payroll line not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PaidUpdated = new("PAYROLL_PAID_UPDATED", "Payroll paid status updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage MySummary = new("PAYROLL_MY_SUMMARY", "My payroll summary.", StatusCodes.Status200OK);
         public static readonly AppMessage DepartmentNotFound = new("PAYROLL_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage EmployeeNotFound = new("PAYROLL_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage PeriodOverlap = new("PAYROLL_PERIOD_OVERLAP", "Pay period dates overlap an existing period.", StatusCodes.Status409Conflict);
@@ -230,6 +328,15 @@ public static class AppMessages
         public static readonly AppMessage Me = new("AUTH_ME", "Current user profile.", StatusCodes.Status200OK);
         public static readonly AppMessage LogoutSuccess = new("AUTH_LOGOUT_SUCCESS", "Logged out.", StatusCodes.Status200OK);
         public static readonly AppMessage NotLoggedIn = new("AUTH_NOT_LOGGED_IN", "Not authenticated.", StatusCodes.Status401Unauthorized);
+        public static readonly AppMessage PasswordChanged = new("AUTH_PASSWORD_CHANGED", "Password updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpSent = new("AUTH_OTP_SENT", "If the email exists, a verification code was sent.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpVerified = new("AUTH_OTP_VERIFIED", "Verification code accepted.", StatusCodes.Status200OK);
+        public static readonly AppMessage OtpInvalid = new("AUTH_OTP_INVALID", "Invalid or expired verification code.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage OtpNotVerified = new("AUTH_OTP_NOT_VERIFIED", "Verify the email code before setting a new password.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage OtpResendTooSoon = new("AUTH_OTP_RESEND_TOO_SOON", "Please wait for the current code to expire before requesting a new one.", StatusCodes.Status429TooManyRequests);
+        public static readonly AppMessage OtpSendLocked = new("AUTH_OTP_SEND_LOCKED", "Too many verification requests. Try again in 30 minutes.", StatusCodes.Status429TooManyRequests);
+        public static readonly AppMessage PasswordConfirmMismatch = new("AUTH_PASSWORD_CONFIRM_MISMATCH", "New password and confirmation do not match.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage PasswordResetSuccess = new("AUTH_PASSWORD_RESET", "Password reset successful.", StatusCodes.Status200OK);
     }
 
     public static class OvertimeRequest
@@ -287,6 +394,30 @@ public static class AppMessages
         public static readonly AppMessage TransferForbidden = new("WS_TRANSFER_FORBIDDEN", "You are not authorized to manage this employee.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage AlreadyAtLocation = new("WS_ALREADY_AT_LOCATION", "Employee already has an active membership at this location.", StatusCodes.Status409Conflict);
         public static readonly AppMessage AlreadyInDepartment = new("WS_ALREADY_IN_DEPT", "Employee is already in this department.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage EmployeeWrongLocation = new("WS_EMPLOYEE_WRONG_LOCATION", "Employee must have an active membership in the target department's location before department transfer.", StatusCodes.Status400BadRequest);
+    }
+
+    public static class Stats
+    {
+        public static readonly AppMessage PlatformFound = new("STATS_PLATFORM_FOUND", "Platform statistics retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgFound = new("STATS_ORG_FOUND", "Organization statistics retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgSubscriptionFound = new("STATS_ORG_SUBSCRIPTION_FOUND", "Organization subscription retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Forbidden = new("STATS_FORBIDDEN", "You are not authorized to view these statistics.", StatusCodes.Status403Forbidden);
+    }
+
+    public static class Organization
+    {
+        public static readonly AppMessage CrossTenant = new("ORG_CROSS_TENANT", "Resource not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Required = new("ORG_REQUIRED", "Organization context is required.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage Disabled = new("ORG_DISABLED", "Organization is disabled.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage PackageNotActivated = new("ORG_PACKAGE_NOT_ACTIVATED", "Organization package is not activated.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage PackageExpired = new("ORG_PACKAGE_EXPIRED", "Organization package has expired.", StatusCodes.Status402PaymentRequired);
+        public static readonly AppMessage SchedulingCatalogFound = new("ORG_SCHEDULING_CATALOG_FOUND", "Scheduling rule catalog found.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyFound = new("ORG_SCHEDULING_POLICY_FOUND", "Organization scheduling policy found.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyUpdated = new("ORG_SCHEDULING_POLICY_UPDATED", "Organization scheduling policy updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage SchedulingPolicyInvalid = new("ORG_SCHEDULING_POLICY_INVALID", "Organization scheduling policy is invalid.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage SchedulingPolicyInfeasible = new("ORG_SCHEDULING_POLICY_INFEASIBLE", "Organization scheduling policy is not feasible.", StatusCodes.Status422UnprocessableEntity);
+        public static readonly AppMessage SchedulingPolicyWizardDraftCreated = new("ORG_SCHEDULING_POLICY_WIZARD_DRAFT", "Scheduling policy wizard draft created.", StatusCodes.Status200OK);
     }
 
     public static class Validation

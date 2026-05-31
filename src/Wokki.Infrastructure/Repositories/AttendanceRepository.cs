@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wokki.Domain.Entities;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Models;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
@@ -25,12 +26,19 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
     public async Task<(IReadOnlyList<AttendanceRecord> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? employeeId = null,
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
+        AttendanceMode? mode = null,
+        bool? payrollEligible = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.AttendanceRecords.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(a => a.OrganizationId == organizationId.Value);
 
         if (employeeId.HasValue)
             query = query.Where(a => a.EmployeeId == employeeId.Value);
@@ -45,6 +53,27 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         {
             var to = new DateTimeOffset(toDate.Value.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
             query = query.Where(a => a.ClockIn <= to);
+        }
+
+        if (mode.HasValue)
+            query = query.Where(a => a.Mode == mode.Value);
+
+        if (payrollEligible.HasValue)
+            query = query.Where(a => a.PayrollEligible == payrollEligible.Value);
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(a =>
+                    a.AssignmentId != null &&
+                    context.ShiftAssignments.Any(sa =>
+                        sa.Id == a.AssignmentId.Value &&
+                        context.Schedules.Any(sc =>
+                            sc.Id == sa.ScheduleId &&
+                            context.Departments.Any(d =>
+                                d.Id == sc.DepartmentId && allowedLocationIds.Contains(d.LocationId)))));
         }
 
         query = query.OrderByDescending(a => a.ClockIn);
@@ -94,6 +123,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
             .Where(a => ids.Contains(a.EmployeeId)
                         && a.ClockOut != null
                         && a.AssignmentId != null
+                        && a.Mode == AttendanceMode.Assignment
                         && a.ClockIn >= from
                         && a.ClockIn <= to)
             .GroupBy(a => a.EmployeeId)
@@ -120,6 +150,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
             .Where(a => ids.Contains(a.EmployeeId)
                         && a.ClockOut != null
                         && a.AssignmentId != null
+                        && a.Mode == AttendanceMode.Assignment
                         && a.ClockIn >= from
                         && a.ClockIn <= to
                         && a.ApprovedOvertimeMinutes > 0)

@@ -57,6 +57,16 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
             select a
         ).ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ShiftAssignment>> ListByEmployeeAndScheduleAsync(
+        Guid employeeId,
+        Guid scheduleId,
+        CancellationToken cancellationToken = default) =>
+        await context.ShiftAssignments.AsNoTracking()
+            .Where(a => a.EmployeeId == employeeId && a.ScheduleId == scheduleId)
+            .OrderBy(a => a.Date)
+            .ThenBy(a => a.CreatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task<bool> ExistsAsync(
         Guid scheduleId,
         Guid shiftDefinitionId,
@@ -100,6 +110,7 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
     public async Task SwapEmployeeIdsAsync(
         Guid assignmentId1,
         Guid assignmentId2,
+        Guid holdEmployeeId,
         CancellationToken cancellationToken = default)
     {
         var emp1 = await context.ShiftAssignments.AsNoTracking()
@@ -111,10 +122,8 @@ public sealed class ShiftAssignmentRepository(AppDbContext context) : IShiftAssi
             .Select(a => a.EmployeeId)
             .FirstAsync(cancellationToken);
 
-        var holdId = SeedData.SwapHoldEmployeeId;
-
         await context.Database.ExecuteSqlInterpolatedAsync(
-            $"""UPDATE shift_assignments SET "EmployeeId" = {holdId} WHERE "Id" = {assignmentId1}""",
+            $"""UPDATE shift_assignments SET "EmployeeId" = {holdEmployeeId} WHERE "Id" = {assignmentId1}""",
             cancellationToken);
         await context.Database.ExecuteSqlInterpolatedAsync(
             $"""UPDATE shift_assignments SET "EmployeeId" = {emp1} WHERE "Id" = {assignmentId2}""",

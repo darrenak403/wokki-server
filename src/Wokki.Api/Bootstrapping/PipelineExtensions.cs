@@ -15,9 +15,13 @@ using Wokki.Api.Apis.Locations;
 using Wokki.Api.Apis.EmployeeSelf;
 using Wokki.Api.Apis.Payroll;
 using Wokki.Api.Apis.Schedules;
+using Wokki.Api.Apis.ScheduleLeaveRequest;
 using Wokki.Api.Apis.Shifts;
-using Wokki.Api.Apis.SwapRequests;
+using Wokki.Api.Apis.SwapPosts;
 using Wokki.Api.Apis.Users;
+using Wokki.Api.Apis.Organization;
+using Wokki.Api.Apis.Platform;
+using Wokki.Api.Apis.Scheduling;
 using Wokki.Api.Apis.Workspace;
 
 namespace Wokki.Api.Bootstrapping;
@@ -44,9 +48,11 @@ public static class PipelineExtensions
         app.UseCors(CorsSettings.FrontendPolicy);
         app.UseRateLimiter();
         app.UseAuthentication();
+        app.UseMiddleware<Middleware.OrganizationContextMiddleware>();
         app.UseAuthorization();
 
-        app.MapHub<ChatHub>("/ws/chat");
+        app.MapHub<ChatHub>("/ws/chat")
+            .RequireCors(CorsSettings.FrontendPolicy);
 
         return app;
     }
@@ -79,8 +85,9 @@ public static class PipelineExtensions
         app.MapDepartmentApi();
         app.MapShiftApi();
         app.MapScheduleApi();
+        app.MapScheduleLeaveRequestApi();
         app.MapEmployeeSelfApi();
-        app.MapSwapRequestApi();
+        app.MapSwapPostApi();
         app.MapAttendanceApi();
         app.MapPayrollApi();
         app.MapChannelApi();
@@ -88,6 +95,9 @@ public static class PipelineExtensions
         app.MapLocationMembershipApi();
         app.MapLocationManagerApi();
         app.MapWorkspaceApi();
+        app.MapPlatformApi();
+        app.MapOrgStatsApi();
+        app.MapSchedulingCatalogApi();
 
         return app;
     }

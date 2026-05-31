@@ -13,12 +13,14 @@ Read these **before** implementing or changing behavior. Technical how-to stays 
 | 3 | [process-flows.md](./process-flows.md) | End-to-end flows and state machines |
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket surface by role |
 | 5 | [glossary.md](./glossary.md) | Domain terms and enums |
-| 6 | [architecture.md](./architecture.md) | Clean Architecture layers and code conventions |
-| 7 | [minimal-api.md](./minimal-api.md) | Endpoint module pattern in `Wokki.Api` |
+| 6 | [fe/self-serve-org-handoff.md](./fe/self-serve-org-handoff.md) | **FE handoff (2026-05-29):** self-serve org, register, platform vs org app, package gate |
+| 7 | [fe/2026-05-29-feat-platform-org-subscription.md](./fe/2026-05-29-feat-platform-org-subscription.md) | Concise FE contract for platform user/org list and org package activation |
+| 8 | [architecture.md](./architecture.md) | Clean Architecture layers and code conventions |
+| 9 | [minimal-api.md](./minimal-api.md) | Endpoint module pattern in `Wokki.Api` |
 
 ## Product context
 
-**Wokki Shift Ops MVP** is a single-tenant workforce backend: scheduling, shift swaps, attendance, payroll summaries, internal chat, and heuristic schedule suggestions. One company per deployment; no in-app multi-tenant onboarding.
+**Wokki Shift Ops** — workforce backend với **logical multi-tenant (Organization)**: self-serve register, org-scoped data, platform operator riêng. Scheduling, swap, attendance, payroll, chat.
 
 ## Document control
 
@@ -27,7 +29,7 @@ Read these **before** implementing or changing behavior. Technical how-to stays 
 | Product | Wokki Shift Ops MVP |
 | Backend repo | `wokki-server` |
 | BRD version | 1.0 |
-| Last updated | 2026-05-20 |
+| Last updated | 2026-05-29 |
 | Implementation status | Phases 1–5 complete (see `plans/shift-ops-mvp/plan.md`) |
 | Source of truth for code | This `docs/` set + `Wokki.Domain` enums + `AppMessages` |
 

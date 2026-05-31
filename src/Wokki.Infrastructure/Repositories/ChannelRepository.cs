@@ -22,6 +22,14 @@ public sealed class ChannelRepository(AppDbContext context) : IChannelRepository
             select c
         ).ToListAsync(cancellationToken);
 
+    public async Task<Channel?> FindOrganizationChannelAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default) =>
+        await context.Channels.AsNoTracking()
+            .FirstOrDefaultAsync(
+                c => c.OrganizationId == organizationId && c.Type == ChannelType.Organization,
+                cancellationToken);
+
     public async Task<Channel?> FindDirectChannelAsync(
         Guid employeeIdA,
         Guid employeeIdB,
@@ -47,6 +55,17 @@ public sealed class ChannelRepository(AppDbContext context) : IChannelRepository
         CancellationToken cancellationToken = default) =>
         await context.ChannelMembers.AsNoTracking()
             .AnyAsync(m => m.ChannelId == channelId && m.EmployeeId == employeeId, cancellationToken);
+
+    public async Task RemoveMemberAsync(
+        Guid channelId,
+        Guid employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        var member = await context.ChannelMembers
+            .FirstOrDefaultAsync(m => m.ChannelId == channelId && m.EmployeeId == employeeId, cancellationToken);
+        if (member is not null)
+            context.ChannelMembers.Remove(member);
+    }
 
     public async Task<IReadOnlyList<ChannelMember>> ListMembersAsync(
         Guid channelId,

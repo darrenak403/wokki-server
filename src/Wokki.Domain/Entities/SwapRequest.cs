@@ -2,9 +2,11 @@ using Wokki.Domain.Enums;
 
 namespace Wokki.Domain.Entities;
 
+// Deprecated: retained only for historical swap_requests rows. New shift trades use SwapPost.
 public class SwapRequest
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid RequesterAssignmentId { get; set; }
     public Guid TargetAssignmentId { get; set; }
     public Guid RequesterId { get; set; }

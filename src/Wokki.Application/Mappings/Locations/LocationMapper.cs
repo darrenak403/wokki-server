@@ -8,10 +8,11 @@ public static class LocationMapper
     public static LocationResponse ToResponse(this Location location) =>
         new(location.Id, location.Name, location.Address, location.TimeZone, location.IsActive, location.CreatedAt);
 
-    public static Location ToEntity(this CreateLocationRequest request) =>
+    public static Location ToEntity(this CreateLocationRequest request, Guid organizationId) =>
         new()
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Name = request.Name.Trim(),
             Address = request.Address.Trim(),
             TimeZone = request.TimeZone.Trim(),

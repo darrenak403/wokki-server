@@ -8,8 +8,7 @@ public sealed class CreateChannelRequestValidator : AbstractValidator<CreateChan
 {
     public CreateChannelRequestValidator()
     {
+        RuleFor(x => x.Type).Equal(ChannelType.Direct);
         RuleFor(x => x.MemberEmployeeIds).NotEmpty();
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(200)
-            .When(x => x.Type == ChannelType.Group);
     }
 }

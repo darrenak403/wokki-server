@@ -6,7 +6,9 @@ Tài liệu bàn giao cho team FE tích hợp **Wokki Shift Ops MVP**. Chi tiế
 
 **Smoke BE (không unit test):** `plans/fe-handoff-flow-verification/run-smoke.sh`
 
-**Handoff theo wave (contract từng file):** [docs/fe/README.md](../fe/README.md)
+**Handoff self-serve org (2026-05-29):** [fe/self-serve-org-handoff.md](./fe/self-serve-org-handoff.md) — **ưu tiên thay luồng demo/seed cũ**
+
+**Handoff theo wave (MVP cũ — phần seed đã lỗi thời):** [docs/fe/README.md](../fe/README.md)
 
 ---
 
@@ -159,25 +161,25 @@ Chỉ gọi sau **publish**. Dùng token User (`user@gmail.com` seed).
 
 Refresh sau swap accept.
 
-#### F3 — Đổi ca (User)
+#### F3 — Bảng tin đổi ca (User, lịch Draft)
 
 | Bước | API | Method | Ai gọi |
 |------|-----|--------|--------|
-| 1 | `/api/v1/self/swap-requests` | GET | User — danh sách gửi/nhận |
-| 2 | `/api/v1/swap-requests` | POST | User — `{ requesterAssignmentId, targetAssignmentId, requesterNote? }` → `swapId` |
-| 3 | `/api/v1/swap-requests/{swapId}` | GET | User / Manager — chi tiết |
-| 4 | `/api/v1/swap-requests/{swapId}/accept` | POST | **Đối tác** (employee nhận ca) |
-| 5 | `/api/v1/swap-requests/{swapId}/decline` | POST | Đối tác |
-| 6 | `/api/v1/swap-requests/{swapId}/cancel` | POST | Người gửi |
-| 7 | `/api/v1/self/schedule` | GET | Cả hai — xác nhận đã đổi ca |
+| 1 | `/api/v1/self/schedule-preferences/week/{weekStartDate}` | GET | User — `scheduleId` + trạng thái Draft |
+| 2 | `/api/v1/self/schedule/draft/{weekStartDate}/assignments` | GET | User — phân ca Draft để chọn ca |
+| 3 | `/api/v1/swap-posts/feed?scheduleId=` | GET | User — bảng tin Pending |
+| 4 | `/api/v1/swap-posts` | POST | User — `{ authorAssignmentId, type, note? }` |
+| 5 | `/api/v1/swap-posts/{id}/accept/preview` | POST | User — CrossSwap: `{ acceptorAssignmentId }` |
+| 6 | `/api/v1/swap-posts/{id}/accept` | POST | User — Cover: body rỗng; CrossSwap: `{ acceptorAssignmentId }` |
+| 7 | `/api/v1/self/swap-posts/mine` | GET | User — bài của mình; huỷ qua `POST .../cancel` |
 
-**Manager (wave 5, có thể gộp màn duyệt):**
+**Admin/Manager (chỉ xem nhật ký):**
 
 | API | Method |
 |-----|--------|
-| `/api/v1/swap-requests` | GET — lọc `?status=&departmentId=` |
-| `/api/v1/swap-requests/{swapId}/override-approve` | POST |
-| `/api/v1/swap-requests/{swapId}/override-reject` | POST |
+| `/api/v1/swap-posts/audit` | GET — `?locationId=`, `?weekStartDate=`, `?scheduleId=` |
+
+Không còn duyệt thủ công / decline / override. API cũ `/api/v1/swap-requests` đã gỡ.
 
 #### F4 — Chấm công (User)
 
@@ -231,12 +233,12 @@ Gọi sau khi đã có bản ghi clock-out trong kỳ.
 
 Dùng để QA end-to-end; thứ tự API **không đổi**:
 
-1. Manager login → `POST /shifts` → `POST /schedules` → 2× `POST .../assignments` → `POST .../publish`
-2. User login → `GET /self/schedule`
-3. User `POST /swap-requests` → Manager/User đối tác `POST .../accept` → `GET /self/schedule` (cả hai)
-4. User `POST /attendance/clock-in` → `clock-out` → `GET /self/attendance`
-5. Manager `GET /attendance` → `GET /payroll/summary`
-6. Manager `POST /channels` → `POST .../messages` + SignalR
+1. Manager login → `POST /shifts` → `POST /schedules` → 2× `POST .../assignments` (giữ **Draft**)
+2. User A login → `GET /self/schedule/draft/{week}/assignments` → `POST /swap-posts` (Cover)
+3. User B login → `GET /swap-posts/feed?scheduleId=` → `POST /swap-posts/{id}/accept`
+4. Manager `POST /schedules/{id}/publish` → feed khóa; bài Pending → Hidden
+5. User `POST /attendance/clock-in` → `clock-out` → `GET /self/attendance`
+6. Manager `GET /swap-posts/audit` → `GET /payroll/summary`
 
 Script tự động: `plans/fe-handoff-flow-verification/run-smoke.sh`
 
@@ -250,8 +252,9 @@ Script tự động: `plans/fe-handoff-flow-verification/run-smoke.sh`
 | Admin users | Admin | `users/*` |
 | Master data | Admin, Manager | `employees`, `locations`, `departments`, `shifts` |
 | Lịch tuần | Manager | `schedules/*`, `shifts` |
-| Ca của tôi | User | `self/schedule`, `self/swap-requests` |
-| Đổi ca | User | `swap-requests/*` |
+| Ca của tôi | User | `self/schedule` (published), `self/schedule/draft/{week}/assignments` (Draft) |
+| Đổi ca | User | `swap-posts/*`, `self/swap-posts/*` — màn `/{org}/{branch}/user/swap` |
+| Nhật ký đổi ca | Admin, Manager | `swap-posts/audit` — màn `.../admin/swap`, `.../manager/swap` |
 | Chấm công | User | `attendance/clock-*`, `self/attendance` |
 | Duyệt chấm công | Manager | `attendance`, `attendance/{id}/adjust` |
 | Payroll | Manager, Admin | `payroll/summary`, export |

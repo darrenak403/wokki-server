@@ -32,5 +32,7 @@ public sealed class AttendanceRecordConfiguration : IEntityTypeConfiguration<Att
             .HasColumnName("xmin")
             .HasColumnType("xid")
             .IsRowVersion();
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

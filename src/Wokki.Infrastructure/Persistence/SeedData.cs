@@ -4,16 +4,13 @@ using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Entities;
-using Wokki.Domain.Enums;
-using Wokki.Infrastructure.Persistence.Seed;
 
 namespace Wokki.Infrastructure.Persistence;
 
 public static class SeedData
 {
-    public static readonly Guid DefaultLocationId = DevSeedData.LocationId;
-    public static readonly Guid DefaultDepartmentId = DevSeedData.DepartmentBarId;
-    public static readonly Guid SwapHoldEmployeeId = DevSeedData.SwapHoldEmployeeId;
+    public const string PlatformAdminEmail = "admin@gmail.com";
+    public const string PlatformSeedPassword = "12345@Abc";
 
     public static async Task InitializeAsync(IServiceProvider services)
     {
@@ -24,114 +21,21 @@ public static class SeedData
 
         if (await context.Users.AnyAsync())
         {
-            logger.LogInformation("Users already exist. Skip dev seed.");
-        }
-        else
-        {
-            logger.LogInformation("Applying dev seed from {Table}...", nameof(DevSeedData));
-            await DevSeedApplicator.ApplyAsync(context, passwordHasher, logger);
-        }
-
-        await EnsureSwapHoldEmployeeAsync(context, passwordHasher, logger);
-        await EnsureLocationMembershipsAsync(context, logger);
-    }
-
-    private static async Task EnsureSwapHoldEmployeeAsync(
-        AppDbContext context,
-        IPasswordHasher passwordHasher,
-        ILogger logger)
-    {
-        if (await context.Employees.AnyAsync(e => e.Id == SwapHoldEmployeeId))
-            return;
-
-        var departmentId = await context.Departments
-            .OrderBy(d => d.Id)
-            .Select(d => d.Id)
-            .FirstOrDefaultAsync();
-        if (departmentId == Guid.Empty)
-        {
-            logger.LogWarning("Swap hold employee not created: no department in database.");
+            logger.LogInformation("Users already exist. Skip platform seed.");
             return;
         }
 
-        if (!await context.Users.AnyAsync(u => u.Id == DevSeedData.UserSwapHoldId))
+        logger.LogInformation("Seeding platform operator {Email}.", PlatformAdminEmail);
+        context.Users.Add(new User
         {
-            context.Users.Add(new User
-            {
-                Id = DevSeedData.UserSwapHoldId,
-                Email = "swap-hold@system.local",
-                PasswordHash = passwordHasher.HashPassword(DevSeedData.DevPassword),
-                Role = RoleConstants.User,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
-
-        context.Employees.Add(new Employee
-        {
-            Id = SwapHoldEmployeeId,
-            UserId = DevSeedData.UserSwapHoldId,
-            FirstName = "Swap",
-            LastName = "Hold",
-            Phone = "",
-            Position = "System",
-            HourlyRate = 0m,
-            DepartmentId = departmentId,
-            CreatedAt = DateTime.UtcNow,
-            EmployedAt = DateTime.UtcNow
+            Id = Guid.NewGuid(),
+            Email = PlatformAdminEmail,
+            PasswordHash = passwordHasher.HashPassword(PlatformSeedPassword),
+            Role = RoleConstants.PlatformOperator,
+            OrganizationId = null,
+            CreatedAt = DateTime.UtcNow
         });
 
         await context.SaveChangesAsync();
-        logger.LogInformation("Ensured swap hold employee {EmployeeId}.", SwapHoldEmployeeId);
-    }
-
-    private static async Task EnsureLocationMembershipsAsync(AppDbContext context, ILogger logger)
-    {
-        var coveredEmployeeIds = await context.LocationMemberships
-            .Where(m => m.Status == LocationMembershipStatus.Active || m.Status == LocationMembershipStatus.Pending)
-            .Select(m => m.EmployeeId)
-            .Distinct()
-            .ToListAsync();
-
-        var uncovered = await context.Employees
-            .Where(e => e.Id != SwapHoldEmployeeId && !coveredEmployeeIds.Contains(e.Id))
-            .Select(e => new { e.Id, e.DepartmentId })
-            .ToListAsync();
-
-        if (uncovered.Count == 0)
-            return;
-
-        var deptIds = uncovered.Select(e => e.DepartmentId).Distinct().ToList();
-        var deptLocationMap = await context.Departments
-            .Where(d => deptIds.Contains(d.Id))
-            .ToDictionaryAsync(d => d.Id, d => d.LocationId);
-
-        var now = DateTime.UtcNow;
-        var inserted = 0;
-
-        foreach (var emp in uncovered)
-        {
-            if (!deptLocationMap.TryGetValue(emp.DepartmentId, out var locationId))
-            {
-                logger.LogWarning("Membership seed: employee {EmployeeId} has no resolvable location — skipped.", emp.Id);
-                continue;
-            }
-
-            context.LocationMemberships.Add(new LocationMembership
-            {
-                Id = Guid.NewGuid(),
-                EmployeeId = emp.Id,
-                LocationId = locationId,
-                Status = LocationMembershipStatus.Active,
-                RequestedAt = now,
-                ReviewedAt = now
-            });
-            inserted++;
-        }
-
-        if (inserted == 0)
-            return;
-
-        await context.SaveChangesAsync();
-        logger.LogInformation("Location membership seed: {Count} membership(s) seeded.", inserted);
     }
 }

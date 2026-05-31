@@ -2,6 +2,7 @@ namespace Wokki.Domain.Entities;
 
 public class ScheduleInsightContext
 {
+    public Guid OrganizationId { get; set; }
     public Guid ScheduleId { get; set; }
     public Guid LocationId { get; set; }
     public Guid DepartmentId { get; set; }

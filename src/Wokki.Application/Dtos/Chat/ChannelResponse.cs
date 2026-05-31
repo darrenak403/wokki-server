@@ -8,6 +8,7 @@ public sealed record ChannelResponse(
     ChannelType Type,
     Guid CreatedBy,
     DateTime CreatedAt,
+    DateTime? LastMessageAt,
     IReadOnlyList<ChannelMemberResponse> Members);
 
 public sealed record ChannelMemberResponse(

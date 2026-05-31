@@ -1,0 +1,21 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+# Dependency folders (Cực kỳ nặng, phải bỏ qua đầu tiên)
+node_modules/
+.pnpm-store/
+
+# Next.js & Build outputs (Tránh quét file build liên tục của next-server)
+.next/
+dist/
+build/
+out/
+
+# Log & Temporary files
+*.log
+.logs/
+.tmp/
+.cache/
+
+# Git & IDE configs
+.git/
+.idea/
+.vscode/

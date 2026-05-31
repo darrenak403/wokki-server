@@ -3,6 +3,7 @@ namespace Wokki.Domain.Entities;
 public class ShiftAssignment
 {
     public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public Guid ScheduleId { get; set; }
     public Guid ShiftDefinitionId { get; set; }
     public Guid EmployeeId { get; set; }

@@ -38,5 +38,7 @@ public sealed class OvertimeRequestConfiguration : IEntityTypeConfiguration<Over
             .WithMany()
             .HasForeignKey(x => x.ReviewedById)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

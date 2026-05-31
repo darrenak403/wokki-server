@@ -12,6 +12,7 @@ public interface ISwapRequestRepository
         SwapStatus? status = null,
         Guid? departmentId = null,
         DateOnly? weekStartDate = null,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SwapRequest>> ListByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default);
     Task<bool> HasOpenSwapForAssignmentAsync(

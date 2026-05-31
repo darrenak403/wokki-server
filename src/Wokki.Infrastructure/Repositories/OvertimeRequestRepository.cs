@@ -51,6 +51,7 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
         Guid? departmentId,
         int page,
         int pageSize,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.OvertimeRequests.AsNoTracking()
@@ -67,6 +68,20 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
                         sc.Id == sa.ScheduleId &&
                         sc.DepartmentId == departmentId.Value)));
 
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(r =>
+                    context.ShiftAssignments.Any(sa =>
+                        sa.Id == r.ShiftAssignmentId &&
+                        context.Schedules.Any(sc =>
+                            sc.Id == sa.ScheduleId &&
+                            context.Departments.Any(d =>
+                                d.Id == sc.DepartmentId && allowedLocationIds.Contains(d.LocationId)))));
+        }
+
         query = query.OrderByDescending(r => r.CreatedAt);
 
         var total = await query.CountAsync(cancellationToken);
@@ -82,6 +97,7 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
             int year,
             int page,
             int pageSize,
+            IReadOnlySet<Guid>? locationIds = null,
             CancellationToken cancellationToken = default)
     {
         var query = from r in context.OvertimeRequests
@@ -98,6 +114,17 @@ public sealed class OvertimeRequestRepository(AppDbContext context) : IOvertimeR
 
         if (departmentId.HasValue)
             query = query.Where(x => context.Schedules.Any(sc => sc.Id == x.sa.ScheduleId && sc.DepartmentId == departmentId.Value));
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(x => context.Schedules.Any(sc =>
+                    sc.Id == x.sa.ScheduleId &&
+                    context.Departments.Any(d =>
+                        d.Id == sc.DepartmentId && allowedLocationIds.Contains(d.LocationId))));
+        }
 
         query = query.OrderByDescending(x => x.r.StartedAt);
 

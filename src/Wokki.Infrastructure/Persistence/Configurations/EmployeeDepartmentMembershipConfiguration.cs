@@ -10,8 +10,9 @@ public sealed class EmployeeDepartmentMembershipConfiguration : IEntityTypeConfi
     public void Configure(EntityTypeBuilder<EmployeeDepartmentMembership> builder)
     {
         builder.ToTable("employee_department_memberships");
-        builder.HasKey(x => new { x.EmployeeId, x.DepartmentId });
+        builder.HasKey(x => new { x.EmployeeId, x.DepartmentId, x.CreatedAt });
         builder.HasIndex(x => x.DepartmentId);
+        builder.HasIndex(x => new { x.EmployeeId, x.DepartmentId, x.Status });
 
         builder.Property(x => x.Status)
             .HasColumnType("integer")
@@ -36,5 +37,7 @@ public sealed class EmployeeDepartmentMembershipConfiguration : IEntityTypeConfi
             .WithMany()
             .HasForeignKey(x => x.DepartmentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

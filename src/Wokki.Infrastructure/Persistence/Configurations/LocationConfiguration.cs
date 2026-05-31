@@ -13,6 +13,8 @@ public sealed class LocationConfiguration : IEntityTypeConfiguration<Location>
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Address).HasMaxLength(500).IsRequired();
         builder.Property(x => x.TimeZone).HasMaxLength(100).IsRequired();
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
+
+        builder.HasRequiredOrganization(x => x.OrganizationId);
     }
 }

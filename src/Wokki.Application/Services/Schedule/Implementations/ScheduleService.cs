@@ -2,6 +2,9 @@ using Wokki.Application.Common;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Mappings.Schedules;
+using Wokki.Application.Notifications;
+using Wokki.Application.Scheduling;
+using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
@@ -19,10 +22,13 @@ public sealed class ScheduleService(
     IUnitOfWork unitOfWork,
     INotificationService notifications,
     IScheduleSuggestionOrchestrator scheduleSuggestions,
-    IScheduleInsightService scheduleInsights) : IScheduleService
+    IScheduleInsightService scheduleInsights,
+    IScheduleRebalanceAnalyzer rebalanceAnalyzer,
+    IOrganizationScopeService organizationScope) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
+        IReadOnlySet<Guid>? locationIds = null,
         CancellationToken cancellationToken = default)
     {
         var page = request.Page < 1 ? 1 : request.Page;
@@ -31,8 +37,10 @@ public sealed class ScheduleService(
         var (items, total) = await unitOfWork.Schedules.ListAsync(
             page,
             pageSize,
+            organizationScope.GetCurrentOrganizationId(),
             request.DepartmentId,
             request.WeekStartDate,
+            locationIds,
             cancellationToken);
 
         return ApiResponse<PagedResponse<ScheduleResponse>>.SuccessPagedResponse(
@@ -48,12 +56,13 @@ public sealed class ScheduleService(
         CancellationToken cancellationToken = default)
     {
         var schedule = await unitOfWork.Schedules.GetByIdAsync(id, cancellationToken: cancellationToken);
-        if (schedule is null)
+        if (schedule is null || !organizationScope.IsSameOrganization(schedule.OrganizationId))
             return ApiResponse<ScheduleDetailResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
         var assignments = await BuildAssignmentResponsesAsync(id, cancellationToken);
+        var rebalanceHints = await rebalanceAnalyzer.AnalyzeAsync(id, cancellationToken);
         return ApiResponse<ScheduleDetailResponse>.SuccessResponse(
-            new ScheduleDetailResponse(schedule.ToResponse(), assignments),
+            new ScheduleDetailResponse(schedule.ToResponse(), assignments, rebalanceHints),
             AppMessages.Schedule.Found);
     }
 
@@ -65,8 +74,9 @@ public sealed class ScheduleService(
         if (!ScheduleRules.IsMonday(request.WeekStartDate))
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
 
+        var organizationId = organizationScope.RequireOrganizationId();
         var department = await unitOfWork.Departments.GetByIdAsync(request.DepartmentId, cancellationToken: cancellationToken);
-        if (department is null)
+        if (department is null || department.OrganizationId != organizationId)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.DepartmentNotFound);
 
         var existing = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
@@ -76,7 +86,7 @@ public sealed class ScheduleService(
         if (existing is not null)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyExists);
 
-        var entity = request.ToEntity(createdByUserId);
+        var entity = request.ToEntity(createdByUserId, organizationId);
         await unitOfWork.Schedules.AddAsync(entity, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -127,29 +137,60 @@ public sealed class ScheduleService(
 
     public async Task<ApiResponse<ScheduleResponse>> PublishAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var schedule = await unitOfWork.Schedules.GetByIdAsync(id, track: true, cancellationToken: cancellationToken);
-        if (schedule is null)
+        var schedulePreview = await unitOfWork.Schedules.GetByIdAsync(id, cancellationToken: cancellationToken);
+        if (schedulePreview is null)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
-        if (schedule.Status == ScheduleStatus.Published)
+        if (schedulePreview.Status == ScheduleStatus.Published)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyPublished);
 
-        if (schedule.Status != ScheduleStatus.Draft)
+        if (schedulePreview.Status != ScheduleStatus.Draft)
             return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.NotDraft);
 
-        schedule.Status = ScheduleStatus.Published;
-        schedule.PublishedAt = DateTime.UtcNow;
-        unitOfWork.Schedules.Update(schedule);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var assignments = await unitOfWork.ShiftAssignments.ListByScheduleAsync(id, cancellationToken);
-        foreach (var employeeId in assignments.Select(a => a.EmployeeId).Distinct())
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        ScheduleEntity schedule;
+        try
         {
-            await NotifyEmployeeSafeAsync(
-                employeeId,
-                "schedule.published",
-                new { scheduleId = schedule.Id, schedule.WeekStartDate },
-                cancellationToken);
+            schedule = (await unitOfWork.Schedules.GetByIdForUpdateAsync(id, cancellationToken))!;
+            if (schedule.Status != ScheduleStatus.Draft)
+            {
+                await unitOfWork.RollbackTransactionAsync(cancellationToken);
+                return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.NotDraft);
+            }
+
+            await unitOfWork.SwapPosts.HidePendingByScheduleAsync(id, cancellationToken);
+            schedule.Status = ScheduleStatus.Published;
+            schedule.PublishedAt = DateTime.UtcNow;
+            unitOfWork.Schedules.Update(schedule);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.CommitTransactionAsync(cancellationToken);
+        }
+        catch
+        {
+            await unitOfWork.RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
+
+        var assignmentResponses = await BuildAssignmentResponsesAsync(id, cancellationToken);
+        foreach (var group in assignmentResponses.GroupBy(a => a.EmployeeId))
+        {
+            var employee = await unitOfWork.Employees.GetByIdAsync(group.Key, cancellationToken: cancellationToken);
+            if (employee is null)
+                continue;
+
+            var sample = group.First();
+            var payload = new SchedulePublishedNotificationPayload(
+                employee.FirstName,
+                schedule.WeekStartDate,
+                sample.LocationName,
+                sample.DepartmentName,
+                group
+                    .OrderBy(a => a.Date)
+                    .ThenBy(a => a.StartTime)
+                    .Select(a => new SchedulePublishedShiftLine(a.Date, a.ShiftName, a.StartTime, a.EndTime))
+                    .ToList());
+
+            await NotifyEmployeeSafeAsync(employee.Id, "schedule.published", payload, cancellationToken);
         }
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(schedule.ToResponse(), AppMessages.Schedule.Published);
@@ -313,6 +354,7 @@ public sealed class ScheduleService(
             var clone = new ShiftAssignmentEntity
             {
                 Id = Guid.NewGuid(),
+                OrganizationId = assignment.OrganizationId,
                 ScheduleId = targetScheduleId,
                 ShiftDefinitionId = assignment.ShiftDefinitionId,
                 EmployeeId = assignment.EmployeeId,
@@ -435,7 +477,13 @@ public sealed class ScheduleService(
         if (schedule is null)
             return ApiResponse<ShiftAssignmentResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
-        var prepared = await TryPrepareAssignmentAsync(schedule, scheduleId, request, cancellationToken);
+        var prepared = await TryPrepareAssignmentAsync(
+            schedule,
+            scheduleId,
+            request,
+            ignoredAssignmentIds: null,
+            existingOnSchedule: null,
+            cancellationToken);
         if (prepared.Error is not null)
             return ApiResponse<ShiftAssignmentResponse>.FailureResponse(prepared.Error);
 
@@ -535,18 +583,73 @@ public sealed class ScheduleService(
         if (schedule.Status != ScheduleStatus.Draft)
             return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.NotDraft);
 
-        var preparedItems = new List<(ShiftAssignmentEntity Assignment, Wokki.Domain.Entities.ShiftDefinition Shift)>();
+        var suggestionByAssignment = new Dictionary<(Guid ShiftDefinitionId, Guid EmployeeId, DateOnly Date), ApplyScheduleSuggestionItem>();
         foreach (var item in request.Suggestions)
         {
+            if (!suggestionByAssignment.TryAdd((item.ShiftDefinitionId, item.EmployeeId, item.Date), item))
+                return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.AssignmentDuplicate);
+        }
+
+        var existingOnSchedule = await unitOfWork.ShiftAssignments.ListByScheduleAsync(scheduleId, cancellationToken);
+        var assignmentByKey = new Dictionary<(Guid ShiftDefinitionId, Guid EmployeeId, DateOnly Date), ShiftAssignmentEntity>();
+        foreach (var assignment in existingOnSchedule)
+            assignmentByKey.TryAdd((assignment.ShiftDefinitionId, assignment.EmployeeId, assignment.Date), assignment);
+
+        var clearEmployeeIds = request.ClearOrphanAssignments
+            ? await ResolveSuggestionApplyClearEmployeeIdsAsync(
+                schedule,
+                existingOnSchedule,
+                suggestionByAssignment.Keys.Select(k => k.EmployeeId).ToHashSet(),
+                cancellationToken)
+            : [];
+        var assignmentsToRemove = request.ClearOrphanAssignments
+            ? existingOnSchedule
+                .Where(a => clearEmployeeIds.Contains(a.EmployeeId)
+                            && !suggestionByAssignment.ContainsKey((a.ShiftDefinitionId, a.EmployeeId, a.Date)))
+                .ToList()
+            : [];
+        var ignoredAssignmentIds = assignmentsToRemove
+            .Select(a => a.Id)
+            .ToHashSet();
+
+        var preparedItems = new List<(ShiftAssignmentEntity Assignment, Wokki.Domain.Entities.ShiftDefinition Shift)>();
+        foreach (var item in suggestionByAssignment.Values)
+        {
+            var assignmentKey = (item.ShiftDefinitionId, item.EmployeeId, item.Date);
+            if (assignmentByKey.ContainsKey(assignmentKey))
+                continue;
+
             var createRequest = new CreateShiftAssignmentRequest(
                 item.ShiftDefinitionId,
                 item.EmployeeId,
                 item.Date,
                 item.Note);
 
-            var prepared = await TryPrepareAssignmentAsync(schedule, scheduleId, createRequest, cancellationToken);
+            var prepared = await TryPrepareAssignmentAsync(
+                schedule,
+                scheduleId,
+                createRequest,
+                ignoredAssignmentIds,
+                existingOnSchedule,
+                cancellationToken);
             if (prepared.Error is not null)
                 return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(prepared.Error);
+
+            if (preparedItems.Any(existingItem =>
+                    existingItem.Assignment.ShiftDefinitionId == prepared.Assignment!.ShiftDefinitionId
+                    && existingItem.Assignment.EmployeeId == prepared.Assignment.EmployeeId
+                    && existingItem.Assignment.Date == prepared.Assignment.Date))
+                return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.AssignmentDuplicate);
+
+            if (preparedItems.Any(existingItem =>
+                    existingItem.Assignment.EmployeeId == prepared.Assignment!.EmployeeId
+                    && existingItem.Assignment.Date == prepared.Assignment.Date
+                    && TimeRangesOverlap(
+                        existingItem.Shift.StartTime,
+                        existingItem.Shift.EndTime,
+                        prepared.Shift!.StartTime,
+                        prepared.Shift.EndTime)))
+                return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.AssignmentConflict);
 
             preparedItems.Add((prepared.Assignment!, prepared.Shift!));
         }
@@ -554,8 +657,15 @@ public sealed class ScheduleService(
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
+            foreach (var existing in existingOnSchedule)
+                if (ignoredAssignmentIds.Contains(existing.Id))
+                    unitOfWork.ShiftAssignments.Remove(existing);
+
             foreach (var (assignment, _) in preparedItems)
                 await unitOfWork.ShiftAssignments.AddAsync(assignment, cancellationToken);
+
+            schedule.SuggestionsAppliedAt = DateTime.UtcNow;
+            unitOfWork.Schedules.Update(schedule);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -579,6 +689,8 @@ public sealed class ScheduleService(
         ScheduleEntity schedule,
         Guid scheduleId,
         CreateShiftAssignmentRequest request,
+        IReadOnlySet<Guid>? ignoredAssignmentIds,
+        IReadOnlyList<ShiftAssignmentEntity>? existingOnSchedule,
         CancellationToken cancellationToken)
     {
         if (schedule.Status != ScheduleStatus.Draft)
@@ -602,6 +714,10 @@ public sealed class ScheduleService(
         if (employee is null || employee.TerminatedAt is not null)
             return (null, null, AppMessages.Schedule.EmployeeNotFound);
 
+        var locationMembership = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(employee.Id, cancellationToken: cancellationToken);
+        if (locationMembership?.LocationId != department.LocationId)
+            return (null, null, AppMessages.Schedule.EmployeeWrongLocation);
+
         if (!await unitOfWork.Employees.IsMemberOfDepartmentAsync(
                 employee.Id,
                 schedule.DepartmentId,
@@ -612,7 +728,16 @@ public sealed class ScheduleService(
         if (request.Date < schedule.WeekStartDate || request.Date > weekEnd)
             return (null, null, AppMessages.Validation.Failed);
 
-        if (await unitOfWork.ShiftAssignments.ExistsAsync(
+        if (existingOnSchedule is not null)
+        {
+            if (existingOnSchedule.Any(a =>
+                    !IsIgnored(a, ignoredAssignmentIds)
+                    && a.ShiftDefinitionId == request.ShiftDefinitionId
+                    && a.EmployeeId == request.EmployeeId
+                    && a.Date == request.Date))
+                return (null, null, AppMessages.Schedule.AssignmentDuplicate);
+        }
+        else if (await unitOfWork.ShiftAssignments.ExistsAsync(
                 scheduleId,
                 request.ShiftDefinitionId,
                 request.EmployeeId,
@@ -620,16 +745,95 @@ public sealed class ScheduleService(
                 cancellationToken))
             return (null, null, AppMessages.Schedule.AssignmentDuplicate);
 
-        if (await unitOfWork.ShiftAssignments.HasTimeOverlapAsync(
+        var hasOverlap = existingOnSchedule is not null
+            ? await HasTimeOverlapInExistingAssignmentsAsync(
+                existingOnSchedule,
+                ignoredAssignmentIds,
+                request.EmployeeId,
+                request.Date,
+                shift.StartTime,
+                shift.EndTime,
+                cancellationToken)
+            : await unitOfWork.ShiftAssignments.HasTimeOverlapAsync(
                 scheduleId,
                 request.EmployeeId,
                 request.Date,
                 shift.StartTime,
                 shift.EndTime,
-                cancellationToken: cancellationToken))
+                cancellationToken: cancellationToken);
+        if (hasOverlap)
             return (null, null, AppMessages.Schedule.AssignmentConflict);
 
-        return (request.ToAssignmentEntity(scheduleId), shift, null);
+        return (request.ToAssignmentEntity(scheduleId, schedule.OrganizationId), shift, null);
+    }
+
+    private async Task<bool> HasTimeOverlapInExistingAssignmentsAsync(
+        IReadOnlyList<ShiftAssignmentEntity> existingOnSchedule,
+        IReadOnlySet<Guid>? ignoredAssignmentIds,
+        Guid employeeId,
+        DateOnly date,
+        TimeOnly startTime,
+        TimeOnly endTime,
+        CancellationToken cancellationToken)
+    {
+        foreach (var assignment in existingOnSchedule)
+        {
+            if (IsIgnored(assignment, ignoredAssignmentIds)
+                || assignment.EmployeeId != employeeId
+                || assignment.Date != date)
+                continue;
+
+            var existingShift = await unitOfWork.ShiftDefinitions.GetByIdAsync(
+                assignment.ShiftDefinitionId,
+                cancellationToken: cancellationToken);
+            if (existingShift is null)
+                continue;
+
+            if (TimeRangesOverlap(startTime, endTime, existingShift.StartTime, existingShift.EndTime))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsIgnored(
+        ShiftAssignmentEntity assignment,
+        IReadOnlySet<Guid>? ignoredAssignmentIds) =>
+        ignoredAssignmentIds?.Contains(assignment.Id) == true;
+
+    private async Task<HashSet<Guid>> ResolveSuggestionApplyClearEmployeeIdsAsync(
+        ScheduleEntity schedule,
+        IReadOnlyList<ShiftAssignmentEntity> existingOnSchedule,
+        HashSet<Guid> suggestionEmployeeIds,
+        CancellationToken cancellationToken)
+    {
+        if (existingOnSchedule.Count == 0)
+            return suggestionEmployeeIds;
+
+        var submissions = await unitOfWork.SchedulePreferences.ListByScheduleAsync(
+            schedule.Id,
+            includeLines: true,
+            status: SchedulePreferenceStatus.Submitted,
+            cancellationToken);
+        var baseline = ScheduleRebalanceBaseline.GetPreferenceChangeBaseline(schedule, existingOnSchedule);
+        var changedEmployeeIds = ScheduleRebalanceBaseline.GetPreferenceChangedEmployeeIdsAfterBaseline(
+            submissions,
+            baseline);
+
+        var unavailableKeys = submissions
+            .SelectMany(s => s.Lines
+                .Where(l => l.PreferenceType == PreferenceType.Unavailable)
+                .Select(l => (s.EmployeeId, l.ShiftDefinitionId, l.Date)))
+            .ToHashSet();
+        foreach (var assignment in existingOnSchedule)
+        {
+            if (unavailableKeys.Contains((assignment.EmployeeId, assignment.ShiftDefinitionId, assignment.Date)))
+                changedEmployeeIds.Add(assignment.EmployeeId);
+        }
+
+        return changedEmployeeIds.Count > 0
+            ? changedEmployeeIds
+            : suggestionEmployeeIds;
     }
 
     public async Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyScheduleAsync(
@@ -640,7 +844,9 @@ public sealed class ScheduleService(
         if (employee is null)
             return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
 
-        var department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId, cancellationToken: cancellationToken);
+        DepartmentEntity? department = null;
+        if (employee.DepartmentId.HasValue)
+            department = await unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value, cancellationToken: cancellationToken);
         var location = department is not null
             ? await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken)
             : null;
@@ -667,6 +873,50 @@ public sealed class ScheduleService(
         }
 
         return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse(responses, AppMessages.Schedule.MyScheduleListed);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>> GetMyDraftWeekAssignmentsAsync(
+        Guid userId,
+        DateOnly weekStartDate,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.NoEmployeeProfile);
+
+        if (!ScheduleRules.IsMonday(weekStartDate))
+            return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.FailureResponse(AppMessages.Schedule.WeekNotMonday);
+
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse([], AppMessages.Schedule.MyDraftWeekAssignmentsListed);
+
+        var schedule = await unitOfWork.Schedules.GetByDepartmentAndWeekAsync(
+            employee.DepartmentId.Value,
+            weekStartDate,
+            cancellationToken);
+
+        if (schedule is null
+            || schedule.Status != ScheduleStatus.Draft
+            || !organizationScope.IsSameOrganization(schedule.OrganizationId))
+            return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse([], AppMessages.Schedule.MyDraftWeekAssignmentsListed);
+
+        var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeAndScheduleAsync(
+            employee.Id,
+            schedule.Id,
+            cancellationToken);
+
+        var context = new AssignmentResponseContext();
+        var responses = new List<ShiftAssignmentResponse>(assignments.Count);
+        foreach (var assignment in assignments)
+        {
+            var shift = await unitOfWork.ShiftDefinitions.GetByIdAsync(assignment.ShiftDefinitionId, cancellationToken: cancellationToken);
+            if (shift is null)
+                continue;
+
+            responses.Add(await MapAssignmentAsync(assignment, shift, context, cancellationToken));
+        }
+
+        return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse(responses, AppMessages.Schedule.MyDraftWeekAssignmentsListed);
     }
 
     private async Task<IReadOnlyList<ShiftAssignmentResponse>> BuildAssignmentResponsesAsync(
@@ -783,6 +1033,9 @@ public sealed class ScheduleService(
             // Notifications must not roll back core workflow.
         }
     }
+
+    private static bool TimeRangesOverlap(TimeOnly leftStart, TimeOnly leftEnd, TimeOnly rightStart, TimeOnly rightEnd) =>
+        leftStart < rightEnd && leftEnd > rightStart;
 
     private static GenerateScheduleInsightContextRequest BuildInsightContextRequest(
         IReadOnlyList<ScheduleSuggestionItem> suggestions,

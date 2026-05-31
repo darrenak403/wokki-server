@@ -56,6 +56,32 @@ public static class PayrollEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
+        group.MapPost("/periods/{id:guid}/lock", LockPeriodAsync)
+            .WithName("LockPayPeriod")
+            .WithDescription("Chốt kỳ lương và tạo snapshot PayrollLine.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .Produces<ApiResponse<PayrollSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
+        group.MapGet("/my-summary", GetMySummaryAsync)
+            .WithName("GetMyPayrollSummary")
+            .WithDescription("Tổng lương tháng của nhân viên đang đăng nhập.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<MyPayrollSummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized);
+
+        group.MapPatch("/periods/{payPeriodId:guid}/employees/{employeeId:guid}/paid", SetLinePaidAsync)
+            .WithName("SetPayrollLinePaid")
+            .WithDescription("Đánh dấu đã chuyển lương cho nhân viên trong kỳ đã chốt.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .Produces<ApiResponse<PayrollEmployeeLineResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         return group;
     }
 
@@ -122,5 +148,53 @@ public static class PayrollEndpoints
             return response.ToHttpResult();
 
         return Results.File(response.Data.Content, response.Data.ContentType, response.Data.FileName);
+    }
+
+    private static async Task<IResult> LockPeriodAsync(
+        [FromRoute] Guid id,
+        [FromServices] IPayrollService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<PayrollSummaryResponse>();
+
+        var response = await service.LockPeriodAsync(id, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMySummaryAsync(
+        [FromQuery] DateOnly startDate,
+        [FromQuery] DateOnly endDate,
+        [FromServices] IPayrollService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Unauthorized<MyPayrollSummaryResponse>();
+
+        var response = await service.GetMySummaryAsync(currentUser.UserId.Value, startDate, endDate, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> SetLinePaidAsync(
+        [FromRoute] Guid payPeriodId,
+        [FromRoute] Guid employeeId,
+        [FromBody] SetPayrollLinePaidRequest request,
+        [FromServices] IPayrollService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Unauthorized<PayrollEmployeeLineResponse>();
+
+        var response = await service.SetLinePaidAsync(
+            payPeriodId,
+            employeeId,
+            request.Paid,
+            currentUser.UserId.Value,
+            cancellationToken);
+        return response.ToHttpResult();
     }
 }

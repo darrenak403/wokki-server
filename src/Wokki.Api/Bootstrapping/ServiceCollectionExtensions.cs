@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Wokki.Api.Services;
@@ -16,16 +17,20 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy(CorsSettings.FrontendPolicy, policy =>
             {
-                if (cors.AllowedOrigins.Length > 0)
-                    policy.WithOrigins(cors.AllowedOrigins);
+                policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 
-                policy.AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
+                if (cors.AllowAnyOrigin)
+                    policy.SetIsOriginAllowed(_ => true);
+                else if (cors.AllowedOrigins.Length > 0)
+                    policy.WithOrigins(cors.AllowedOrigins);
             });
         });
 
-        services.AddSignalR();
+        services.AddSignalR()
+            .AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            });
         services.AddScoped<IChatRealtimeNotifier, SignalRChatNotifier>();
 
         services.AddRateLimiter(options =>

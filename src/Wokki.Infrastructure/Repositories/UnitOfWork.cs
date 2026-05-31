@@ -6,6 +6,7 @@ namespace Wokki.Infrastructure.Repositories;
 
 public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
 {
+    private IOrganizationRepository? _organizations;
     private IUserRepository? _users;
     private IEmployeeRepository? _employees;
     private ILocationRepository? _locations;
@@ -14,21 +15,25 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IScheduleRepository? _schedules;
     private IShiftAssignmentRepository? _shiftAssignments;
     private ISwapRequestRepository? _swapRequests;
+    private ISwapPostRepository? _swapPosts;
+    private IAuditLogRepository? _auditLogs;
     private IAttendanceRepository? _attendance;
     private IPayPeriodRepository? _payPeriods;
     private IPayrollLineRepository? _payrollLines;
     private IChannelRepository? _channels;
     private IMessageRepository? _messages;
     private IEmployeeAvailabilityRepository? _employeeAvailabilities;
-    private ILocationSchedulingPolicyRepository? _locationSchedulingPolicies;
+    private IOrganizationSchedulingPolicyRepository? _organizationSchedulingPolicies;
     private IEmployeeDepartmentMembershipRepository? _employeeDepartmentMemberships;
     private ISchedulePreferenceRepository? _schedulePreferences;
     private IScheduleInsightContextRepository? _scheduleInsightContexts;
+    private IScheduleLeaveRequestRepository? _scheduleLeaveRequests;
     private IOvertimeRequestRepository? _overtimeRequests;
     private ILocationMembershipRepository? _locationMemberships;
     private ILocationManagerRepository? _locationManagers;
     private IDbContextTransaction? _transaction;
 
+    public IOrganizationRepository Organizations => _organizations ??= new OrganizationRepository(context);
     public IUserRepository Users => _users ??= new UserRepository(context);
     public IEmployeeRepository Employees => _employees ??= new EmployeeRepository(context);
     public ILocationRepository Locations => _locations ??= new LocationRepository(context);
@@ -37,6 +42,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IScheduleRepository Schedules => _schedules ??= new ScheduleRepository(context);
     public IShiftAssignmentRepository ShiftAssignments => _shiftAssignments ??= new ShiftAssignmentRepository(context);
     public ISwapRequestRepository SwapRequests => _swapRequests ??= new SwapRequestRepository(context);
+    public ISwapPostRepository SwapPosts => _swapPosts ??= new SwapPostRepository(context);
+    public IAuditLogRepository AuditLogs => _auditLogs ??= new AuditLogRepository(context);
     public IAttendanceRepository Attendance => _attendance ??= new AttendanceRepository(context);
     public IPayPeriodRepository PayPeriods => _payPeriods ??= new PayPeriodRepository(context);
     public IPayrollLineRepository PayrollLines => _payrollLines ??= new PayrollLineRepository(context);
@@ -44,14 +51,16 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     public IMessageRepository Messages => _messages ??= new MessageRepository(context);
     public IEmployeeAvailabilityRepository EmployeeAvailabilities =>
         _employeeAvailabilities ??= new EmployeeAvailabilityRepository(context);
-    public ILocationSchedulingPolicyRepository LocationSchedulingPolicies =>
-        _locationSchedulingPolicies ??= new LocationSchedulingPolicyRepository(context);
+    public IOrganizationSchedulingPolicyRepository OrganizationSchedulingPolicies =>
+        _organizationSchedulingPolicies ??= new OrganizationSchedulingPolicyRepository(context);
     public IEmployeeDepartmentMembershipRepository EmployeeDepartmentMemberships =>
         _employeeDepartmentMemberships ??= new EmployeeDepartmentMembershipRepository(context);
     public ISchedulePreferenceRepository SchedulePreferences =>
         _schedulePreferences ??= new SchedulePreferenceRepository(context);
     public IScheduleInsightContextRepository ScheduleInsightContexts =>
         _scheduleInsightContexts ??= new ScheduleInsightContextRepository(context);
+    public IScheduleLeaveRequestRepository ScheduleLeaveRequests =>
+        _scheduleLeaveRequests ??= new ScheduleLeaveRequestRepository(context);
     public IOvertimeRequestRepository OvertimeRequests =>
         _overtimeRequests ??= new OvertimeRequestRepository(context);
     public ILocationMembershipRepository LocationMemberships =>

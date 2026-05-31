@@ -20,5 +20,7 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
             .WithMany()
             .HasForeignKey(x => x.ActorUserId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOptionalOrganization(x => x.OrganizationId);
     }
 }

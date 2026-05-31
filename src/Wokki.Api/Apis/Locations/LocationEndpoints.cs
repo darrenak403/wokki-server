@@ -2,8 +2,10 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Wokki.Api.Bootstrapping;
 using Wokki.Api.Extensions;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Location;
 using Wokki.Application.Services.Location.Interfaces;
+using Wokki.Application.Services.LocationScope.Interfaces;
 using Wokki.Common.Extensions;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
@@ -52,7 +54,7 @@ public static class LocationEndpoints
         group.MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateLocation")
             .WithDescription("Cập nhật địa điểm.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
             .Produces<ApiResponse<LocationResponse>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
@@ -60,33 +62,23 @@ public static class LocationEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
-        group.MapGet("/{id:guid}/scheduling-policy", GetSchedulingPolicyAsync)
-            .WithName("GetLocationSchedulingPolicy")
-            .WithDescription("Luật phân ca tổng của chi nhánh.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
-            .Produces<ApiResponse<LocationSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
-        group.MapPut("/{id:guid}/scheduling-policy", UpsertSchedulingPolicyAsync)
-            .WithName("UpsertLocationSchedulingPolicy")
-            .WithDescription("Cập nhật luật phân ca tổng của chi nhánh.")
-            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
-            .Produces<ApiResponse<LocationSchedulingPolicyResponse>>(StatusCodes.Status200OK)
-            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
-            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
-            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
-            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
-
         return group;
     }
 
     private static async Task<IResult> ListAsync(
         [FromServices] ILocationService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
-        var response = await service.ListAsync(cancellationToken);
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<IReadOnlyList<LocationResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+        var response = await service.ListAsync(managedLocationIds, cancellationToken);
         return response.ToHttpResult();
     }
 
@@ -115,32 +107,21 @@ public static class LocationEndpoints
         [FromRoute] Guid id,
         [FromBody] UpdateLocationRequest request,
         [FromServices] ILocationService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
         [FromServices] IValidator<UpdateLocationRequest> validator,
         CancellationToken cancellationToken = default)
     {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<LocationResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (!await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, id, cancellationToken))
+            return Results.Json(ApiResponse<LocationResponse>.FailureResponse(AppMessages.Auth.Forbidden), statusCode: 403);
+
         if (!request.ValidateRequest(validator, out var validationResult))
             return validationResult!;
 
         var response = await service.UpdateAsync(id, request, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> GetSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromServices] ILocationService service,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await service.GetSchedulingPolicyAsync(id, cancellationToken);
-        return response.ToHttpResult();
-    }
-
-    private static async Task<IResult> UpsertSchedulingPolicyAsync(
-        [FromRoute] Guid id,
-        [FromBody] UpsertLocationSchedulingPolicyRequest request,
-        [FromServices] ILocationService service,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await service.UpsertSchedulingPolicyAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 }

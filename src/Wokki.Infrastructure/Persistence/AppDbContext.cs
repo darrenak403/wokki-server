@@ -5,6 +5,7 @@ namespace Wokki.Infrastructure.Persistence;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Department> Departments => Set<Department>();
@@ -13,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Schedule> Schedules => Set<Schedule>();
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<SwapRequest> SwapRequests => Set<SwapRequest>();
+    public DbSet<SwapPost> SwapPosts => Set<SwapPost>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
     public DbSet<PayPeriod> PayPeriods => Set<PayPeriod>();
     public DbSet<PayrollLine> PayrollLines => Set<PayrollLine>();
@@ -20,11 +22,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChannelMember> ChannelMembers => Set<ChannelMember>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<EmployeeAvailability> EmployeeAvailabilities => Set<EmployeeAvailability>();
-    public DbSet<LocationSchedulingPolicy> LocationSchedulingPolicies => Set<LocationSchedulingPolicy>();
+    public DbSet<OrganizationSchedulingPolicy> OrganizationSchedulingPolicies => Set<OrganizationSchedulingPolicy>();
     public DbSet<EmployeeDepartmentMembership> EmployeeDepartmentMemberships => Set<EmployeeDepartmentMembership>();
     public DbSet<SchedulePreferenceSubmission> SchedulePreferenceSubmissions => Set<SchedulePreferenceSubmission>();
     public DbSet<SchedulePreferenceLine> SchedulePreferenceLines => Set<SchedulePreferenceLine>();
     public DbSet<ScheduleInsightContext> ScheduleInsightContexts => Set<ScheduleInsightContext>();
+    public DbSet<ScheduleLeaveRequest> ScheduleLeaveRequests => Set<ScheduleLeaveRequest>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OvertimeRequest> OvertimeRequests => Set<OvertimeRequest>();
     public DbSet<LocationManager> LocationManagers => Set<LocationManager>();

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wokki.Domain.Entities;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
 
@@ -19,12 +20,18 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
     public async Task<(IReadOnlyList<Employee> Items, int TotalCount)> ListAsync(
         int page,
         int pageSize,
+        Guid? organizationId = null,
         Guid? departmentId = null,
         Guid? locationId = null,
         bool includeTerminated = false,
+        IReadOnlySet<Guid>? locationIds = null,
+        string? search = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.Employees.AsNoTracking().AsQueryable();
+
+        if (organizationId.HasValue)
+            query = query.Where(e => e.OrganizationId == organizationId.Value);
 
         if (!includeTerminated)
             query = query.Where(e => e.TerminatedAt == null);
@@ -34,16 +41,51 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
             query = query.Where(e =>
                 e.DepartmentId == departmentId.Value ||
                 context.EmployeeDepartmentMemberships.Any(m =>
-                    m.EmployeeId == e.Id && m.DepartmentId == departmentId.Value));
+                    m.EmployeeId == e.Id &&
+                    m.DepartmentId == departmentId.Value &&
+                    m.Status == DepartmentMembershipStatus.Active));
         }
 
         if (locationId.HasValue)
         {
             query = query.Where(e =>
+                context.LocationMemberships.Any(m =>
+                    m.EmployeeId == e.Id &&
+                    m.Status == LocationMembershipStatus.Active &&
+                    m.LocationId == locationId.Value) ||
                 context.Departments.Any(d => d.Id == e.DepartmentId && d.LocationId == locationId.Value) ||
                 context.EmployeeDepartmentMemberships.Any(m =>
                     m.EmployeeId == e.Id &&
+                    m.Status == DepartmentMembershipStatus.Active &&
                     context.Departments.Any(d => d.Id == m.DepartmentId && d.LocationId == locationId.Value)));
+        }
+
+        if (locationIds is not null)
+        {
+            var allowedLocationIds = locationIds.ToArray();
+            query = allowedLocationIds.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(e =>
+                    context.LocationMemberships.Any(m =>
+                        m.EmployeeId == e.Id &&
+                        m.Status == LocationMembershipStatus.Active &&
+                        allowedLocationIds.Contains(m.LocationId)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            var pattern = $"%{term}%";
+            query = query.Where(e =>
+                EF.Functions.ILike(e.FirstName, pattern) ||
+                EF.Functions.ILike(e.LastName, pattern) ||
+                EF.Functions.ILike(e.FirstName + " " + e.LastName, pattern) ||
+                EF.Functions.ILike(e.LastName + " " + e.FirstName, pattern) ||
+                EF.Functions.ILike(e.Phone, pattern) ||
+                EF.Functions.ILike(e.Position, pattern) ||
+                context.Users.Any(u =>
+                    u.Id == e.UserId &&
+                    EF.Functions.ILike(u.Email, pattern)));
         }
 
         query = query.OrderByDescending(e => e.CreatedAt);
@@ -72,9 +114,11 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         return await context.Employees.AsNoTracking()
             .Where(e =>
                 e.TerminatedAt == null &&
-                (deptList.Contains(e.DepartmentId) ||
+                (e.DepartmentId.HasValue && deptList.Contains(e.DepartmentId.Value) ||
                  context.EmployeeDepartmentMemberships.Any(m =>
-                     m.EmployeeId == e.Id && deptList.Contains(m.DepartmentId))))
+                     m.EmployeeId == e.Id &&
+                     m.Status == DepartmentMembershipStatus.Active &&
+                     deptList.Contains(m.DepartmentId))))
             .Select(e => e.Id)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -89,7 +133,9 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
             return true;
 
         return await context.EmployeeDepartmentMemberships.AnyAsync(
-            m => m.EmployeeId == employeeId && m.DepartmentId == departmentId,
+            m => m.EmployeeId == employeeId &&
+                 m.DepartmentId == departmentId &&
+                 m.Status == DepartmentMembershipStatus.Active,
             cancellationToken);
     }
 
@@ -97,4 +143,10 @@ public sealed class EmployeeRepository(AppDbContext context) : IEmployeeReposito
         await context.Employees.AddAsync(employee, cancellationToken);
 
     public void Update(Employee employee) => context.Employees.Update(employee);
+
+    public async Task<Employee?> GetSwapHoldByOrganizationAsync(Guid organizationId, CancellationToken cancellationToken = default) =>
+        await context.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(
+                e => e.OrganizationId == organizationId && e.FirstName == "Swap" && e.LastName == "Hold",
+                cancellationToken);
 }

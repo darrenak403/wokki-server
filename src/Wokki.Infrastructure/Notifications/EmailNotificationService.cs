@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Mail;
-using System.Text.Json;
+using System.Net.Mime;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Notifications;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Infrastructure.Notifications;
@@ -23,22 +25,39 @@ public sealed class EmailNotificationService(
         if (!settings.IsConfigured)
             return;
 
-        var user = await unitOfWork.Users.GetByIdAsync(userId, cancellationToken);
+        var user = await unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.Email))
             return;
 
-        var subject = $"Wokki: {eventName}";
-        var body = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        var composed = NotificationEmailComposer.Compose(eventName, payload);
 
-        using var message = new MailMessage(settings.From, user.Email, subject, body);
+        using var message = new MailMessage
+        {
+            From = new MailAddress(settings.From),
+            Subject = composed.Subject,
+            BodyEncoding = Encoding.UTF8,
+            SubjectEncoding = Encoding.UTF8,
+        };
+        message.To.Add(user.Email);
+
+        var plainView = AlternateView.CreateAlternateViewFromString(
+            composed.PlainTextBody,
+            Encoding.UTF8,
+            MediaTypeNames.Text.Plain);
+        var htmlView = AlternateView.CreateAlternateViewFromString(
+            composed.HtmlBody,
+            Encoding.UTF8,
+            MediaTypeNames.Text.Html);
+        message.AlternateViews.Add(plainView);
+        message.AlternateViews.Add(htmlView);
+
         using var client = new SmtpClient(settings.Host, settings.Port)
         {
             EnableSsl = settings.UseSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network
+            DeliveryMethod = SmtpDeliveryMethod.Network,
+            UseDefaultCredentials = false,
+            Credentials = new NetworkCredential(settings.Username, settings.Password),
         };
-
-        if (!string.IsNullOrWhiteSpace(settings.Username))
-            client.Credentials = new NetworkCredential(settings.Username, settings.Password);
 
         try
         {
