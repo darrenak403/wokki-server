@@ -5,9 +5,9 @@ name: wokki-dev
 # Local API (task run): User Secrets — không load .env.local.
 
 services:
-  postgres:
+  wokki_postgres:
     image: postgres:16-alpine
-    container_name: wokki-postgres-dev
+    container_name: wokki_postgres_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,7 +16,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - wokki_pg_data_dev:/var/lib/postgresql/data
+      - wokki_postgres_data_dev:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -24,9 +24,9 @@ services:
       retries: 10
       start_period: 10s
 
-  redis:
+  wokki_redis:
     image: redis:7-alpine
-    container_name: wokki-redis-dev
+    container_name: wokki_redis_dev
     restart: unless-stopped
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -40,16 +40,17 @@ services:
       retries: 10
       start_period: 5s
 
-  api:
+  wokki_api:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: wokki-api-dev
+    image: wokki/wokki-backend:dev
+    container_name: wokki_api_dev
     restart: unless-stopped
     depends_on:
-      postgres:
+      wokki_postgres:
         condition: service_healthy
-      redis:
+      wokki_redis:
         condition: service_healthy
     ports:
       - "${API_PORT}:8386"
@@ -57,8 +58,8 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ASPNETCORE_URLS: http://+:8386
       ConnectionStrings__DefaultConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      ConnectionStrings__Redis: redis:6379
+        Host=wokki_postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Redis: wokki_redis:6379
       Database__AutoMigrate: ${DATABASE_AUTOMIGRATE}
       ApiDocs__Enabled: ${APIDOCS_ENABLED}
       Jwt__Issuer: ${JWT_ISSUER}
@@ -80,18 +81,18 @@ services:
       AWS__Bedrock__Region: ${AWS_REGION}
       AWS__Bedrock__ModelId: ${BEDROCK_MODEL_ID}
 
-  db-ui:
+  wokki_pgweb:
     image: sosedoff/pgweb:0.16.2
-    container_name: wokki-pgweb-dev
+    container_name: wokki_pgweb_dev
     restart: unless-stopped
     depends_on:
-      postgres:
+      wokki_postgres:
         condition: service_healthy
     ports:
       - "${DB_UI_PORT}:8081"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@wokki_postgres:5432/${POSTGRES_DB}?sslmode=disable
 
 volumes:
-  wokki_pg_data_dev:
+  wokki_postgres_data_dev:
   wokki_redis_data_dev:

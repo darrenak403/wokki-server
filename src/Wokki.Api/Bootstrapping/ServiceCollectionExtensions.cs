@@ -17,12 +17,12 @@ public static class ServiceCollectionExtensions
         {
             options.AddPolicy(CorsSettings.FrontendPolicy, policy =>
             {
-                if (cors.AllowedOrigins.Length > 0)
-                    policy.WithOrigins(cors.AllowedOrigins);
+                policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
 
-                policy.AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
+                if (cors.AllowAnyOrigin)
+                    policy.SetIsOriginAllowed(_ => true);
+                else if (cors.AllowedOrigins.Length > 0)
+                    policy.WithOrigins(cors.AllowedOrigins);
             });
         });
 

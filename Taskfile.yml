@@ -74,7 +74,7 @@ tasks:
   'docker:postgres':
     desc: Start Postgres + Redis (for task run)
     cmds:
-      - '{{.COMPOSE}} up -d postgres redis'
+      - '{{.COMPOSE}} up -d wokki_postgres wokki_redis'
 
   'docker:build':
     desc: Rebuild images and start dev stack
@@ -92,9 +92,15 @@ tasks:
       - '{{.COMPOSE}} down -v'
 
   'docker:prod':
-    desc: Build and start prod stack (requires docker/.env)
+    desc: Pull and start prod stack (requires docker/.env)
     cmds:
-      - '{{.COMPOSE_PROD}} up -d --build'
+      - '{{.COMPOSE_PROD}} pull wokki_api'
+      - '{{.COMPOSE_PROD}} up -d'
+
+  'docker:prod:down':
+    desc: Stop prod stack (volumes preserved)
+    cmds:
+      - '{{.COMPOSE_PROD}} down'
 
   # ── Git ──────────────────────────────────────────────────────────────────────
 

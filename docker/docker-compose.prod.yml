@@ -1,98 +1,118 @@
-name: wokki-prod
+# Usage: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d
+# task docker:prod
+#
+# CI/CD: GitHub Actions → Docker Hub → Dokploy pull & deploy
+# Image: ${DOCKER_USERNAME}/wokki-backend:${IMAGE_TAG:-latest}
+# GitHub secrets: DOCKER_USERNAME, DOCKER_PASSWORD
+# Dokploy: registry credentials in UI + runtime env (JWT, POSTGRES_*, SMTP_*, AWS_*, DOCKER_USERNAME)
+# Deploy BE trước FE — tạo network wokki-network
 
-# Env: docker/.env only (copy từ .env.example khi deploy). Không dùng .env.local.
-# task docker:prod — hoặc: docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+name: wokki
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: wokki-postgres-prod
-    restart: always
+  wokki_api:
+    container_name: wokki_api
+    pull_policy: always
+    image: ${DOCKER_USERNAME}/wokki-backend:${IMAGE_TAG:-latest}
+    ports:
+      - "${API_PORT:-8386}:8386"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8386
+      - ConnectionStrings__DefaultConnection=Host=wokki_postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - ConnectionStrings__Redis=wokki_redis:6379
+      - Database__AutoMigrate=${DATABASE_AUTOMIGRATE:-false}
+      - ApiDocs__Enabled=${APIDOCS_ENABLED:-false}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__Secret=${JWT_SECRET}
+      - Jwt__AccessTokenMinutes=${JWT_ACCESS_TOKEN_MINUTES:-60}
+      - Cors__AllowAnyOrigin=${CORS_ALLOW_ANY_ORIGIN:-true}
+      - Smtp__Host=${SMTP_HOST}
+      - Smtp__Port=${SMTP_PORT}
+      - Smtp__UseSsl=${SMTP_USE_SSL}
+      - Smtp__From=${SMTP_FROM}
+      - Smtp__Username=${SMTP_USERNAME}
+      - Smtp__Password=${SMTP_PASSWORD}
+      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
+      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
+      - AWS__Region=${AWS_REGION}
+      - AWS__AccessKeyId=${AWS_ACCESS_KEY_ID}
+      - AWS__SecretAccessKey=${AWS_SECRET_ACCESS_KEY}
+      - AWS__Bedrock__Region=${AWS_REGION}
+      - AWS__Bedrock__ModelId=${BEDROCK_MODEL_ID}
+    depends_on:
+      wokki_postgres:
+        condition: service_healthy
+      wokki_redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - wokki-network
+
+  wokki_postgres:
+    container_name: wokki_postgres
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - wokki_pg_data_prod:/var/lib/postgresql/data
+      - wokki_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - wokki-network
     # Không expose Postgres ra host trong prod (bỏ comment nếu cần debug)
     # ports:
-    #   - "127.0.0.1:5432:5432"
+    #   - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
 
-  redis:
+  wokki_redis:
+    container_name: wokki_redis
     image: redis:7-alpine
-    container_name: wokki-redis-prod
-    restart: always
     command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
     volumes:
-      - wokki_redis_data_prod:/data
+      - wokki_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 10
       start_period: 10s
+    restart: unless-stopped
+    networks:
+      - wokki-network
 
-  api:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    container_name: wokki-api-prod
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+  wokki_dbgate:
+    container_name: wokki_dbgate
+    image: dbgate/dbgate:latest
     ports:
-      - "${API_PORT}:8386"
+      - "127.0.0.1:${DBGATE_PORT:-5050}:3000"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ASPNETCORE_URLS: http://+:8386
-      ConnectionStrings__DefaultConnection: >-
-        Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      ConnectionStrings__Redis: redis:6379
-      Database__AutoMigrate: ${DATABASE_AUTOMIGRATE:-false}
-      ApiDocs__Enabled: ${APIDOCS_ENABLED:-false}
-      Jwt__Issuer: ${JWT_ISSUER}
-      Jwt__Audience: ${JWT_AUDIENCE}
-      Jwt__Secret: ${JWT_SECRET}
-      Jwt__AccessTokenMinutes: ${JWT_ACCESS_TOKEN_MINUTES:-60}
-      Smtp__Host: ${SMTP_HOST}
-      Smtp__Port: ${SMTP_PORT}
-      Smtp__UseSsl: ${SMTP_USE_SSL}
-      Smtp__From: ${SMTP_FROM}
-      Smtp__Username: ${SMTP_USERNAME}
-      Smtp__Password: ${SMTP_PASSWORD}
-      Cloudinary__CloudName: ${CLOUDINARY_CLOUD_NAME}
-      Cloudinary__ApiKey: ${CLOUDINARY_API_KEY}
-      Cloudinary__ApiSecret: ${CLOUDINARY_API_SECRET}
-      AWS__Region: ${AWS_REGION}
-      AWS__AccessKeyId: ${AWS_ACCESS_KEY_ID}
-      AWS__SecretAccessKey: ${AWS_SECRET_ACCESS_KEY}
-      AWS__Bedrock__Region: ${AWS_REGION}
-      AWS__Bedrock__ModelId: ${BEDROCK_MODEL_ID}
-
-  db-ui:
-    image: dpage/pgadmin4:9.3
-    container_name: wokki-pgadmin-prod
-    restart: always
+      - CONNECTIONS=con1
+      - LABEL_con1=Wokki
+      - SERVER_con1=wokki_postgres
+      - USER_con1=${POSTGRES_USER}
+      - PASSWORD_con1=${POSTGRES_PASSWORD}
+      - PORT_con1=5432
+      - ENGINE_con1=postgres@dbgate-plugin-postgres
     depends_on:
-      postgres:
+      wokki_postgres:
         condition: service_healthy
-    # Chỉ mở local host để quản trị khi cần
-    ports:
-      - "127.0.0.1:${DB_UI_PORT}:80"
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${DB_UI_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${DB_UI_PASSWORD}
-      PGADMIN_CONFIG_SERVER_MODE: "False"
+    restart: unless-stopped
+    networks:
+      - wokki-network
 
 volumes:
-  wokki_pg_data_prod:
-  wokki_redis_data_prod:
+  wokki_postgres_data:
+  wokki_redis_data:
+
+networks:
+  wokki-network:
+    name: wokki-network
