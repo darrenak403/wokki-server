@@ -70,6 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAutoCloseAttendanceService, AutoCloseAttendanceService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IOvertimeRequestService, OvertimeRequestService>();
+        services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
         services.AddScoped<IPayrollService, PayrollService>();
         services.AddScoped<IChannelService, ChannelService>();
         services.AddScoped<ILocationMembershipService, LocationMembershipService>();

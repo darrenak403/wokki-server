@@ -9,7 +9,9 @@ public interface IPayrollLineRepository
         Guid payPeriodId,
         Guid employeeId,
         CancellationToken cancellationToken = default);
+    Task<PayrollLine?> GetByIdAsync(Guid id, bool track = false, CancellationToken cancellationToken = default);
     Task AddAsync(PayrollLine line, CancellationToken cancellationToken = default);
     Task AddRangeAsync(IEnumerable<PayrollLine> lines, CancellationToken cancellationToken = default);
     void RemoveRange(IEnumerable<PayrollLine> lines);
+    void Update(PayrollLine line);
 }

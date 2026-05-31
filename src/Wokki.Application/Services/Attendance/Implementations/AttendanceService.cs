@@ -7,6 +7,7 @@ using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using AttendanceEntity = Wokki.Domain.Entities.AttendanceRecord;
+using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
 using ScheduleEntity = Wokki.Domain.Entities.Schedule;
@@ -40,7 +41,15 @@ public sealed class AttendanceService(
         if (!employee.DepartmentId.HasValue)
             return ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Attendance.NoEmployeeProfile);
 
-        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId.Value, cancellationToken);
+        return await ClockInAssignmentAsync(employee, request, cancellationToken);
+    }
+
+    private async Task<ApiResponse<AttendanceResponse>> ClockInAssignmentAsync(
+        EmployeeEntity employee,
+        ClockInRequest? request,
+        CancellationToken cancellationToken)
+    {
+        var employeeTimeZone = await ResolveEmployeeTimeZoneAsync(employee.DepartmentId!.Value, cancellationToken);
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, employeeTimeZone));
         var assignments = await unitOfWork.ShiftAssignments.ListByEmployeeInDateRangeAsync(
             employee.Id,
@@ -76,6 +85,8 @@ public sealed class AttendanceService(
             OrganizationId = employee.OrganizationId,
             EmployeeId = employee.Id,
             AssignmentId = assignmentId,
+            Mode = AttendanceMode.Assignment,
+            PayrollEligible = true,
             ClockIn = DateTimeOffset.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
@@ -133,6 +144,8 @@ public sealed class AttendanceService(
             request.FromDate,
             request.ToDate,
             locationIds,
+            request.Mode,
+            request.PayrollEligible,
             cancellationToken);
 
         return ApiResponse<PagedResponse<AttendanceResponse>>.SuccessPagedResponse(

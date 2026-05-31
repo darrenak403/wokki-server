@@ -8,10 +8,14 @@ using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using PayPeriodEntity = Wokki.Domain.Entities.PayPeriod;
+using PayrollLineEntity = Wokki.Domain.Entities.PayrollLine;
 
 namespace Wokki.Application.Services.Payroll.Implementations;
 
-public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeService organizationScope) : IPayrollService
+public sealed class PayrollService(
+    IUnitOfWork unitOfWork,
+    IOrganizationScopeService organizationScope,
+    IPayrollCalculationService payrollCalculation) : IPayrollService
 {
     private const int MaxExportRows = 500;
 
@@ -72,7 +76,6 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 AppMessages.Payroll.EmployeeSummary);
         }
 
-        // For locked periods return no live attendance — snapshot totals are authoritative
         IReadOnlyList<PayrollAttendanceItemResponse> items = [];
         if (period!.Status != PayPeriodStatus.Locked)
         {
@@ -83,7 +86,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 cancellationToken);
 
             items = attendance
-                .Where(a => a.ClockOut is not null && a.AssignmentId is not null)
+                .Where(a => a.ClockOut is not null && a.AssignmentId is not null && a.Mode == AttendanceMode.Assignment)
                 .Select(a => new PayrollAttendanceItemResponse(a.Id, a.ClockIn, a.ClockOut, a.WorkedMinutes))
                 .ToList();
         }
@@ -128,6 +131,185 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
             "text/csv");
 
         return ApiResponse<PayrollExportResult>.SuccessResponse(result, AppMessages.Payroll.Exported);
+    }
+
+    public async Task<ApiResponse<PayrollSummaryResponse>> LockPeriodAsync(
+        Guid payPeriodId,
+        CancellationToken cancellationToken = default)
+    {
+        var period = await unitOfWork.PayPeriods.GetByIdAsync(payPeriodId, track: true, cancellationToken: cancellationToken);
+        if (period is null || !organizationScope.IsSameOrganization(period.OrganizationId))
+            return ApiResponse<PayrollSummaryResponse>.FailureResponse(AppMessages.Payroll.PeriodNotFound);
+
+        if (period.Status == PayPeriodStatus.Locked)
+            return ApiResponse<PayrollSummaryResponse>.FailureResponse(AppMessages.Payroll.PeriodAlreadyLocked);
+
+        var request = new PayrollPeriodRequest(period.DepartmentId, period.StartDate, period.EndDate);
+        var (_, lines, error) = await BuildSummaryCoreAsync(request, cancellationToken, period);
+        if (error is not null || lines is null)
+            return ApiResponse<PayrollSummaryResponse>.FailureResponse(error ?? AppMessages.Validation.Failed);
+
+        var snapshotLines = lines.Select(line =>
+        {
+            var employee = line.EmployeeId;
+            return new PayrollLineEntity
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = period.OrganizationId,
+                PayPeriodId = period.Id,
+                EmployeeId = employee,
+                TotalWorkedMinutes = line.TotalWorkedMinutes,
+                RegularMinutes = line.RegularMinutes,
+                HourlyRate = line.HourlyRate,
+                GrossPay = line.GrossPay,
+                ApprovedOvertimeMinutes = line.ApprovedOvertimeMinutes,
+                OvertimePay = line.OvertimePay,
+                CreatedAt = DateTime.UtcNow
+            };
+        }).ToList();
+
+        await unitOfWork.PayrollLines.AddRangeAsync(snapshotLines, cancellationToken);
+        period.Status = PayPeriodStatus.Locked;
+        unitOfWork.PayPeriods.Update(period);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var response = new PayrollSummaryResponse(
+            period.Id,
+            period.DepartmentId,
+            period.StartDate,
+            period.EndDate,
+            period.Status,
+            lines,
+            lines.Sum(l => l.GrossPay));
+
+        return ApiResponse<PayrollSummaryResponse>.SuccessResponse(response, AppMessages.Payroll.PeriodLocked);
+    }
+
+    public async Task<ApiResponse<MyPayrollSummaryResponse>> GetMySummaryAsync(
+        Guid userId,
+        DateOnly startDate,
+        DateOnly endDate,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<MyPayrollSummaryResponse>.FailureResponse(AppMessages.Payroll.EmployeeNotFound);
+
+        if (!employee.DepartmentId.HasValue)
+            return ApiResponse<MyPayrollSummaryResponse>.FailureResponse(AppMessages.Payroll.EmployeeNotFound);
+
+        var period = await unitOfWork.PayPeriods.GetByDepartmentAndStartAsync(
+            employee.DepartmentId.Value,
+            startDate,
+            cancellationToken);
+
+        PayPeriodStatus? status = period?.Status;
+
+        if (period?.Status == PayPeriodStatus.Locked)
+        {
+            var lockedLine = await unitOfWork.PayrollLines.GetByPayPeriodAndEmployeeAsync(
+                period.Id,
+                employee.Id,
+                cancellationToken);
+            if (lockedLine is not null)
+            {
+                var calc = payrollCalculation.Calculate(
+                    lockedLine.TotalWorkedMinutes,
+                    lockedLine.ApprovedOvertimeMinutes,
+                    lockedLine.HourlyRate);
+
+                return ApiResponse<MyPayrollSummaryResponse>.SuccessResponse(
+                    new MyPayrollSummaryResponse(
+                        period.StartDate,
+                        period.EndDate,
+                        status,
+                        calc.TotalWorkedMinutes,
+                        calc.RegularMinutes,
+                        calc.ApprovedOvertimeMinutes,
+                        lockedLine.HourlyRate,
+                        calc.RegularPay,
+                        calc.OvertimePay,
+                        calc.GrossPay),
+                    AppMessages.Payroll.MySummary);
+            }
+        }
+
+        var attendance = await unitOfWork.Attendance.ListByEmployeeAsync(
+            employee.Id,
+            startDate,
+            endDate,
+            cancellationToken);
+
+        var shiftAttendance = attendance
+            .Where(a => a.ClockOut is not null && a.AssignmentId is not null && a.Mode == AttendanceMode.Assignment)
+            .ToList();
+        var totalMinutes = shiftAttendance.Sum(a => a.WorkedMinutes);
+        var otMinutes = shiftAttendance.Sum(a => a.ApprovedOvertimeMinutes);
+        var calcLive = payrollCalculation.Calculate(totalMinutes, otMinutes, employee.HourlyRate);
+
+        return ApiResponse<MyPayrollSummaryResponse>.SuccessResponse(
+            new MyPayrollSummaryResponse(
+                startDate,
+                endDate,
+                status,
+                calcLive.TotalWorkedMinutes,
+                calcLive.RegularMinutes,
+                calcLive.ApprovedOvertimeMinutes,
+                employee.HourlyRate,
+                calcLive.RegularPay,
+                calcLive.OvertimePay,
+                calcLive.GrossPay),
+            AppMessages.Payroll.MySummary);
+    }
+
+    public async Task<ApiResponse<PayrollEmployeeLineResponse>> SetLinePaidAsync(
+        Guid payPeriodId,
+        Guid employeeId,
+        bool paid,
+        Guid adminUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var period = await unitOfWork.PayPeriods.GetByIdAsync(payPeriodId, track: false, cancellationToken: cancellationToken);
+        if (period is null || !organizationScope.IsSameOrganization(period.OrganizationId))
+            return ApiResponse<PayrollEmployeeLineResponse>.FailureResponse(AppMessages.Payroll.PeriodNotFound);
+
+        if (period.Status != PayPeriodStatus.Locked)
+            return ApiResponse<PayrollEmployeeLineResponse>.FailureResponse(AppMessages.Validation.Failed);
+
+        var lineSnapshot = await unitOfWork.PayrollLines.GetByPayPeriodAndEmployeeAsync(payPeriodId, employeeId, cancellationToken);
+        if (lineSnapshot is null)
+            return ApiResponse<PayrollEmployeeLineResponse>.FailureResponse(AppMessages.Payroll.LineNotFound);
+
+        var lineEntity = await unitOfWork.PayrollLines.GetByIdAsync(lineSnapshot.Id, track: true, cancellationToken);
+        if (lineEntity is null)
+            return ApiResponse<PayrollEmployeeLineResponse>.FailureResponse(AppMessages.Payroll.LineNotFound);
+
+        lineEntity.PaidAt = paid ? DateTime.UtcNow : null;
+        lineEntity.PaidMarkedBy = paid ? adminUserId : null;
+        unitOfWork.PayrollLines.Update(lineEntity);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var employee = await unitOfWork.Employees.GetByIdAsync(employeeId, cancellationToken: cancellationToken);
+        if (employee is null)
+            return ApiResponse<PayrollEmployeeLineResponse>.FailureResponse(AppMessages.Payroll.EmployeeNotFound);
+
+        var calc = payrollCalculation.Calculate(
+            lineEntity.TotalWorkedMinutes,
+            lineEntity.ApprovedOvertimeMinutes,
+            lineEntity.HourlyRate);
+
+        return ApiResponse<PayrollEmployeeLineResponse>.SuccessResponse(
+            ToPayrollLine(
+                employeeId,
+                employee,
+                calc.TotalWorkedMinutes,
+                calc.RegularMinutes,
+                lineEntity.HourlyRate,
+                calc.GrossPay,
+                calc.ApprovedOvertimeMinutes,
+                calc.OvertimePay,
+                lineEntity.PaidAt is not null),
+            AppMessages.Payroll.PaidUpdated);
     }
 
     private async Task<(PayPeriodEntity? Period, IReadOnlyList<PayrollEmployeeLineResponse>? Lines, AppMessage? Error)> BuildSummaryCoreAsync(
@@ -177,11 +359,24 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
             if (lockedLines.Count > 0)
             {
                 var employees = await LoadEmployeeMapAsync(lockedLines.Select(l => l.EmployeeId), cancellationToken);
-                var snapshotLines = lockedLines.Select(l =>
-                {
-                    var emp = employees[l.EmployeeId];
-                    return ToPayrollLine(l.EmployeeId, emp, l.TotalWorkedMinutes, l.HourlyRate, l.GrossPay, l.ApprovedOvertimeMinutes, l.OvertimePay);
-                }).ToList();
+                var snapshotLines = lockedLines
+                    .Select(l =>
+                    {
+                        var emp = employees[l.EmployeeId];
+                        var calc = payrollCalculation.Calculate(l.TotalWorkedMinutes, l.ApprovedOvertimeMinutes, l.HourlyRate);
+                        return ToPayrollLine(
+                            l.EmployeeId,
+                            emp,
+                            calc.TotalWorkedMinutes,
+                            l.RegularMinutes > 0 ? l.RegularMinutes : calc.RegularMinutes,
+                            l.HourlyRate,
+                            l.GrossPay,
+                            calc.ApprovedOvertimeMinutes,
+                            l.OvertimePay,
+                            l.PaidAt is not null);
+                    })
+                    .Where(l => request.UnpaidOnly != true || !l.IsPaid)
+                    .ToList();
                 return (period, snapshotLines, null);
             }
         }
@@ -210,18 +405,17 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
         {
             minutesByEmployee.TryGetValue(employee.Id, out var minutes);
             otByEmployee.TryGetValue(employee.Id, out var otMinutes);
-            var hourlyRate = employee.HourlyRate;
-            var otPay = Math.Round((otMinutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
-            // otMinutes is already contained in minutes (same clock-in/out window); do not add twice
-            var gross = Math.Round((minutes / 60m) * hourlyRate, 2, MidpointRounding.AwayFromZero);
+            var calc = payrollCalculation.Calculate(minutes, otMinutes, employee.HourlyRate);
             lines.Add(ToPayrollLine(
                 employee.Id,
                 employee,
-                minutes,
-                hourlyRate,
-                gross,
-                otMinutes,
-                otPay));
+                calc.TotalWorkedMinutes,
+                calc.RegularMinutes,
+                employee.HourlyRate,
+                calc.GrossPay,
+                calc.ApprovedOvertimeMinutes,
+                calc.OvertimePay,
+                false));
         }
 
         return (period, lines, null);
@@ -231,19 +425,23 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
         Guid employeeId,
         EmployeeEntity employee,
         int totalWorkedMinutes,
+        int regularMinutes,
         decimal hourlyRate,
         decimal grossPay,
         int approvedOvertimeMinutes,
-        decimal overtimePay) =>
+        decimal overtimePay,
+        bool isPaid) =>
         new(
             employeeId,
             employee.FirstName,
             employee.LastName,
             totalWorkedMinutes,
+            regularMinutes,
             hourlyRate,
             grossPay,
             approvedOvertimeMinutes,
             overtimePay,
+            isPaid,
             employee.BankAccountNumber,
             employee.BankAccountHolderName,
             employee.BankName,
@@ -267,7 +465,7 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
     private static string BuildCsv(IReadOnlyList<PayrollEmployeeLineResponse> lines)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,TotalHours,HourlyRate,ApprovedOvertimeMinutes,OvertimePay,GrossPay,BankName,BankAccountHolderName,BankAccountNumber,PaymentQrImageUrl");
+        sb.AppendLine("EmployeeId,FirstName,LastName,TotalWorkedMinutes,RegularMinutes,TotalHours,HourlyRate,ApprovedOvertimeMinutes,OvertimePay,GrossPay,IsPaid,BankName,BankAccountHolderName,BankAccountNumber,PaymentQrImageUrl");
         foreach (var line in lines)
         {
             var hours = Math.Round(line.TotalWorkedMinutes / 60m, 2);
@@ -276,11 +474,13 @@ public sealed class PayrollService(IUnitOfWork unitOfWork, IOrganizationScopeSer
                 Escape(line.FirstName),
                 Escape(line.LastName),
                 line.TotalWorkedMinutes.ToString(CultureInfo.InvariantCulture),
+                line.RegularMinutes.ToString(CultureInfo.InvariantCulture),
                 hours.ToString(CultureInfo.InvariantCulture),
                 line.HourlyRate.ToString(CultureInfo.InvariantCulture),
                 line.ApprovedOvertimeMinutes.ToString(CultureInfo.InvariantCulture),
                 line.OvertimePay.ToString(CultureInfo.InvariantCulture),
                 line.GrossPay.ToString(CultureInfo.InvariantCulture),
+                line.IsPaid.ToString(CultureInfo.InvariantCulture),
                 Escape(line.BankName ?? string.Empty),
                 Escape(line.BankAccountHolderName ?? string.Empty),
                 Escape(line.BankAccountNumber ?? string.Empty),

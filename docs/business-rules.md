@@ -89,7 +89,7 @@ Legacy table `swap_requests` is retained read-only for historical rows; API `/ap
 | ID | Rule | Enforcement |
 |----|------|-------------|
 | BR-040 | Clock-in only if employee has **no** open record (`ClockOut IS NULL`). | Partial unique index + service |
-| BR-041 | Clock-in requires at least one **published** assignment for **today**. | `ListByEmployeeInDateRangeAsync` |
+| BR-041 | Clock-in requires a **published assignment** for today. | `AttendanceService` |
 | BR-042 | Clock-out requires an open record; sets `WorkedMinutes` (rounded minute). | `AttendanceService` |
 | BR-043 | Manual adjust: `Admin`/`Manager` only; **adjustment note required**. | `AdjustAsync` |
 | BR-044 | Adjust blocked if a **locked** pay period contains the record's clock-in date. | `IsPayPeriodLockedForRecordAsync` |
@@ -101,12 +101,16 @@ Legacy table `swap_requests` is retained read-only for historical rows; API `/ap
 
 | ID | Rule | Enforcement |
 |----|------|-------------|
-| BR-050 | Summary aggregates `WorkedMinutes` from attendance (with assignment) in pay period date range × current `HourlyRate`. | `PayrollService.BuildSummaryCoreAsync` |
+| BR-050 | Summary aggregates eligible `WorkedMinutes` in period × `HourlyRate`; OT flat same rate. | `PayrollCalculationService` |
 | BR-051 | Pay period auto-created on first summary request if no overlap. | `PayPeriodRepository` |
 | BR-052 | When period is **`Locked`** and snapshot lines exist, summary reads **`PayrollLine`** not live attendance. | `PayrollService` |
-| BR-053 | `HourlyRate` on `PayrollLine` is a **snapshot** at lock time (future lock workflow). | Domain model |
+| BR-053 | `HourlyRate` on `PayrollLine` is a **snapshot** at lock time. | `LockPeriodAsync` |
 | BR-054 | CSV export max **500** rows; Admin only. | `ExportCsvAsync` |
-| BR-055 | Only attendance with `AssignmentId` and `ClockOut` counts toward payroll minutes. | `SumWorkedMinutesByEmployeeAsync` |
+| BR-055 | Only assignment attendance with `ClockOut` counts toward payroll. | `SumWorkedMinutesByEmployeeAsync` |
+| BR-056 | OT pay = approved OT minutes × same `HourlyRate` (flat). | `PayrollCalculationService` |
+| BR-057 | Lock creates immutable `PayrollLine` snapshot per employee. | `POST /payroll/periods/{id}/lock` |
+| BR-058 | Primary pay period UX = **calendar month** per department. | FE + `PayrollPeriodRequest` |
+| BR-059 | Paid flag on locked `PayrollLine`; Admin only. | `SetLinePaidAsync` |
 
 ---
 

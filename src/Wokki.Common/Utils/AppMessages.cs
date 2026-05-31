@@ -288,6 +288,9 @@ public static class AppMessages
         public static readonly AppMessage NoEmployeeProfile = new("ATTENDANCE_NO_EMPLOYEE", "No employee profile linked to this account.", StatusCodes.Status404NotFound);
         public static readonly AppMessage PeriodLocked = new("ATTENDANCE_PERIOD_LOCKED", "Pay period is locked.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage AdjustmentNoteRequired = new("ATTENDANCE_NOTE_REQUIRED", "Adjustment note is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage FlexibleNotAllowed = new("ATTENDANCE_FLEXIBLE_NOT_ALLOWED", "Flexible clock-in is not allowed for this department.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage AssignmentRequired = new("ATTENDANCE_ASSIGNMENT_REQUIRED", "This department requires clock-in on a published shift.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage EligibleUpdated = new("ATTENDANCE_ELIGIBLE_UPDATED", "Payroll eligibility updated.", StatusCodes.Status200OK);
     }
 
     public static class Payroll
@@ -296,6 +299,11 @@ public static class AppMessages
         public static readonly AppMessage EmployeeSummary = new("PAYROLL_EMPLOYEE_SUMMARY", "Employee payroll breakdown.", StatusCodes.Status200OK);
         public static readonly AppMessage Exported = new("PAYROLL_EXPORTED", "Payroll CSV exported.", StatusCodes.Status200OK);
         public static readonly AppMessage PeriodLocked = new("PAYROLL_PERIOD_LOCKED", "Pay period locked.", StatusCodes.Status200OK);
+        public static readonly AppMessage PeriodNotFound = new("PAYROLL_PERIOD_NOT_FOUND", "Pay period not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PeriodAlreadyLocked = new("PAYROLL_PERIOD_ALREADY_LOCKED", "Pay period is already locked.", StatusCodes.Status409Conflict);
+        public static readonly AppMessage LineNotFound = new("PAYROLL_LINE_NOT_FOUND", "Payroll line not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage PaidUpdated = new("PAYROLL_PAID_UPDATED", "Payroll paid status updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage MySummary = new("PAYROLL_MY_SUMMARY", "My payroll summary.", StatusCodes.Status200OK);
         public static readonly AppMessage DepartmentNotFound = new("PAYROLL_DEPARTMENT_NOT_FOUND", "Department not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage EmployeeNotFound = new("PAYROLL_EMPLOYEE_NOT_FOUND", "Employee not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage PeriodOverlap = new("PAYROLL_PERIOD_OVERLAP", "Pay period dates overlap an existing period.", StatusCodes.Status409Conflict);

@@ -21,6 +21,15 @@ public sealed class PayrollLineRepository(AppDbContext context) : IPayrollLineRe
         await context.PayrollLines.AsNoTracking()
             .FirstOrDefaultAsync(l => l.PayPeriodId == payPeriodId && l.EmployeeId == employeeId, cancellationToken);
 
+    public async Task<PayrollLine?> GetByIdAsync(
+        Guid id,
+        bool track = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = track ? context.PayrollLines : context.PayrollLines.AsNoTracking();
+        return await query.FirstOrDefaultAsync(l => l.Id == id, cancellationToken);
+    }
+
     public async Task AddAsync(PayrollLine line, CancellationToken cancellationToken = default) =>
         await context.PayrollLines.AddAsync(line, cancellationToken);
 
@@ -28,4 +37,6 @@ public sealed class PayrollLineRepository(AppDbContext context) : IPayrollLineRe
         await context.PayrollLines.AddRangeAsync(lines, cancellationToken);
 
     public void RemoveRange(IEnumerable<PayrollLine> lines) => context.PayrollLines.RemoveRange(lines);
+
+    public void Update(PayrollLine line) => context.PayrollLines.Update(line);
 }

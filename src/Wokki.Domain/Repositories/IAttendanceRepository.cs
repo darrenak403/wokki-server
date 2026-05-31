@@ -1,4 +1,5 @@
 using Wokki.Domain.Entities;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Models;
 
 namespace Wokki.Domain.Repositories;
@@ -16,6 +17,8 @@ public interface IAttendanceRepository
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
         IReadOnlySet<Guid>? locationIds = null,
+        AttendanceMode? mode = null,
+        bool? payrollEligible = null,
         CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AttendanceRecord>> ListByEmployeeAsync(
         Guid employeeId,

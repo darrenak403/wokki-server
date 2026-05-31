@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Wokki.Domain.Entities;
+using Wokki.Domain.Enums;
 using Wokki.Domain.Models;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
@@ -30,6 +31,8 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         DateOnly? fromDate = null,
         DateOnly? toDate = null,
         IReadOnlySet<Guid>? locationIds = null,
+        AttendanceMode? mode = null,
+        bool? payrollEligible = null,
         CancellationToken cancellationToken = default)
     {
         var query = context.AttendanceRecords.AsNoTracking().AsQueryable();
@@ -51,6 +54,12 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
             var to = new DateTimeOffset(toDate.Value.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc));
             query = query.Where(a => a.ClockIn <= to);
         }
+
+        if (mode.HasValue)
+            query = query.Where(a => a.Mode == mode.Value);
+
+        if (payrollEligible.HasValue)
+            query = query.Where(a => a.PayrollEligible == payrollEligible.Value);
 
         if (locationIds is not null)
         {
@@ -114,6 +123,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
             .Where(a => ids.Contains(a.EmployeeId)
                         && a.ClockOut != null
                         && a.AssignmentId != null
+                        && a.Mode == AttendanceMode.Assignment
                         && a.ClockIn >= from
                         && a.ClockIn <= to)
             .GroupBy(a => a.EmployeeId)
@@ -140,6 +150,7 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
             .Where(a => ids.Contains(a.EmployeeId)
                         && a.ClockOut != null
                         && a.AssignmentId != null
+                        && a.Mode == AttendanceMode.Assignment
                         && a.ClockIn >= from
                         && a.ClockIn <= to
                         && a.ApprovedOvertimeMinutes > 0)
