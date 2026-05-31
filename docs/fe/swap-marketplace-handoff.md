@@ -14,7 +14,7 @@
 | Area | Component / hook |
 |------|------------------|
 | User marketplace | `SwapMarketplacePanel`, `SwapFeedCard`, `CreateSwapPostDialog`, `AcceptCoverDialog`, `AcceptCrossSwapDialog` |
-| Admin/Manager audit | `SwapAuditPanel` |
+| Admin/Manager audit | `SwapAdminPanel` |
 | API | `fetchSwapPosts`, `fetchSelf.getDraftWeekAssignments` |
 | React Query | `useSwapPosts` (`useSwapPostFeedQuery`, `useMySwapPostsQuery`, mutations, audit) |
 
@@ -36,10 +36,15 @@
 
 - Filter by `scheduleId`; **Cancel** when `canCancel` → `POST /{id}/cancel`.
 
-### 4. Admin/Manager audit (`GET /api/v1/swap-posts/audit`)
+### 4. Admin/Manager moderation
 
-- Read-only table: completed swaps, filters `scheduleId`, `locationId`, `weekStartDate`.
+- **Bảng tin (read-only):** `GET /api/v1/swap-posts/admin/feed?locationId=&weekStartDate=&departmentId=` — Pending posts on Draft schedules; filter by branch + optional department (`Tất cả` = omit `departmentId`).
+- **Nhật ký:** `GET /api/v1/swap-posts/audit` — same filters + optional `departmentId`.
 - No create/accept actions.
+
+| Area | Component |
+|------|-----------|
+| Admin/Manager | `SwapAdminPanel` (tabs Bảng tin / Nhật ký) |
 
 - Week navigator defaults to **next Monday** (same as đăng ký ca — Draft is usually the upcoming week).
 

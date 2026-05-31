@@ -12,4 +12,5 @@ public sealed record SwapPostAuditResponse(
     SwapPostShiftDto? AcceptedShift,
     Guid ScheduleId,
     Guid LocationId,
-    Guid DepartmentId);
+    Guid DepartmentId,
+    string? DepartmentName = null);

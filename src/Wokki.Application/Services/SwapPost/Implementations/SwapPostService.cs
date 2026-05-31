@@ -248,6 +248,7 @@ public sealed class SwapPostService(
     public async Task<ApiResponse<PagedResponse<SwapPostAuditResponse>>> ListAuditAsync(
         Guid? scheduleId,
         Guid? locationId,
+        Guid? departmentId,
         DateOnly? weekStartDate,
         Guid userId,
         string role,
@@ -262,17 +263,16 @@ public sealed class SwapPostService(
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        IReadOnlySet<Guid>? locationFilter = null;
-        if (role == RoleConstants.Manager)
-            locationFilter = managedLocationIds;
-        else if (locationId.HasValue)
-            locationFilter = new HashSet<Guid> { locationId.Value };
+        var locationFilter = ResolveModerationLocationFilter(role, locationId, managedLocationIds);
+        if (locationFilter is { Count: 0 })
+            return ApiResponse<PagedResponse<SwapPostAuditResponse>>.FailureResponse(AppMessages.Auth.Forbidden);
 
         var organizationId = organizationScope.RequireOrganizationId();
         var (items, total) = await unitOfWork.SwapPosts.ListAuditAsync(
             organizationId,
             locationFilter,
             scheduleId,
+            departmentId,
             weekStartDate,
             page,
             pageSize,
@@ -288,6 +288,65 @@ public sealed class SwapPostService(
             pageSize,
             total,
             AppMessages.SwapPost.AuditListed);
+    }
+
+    public async Task<ApiResponse<PagedResponse<SwapPostResponse>>> ListAdminFeedAsync(
+        Guid? locationId,
+        Guid? departmentId,
+        DateOnly? weekStartDate,
+        Guid userId,
+        string role,
+        IReadOnlySet<Guid>? managedLocationIds,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        if (role is not (RoleConstants.Admin or RoleConstants.Manager))
+            return ApiResponse<PagedResponse<SwapPostResponse>>.FailureResponse(AppMessages.Auth.Forbidden);
+
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var locationFilter = ResolveModerationLocationFilter(role, locationId, managedLocationIds);
+        if (locationFilter is { Count: 0 })
+            return ApiResponse<PagedResponse<SwapPostResponse>>.FailureResponse(AppMessages.Auth.Forbidden);
+
+        var organizationId = organizationScope.RequireOrganizationId();
+        var (items, total) = await unitOfWork.SwapPosts.ListAdminFeedAsync(
+            organizationId,
+            locationFilter,
+            departmentId,
+            weekStartDate,
+            page,
+            pageSize,
+            cancellationToken);
+
+        var responses = new List<SwapPostResponse>(items.Count);
+        foreach (var post in items)
+        {
+            if (!await IsPostStillValidAsync(post, cancellationToken))
+                continue;
+
+            responses.Add(await MapResponseAsync(post, null, role, cancellationToken, includeDepartment: true));
+        }
+
+        return ApiResponse<PagedResponse<SwapPostResponse>>.SuccessPagedResponse(
+            responses,
+            page,
+            pageSize,
+            total,
+            AppMessages.SwapPost.Listed);
+    }
+
+    private static HashSet<Guid>? ResolveModerationLocationFilter(
+        string role,
+        Guid? locationId,
+        IReadOnlySet<Guid>? managedLocationIds)
+    {
+        if (role == RoleConstants.Manager)
+            return managedLocationIds is null ? [] : [.. managedLocationIds];
+
+        return locationId.HasValue ? [locationId.Value] : null;
     }
 
     private async Task<ApiResponse<SwapPostResponse>> ExecuteAcceptInternalAsync(
@@ -786,7 +845,8 @@ public sealed class SwapPostService(
         SwapPostEntity post,
         Guid? viewerEmployeeId,
         string role,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool includeDepartment = false)
     {
         var author = await unitOfWork.Employees.GetByIdAsync(post.AuthorEmployeeId, cancellationToken: cancellationToken);
         var authorAssignment = await unitOfWork.ShiftAssignments.GetByIdAsync(post.AuthorAssignmentId, cancellationToken: cancellationToken);
@@ -823,6 +883,15 @@ public sealed class SwapPostService(
                         && viewerEmployeeId.HasValue
                         && viewerEmployeeId != post.AuthorEmployeeId;
 
+        Guid? departmentId = null;
+        string? departmentName = null;
+        if (includeDepartment)
+        {
+            departmentId = post.DepartmentId;
+            var department = await unitOfWork.Departments.GetByIdAsync(post.DepartmentId, cancellationToken: cancellationToken);
+            departmentName = department?.Name;
+        }
+
         return new SwapPostResponse(
             post.Id,
             post.ScheduleId,
@@ -839,7 +908,9 @@ public sealed class SwapPostService(
             post.CompletedAt,
             canAccept,
             canCancel,
-            isMine);
+            isMine,
+            departmentId,
+            departmentName);
     }
 
     private async Task<SwapPostAuditResponse> MapAuditResponseAsync(
@@ -870,6 +941,8 @@ public sealed class SwapPostService(
             }
         }
 
+        var department = await unitOfWork.Departments.GetByIdAsync(post.DepartmentId, cancellationToken: cancellationToken);
+
         return new SwapPostAuditResponse(
             post.Id,
             post.Type,
@@ -882,7 +955,8 @@ public sealed class SwapPostService(
             acceptedShift,
             post.ScheduleId,
             post.LocationId,
-            post.DepartmentId);
+            post.DepartmentId,
+            department?.Name);
     }
 
     private static SwapPostShiftDto MapShiftDto(ShiftAssignmentEntity assignment, ShiftDefinitionEntity shift) =>

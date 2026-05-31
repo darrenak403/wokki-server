@@ -55,9 +55,21 @@ public interface ISwapPostService
         string role,
         CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<PagedResponse<SwapPostResponse>>> ListAdminFeedAsync(
+        Guid? locationId,
+        Guid? departmentId,
+        DateOnly? weekStartDate,
+        Guid userId,
+        string role,
+        IReadOnlySet<Guid>? managedLocationIds,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<ApiResponse<PagedResponse<SwapPostAuditResponse>>> ListAuditAsync(
         Guid? scheduleId,
         Guid? locationId,
+        Guid? departmentId,
         DateOnly? weekStartDate,
         Guid userId,
         string role,

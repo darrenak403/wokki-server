@@ -87,10 +87,48 @@ public sealed class SwapPostRepository(AppDbContext context) : ISwapPostReposito
                 p.AuthorAssignmentId == acceptorAssignmentId,
                 cancellationToken);
 
+    public async Task<(IReadOnlyList<SwapPost> Items, int TotalCount)> ListAdminFeedAsync(
+        Guid organizationId,
+        IReadOnlySet<Guid>? locationIds,
+        Guid? departmentId,
+        DateOnly? weekStartDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var query = context.SwapPosts.AsNoTracking()
+            .Where(p =>
+                p.OrganizationId == organizationId &&
+                p.Status == SwapPostStatus.Pending &&
+                context.Schedules.Any(s => s.Id == p.ScheduleId && s.Status == ScheduleStatus.Draft));
+
+        if (locationIds is not null)
+        {
+            var allowed = locationIds.ToArray();
+            query = allowed.Length == 0
+                ? query.Where(_ => false)
+                : query.Where(p => allowed.Contains(p.LocationId));
+        }
+
+        if (departmentId.HasValue)
+            query = query.Where(p => p.DepartmentId == departmentId.Value);
+
+        if (weekStartDate.HasValue)
+            query = query.Where(p =>
+                context.Schedules.Any(s => s.Id == p.ScheduleId && s.WeekStartDate == weekStartDate.Value));
+
+        query = query.OrderByDescending(p => p.CreatedAt);
+
+        var total = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return (items, total);
+    }
+
     public async Task<(IReadOnlyList<SwapPost> Items, int TotalCount)> ListAuditAsync(
         Guid organizationId,
         IReadOnlySet<Guid>? locationIds,
         Guid? scheduleId,
+        Guid? departmentId,
         DateOnly? weekStartDate,
         int page,
         int pageSize,
@@ -109,6 +147,9 @@ public sealed class SwapPostRepository(AppDbContext context) : ISwapPostReposito
 
         if (scheduleId.HasValue)
             query = query.Where(p => p.ScheduleId == scheduleId.Value);
+
+        if (departmentId.HasValue)
+            query = query.Where(p => p.DepartmentId == departmentId.Value);
 
         if (weekStartDate.HasValue)
             query = query.Where(p =>

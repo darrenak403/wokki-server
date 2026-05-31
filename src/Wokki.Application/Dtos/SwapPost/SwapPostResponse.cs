@@ -28,4 +28,6 @@ public sealed record SwapPostResponse(
     DateTime? CompletedAt,
     bool CanAccept,
     bool CanCancel,
-    bool IsMine);
+    bool IsMine,
+    Guid? DepartmentId = null,
+    string? DepartmentName = null);

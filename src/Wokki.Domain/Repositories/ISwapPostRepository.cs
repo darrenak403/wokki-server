@@ -28,10 +28,20 @@ public interface ISwapPostRepository
     Task<bool> HasPendingForAcceptorAssignmentAsync(
         Guid acceptorAssignmentId,
         CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<SwapPost> Items, int TotalCount)> ListAdminFeedAsync(
+        Guid organizationId,
+        IReadOnlySet<Guid>? locationIds,
+        Guid? departmentId,
+        DateOnly? weekStartDate,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
     Task<(IReadOnlyList<SwapPost> Items, int TotalCount)> ListAuditAsync(
         Guid organizationId,
         IReadOnlySet<Guid>? locationIds,
         Guid? scheduleId,
+        Guid? departmentId,
         DateOnly? weekStartDate,
         int page,
         int pageSize,

@@ -69,6 +69,12 @@ public static class SwapPostEndpoints
             .RequireAuthorization(p => p.RequireRole(RoleConstants.User))
             .Produces<ApiResponse<SwapPostResponse>>(StatusCodes.Status200OK);
 
+        group.MapGet("/admin/feed", ListAdminFeedAsync)
+            .WithName("ListSwapPostAdminFeed")
+            .WithDescription("Bảng tin đổi ca (Pending) — Admin/Manager xem theo chi nhánh/phòng ban.")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .Produces<ApiResponse<PagedResponse<SwapPostResponse>>>(StatusCodes.Status200OK);
+
         group.MapGet("/audit", ListAuditAsync)
             .WithName("ListSwapPostAudit")
             .WithDescription("Nhật ký đổi ca đã hoàn thành (Admin/Manager).")
@@ -206,9 +212,43 @@ public static class SwapPostEndpoints
         return response.ToHttpResult();
     }
 
+    private static async Task<IResult> ListAdminFeedAsync(
+        [FromQuery] Guid? locationId,
+        [FromQuery] Guid? departmentId,
+        [FromQuery] DateOnly? weekStartDate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromServices] ISwapPostService service = null!,
+        [FromServices] ILocationScopeService scopeService = null!,
+        [FromServices] ICurrentUserService currentUser = null!,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Results.Json(ApiResponse<PagedResponse<SwapPostResponse>>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var managedLocationIds = await scopeService.GetManagedLocationIdsAsync(
+            currentUser.UserId.Value,
+            currentUser.Role,
+            cancellationToken);
+
+        var response = await service.ListAdminFeedAsync(
+            locationId,
+            departmentId,
+            weekStartDate,
+            currentUser.UserId.Value,
+            currentUser.Role,
+            managedLocationIds,
+            page,
+            pageSize,
+            cancellationToken);
+
+        return response.ToHttpResult();
+    }
+
     private static async Task<IResult> ListAuditAsync(
         [FromQuery] Guid? scheduleId,
         [FromQuery] Guid? locationId,
+        [FromQuery] Guid? departmentId,
         [FromQuery] DateOnly? weekStartDate,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -228,6 +268,7 @@ public static class SwapPostEndpoints
         var response = await service.ListAuditAsync(
             scheduleId,
             locationId,
+            departmentId,
             weekStartDate,
             currentUser.UserId.Value,
             currentUser.Role,
