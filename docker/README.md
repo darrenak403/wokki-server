@@ -113,7 +113,18 @@ Workflow **Docker publish** → `${DOCKER_USERNAME}/wokki-backend:latest` (+ tag
 | API | `wokki_api` | `8386` — image `${DOCKER_USERNAME}/wokki-backend:latest` |
 | Postgres | `wokki_postgres` | nội bộ — volume `wokki_postgres_data` |
 | Redis | `wokki_redis` | nội bộ — volume `wokki_redis_data` |
-| DbGate | `wokki_dbgate` | `127.0.0.1:5050` — optional, SSH tunnel |
+| DbGate | `wokki_dbgate` | Profile `tools` — `docker compose --profile tools up -d` |
+
+### Tối ưu (prod compose)
+
+| Hạng mục | Chi tiết |
+| -------- | -------- |
+| **Image BE** | Alpine (`aspnet:10.0-alpine`), non-root user `wokki`, NuGet cache build |
+| **Image FE** | Alpine, standalone Next.js, non-root, bỏ `wget` |
+| **Bảo mật** | `cap_drop: ALL`, `no-new-privileges`, log rotation, Postgres/Redis không expose host |
+| **Concurrency** | Kestrel limits, Npgsql pool (5–100), Redis LRU + backlog, Postgres tuning |
+| **Resources** | CPU/RAM limits qua `API_*`, `POSTGRES_*`, `REDIS_*` env (optional) |
+| **CI** | GitHub Actions cache (`cache-from/to: gha`) — build nhanh hơn |
 
 ### Manual (không qua Dokploy)
 
