@@ -19,6 +19,21 @@ public static class SeedData
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
+        if (!await context.Database.CanConnectAsync())
+        {
+            logger.LogWarning("Database not reachable. Skip platform seed.");
+            return;
+        }
+
+        var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            logger.LogWarning(
+                "Pending migrations ({Count}). Skip platform seed — set Database:AutoMigrate=true or apply migrations.",
+                pendingMigrations.Count());
+            return;
+        }
+
         if (await context.Users.AnyAsync())
         {
             logger.LogInformation("Users already exist. Skip platform seed.");

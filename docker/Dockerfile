@@ -31,7 +31,7 @@ ENV ASPNETCORE_URLS=http://+:8386 \
     DOTNET_EnableDiagnostics=0 \
     ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
-RUN apk add --no-cache wget icu-libs \
+RUN apk add --no-cache wget icu-libs krb5-libs \
     && addgroup -S wokki \
     && adduser -S wokki -G wokki -u 10001
 

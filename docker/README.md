@@ -47,15 +47,22 @@ task docker:prod
 
 ### Env Dokploy (BE) — ví dụ
 
+**Quan trọng:** `DOCKER_USERNAME` = username Docker Hub **thật** (VD `darrenak403`).  
+Không để `your-dockerhub-username` hay placeholder từ `.env.example` → lỗi `not found`.
+
+1. GitHub Actions **Docker publish** chạy OK → image có trên Docker Hub  
+2. Dokploy **Registry** đã cấu hình token Docker Hub  
+3. Dokploy **Environment**:
+
 | Biến | Ghi chú |
 | ---- | ------- |
-| `DOCKER_USERNAME` | Cùng username Docker Hub (cho tên image) |
+| `DOCKER_USERNAME` | **Bắt buộc** — username Docker Hub thật |
 | `IMAGE_TAG` | Optional, default `latest` |
 | `API_PORT` | Optional, default `8386` |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database |
 | `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_SECRET` | Auth |
 | `CORS_ALLOW_ANY_ORIGIN` | Default `true` |
-| `DATABASE_AUTOMIGRATE` | `true` lần đầu, sau `false` |
+| `DATABASE_AUTOMIGRATE` | **`true` lần deploy đầu** (tạo bảng), sau đó đổi `false` |
 | `SMTP_*`, `AWS_*`, `CLOUDINARY_*` | Integrations |
 
 Deploy **BE trước FE** — tạo network `wokki-network`.
