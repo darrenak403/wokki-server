@@ -11,5 +11,7 @@ public class Schedule
     public ScheduleStatus Status { get; set; } = ScheduleStatus.Draft;
     public Guid CreatedBy { get; set; }
     public DateTime? PublishedAt { get; set; }
+    /// <summary>Last time admin applied CP-SAT suggestions; rebalance banner uses this as preference-change watermark.</summary>
+    public DateTime? SuggestionsAppliedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

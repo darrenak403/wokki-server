@@ -266,14 +266,14 @@ sequenceDiagram
     API-->>M: 200 suggestions only — no DB assignment write
 
     M->>API: POST /schedules/{id}/apply-suggestions
-    API->>API: Validate all rows, one transaction
+    API->>API: Validate rows by (shift, employee, date), one transaction
     API-->>M: 201 ShiftAssignment rows (Draft)
 
     M->>API: POST /schedules/{id}/publish
     API-->>M: Published schedule; preferences read-only
 ```
 
-**No auto-apply, no auto-rebalance** when preferences change after apply (BR-086). Admin uses the same **Tạo gợi ý AI** button to re-suggest; CP-SAT keeps existing assignment slots locked until Admin removes conflicts on the grid.
+**No auto-apply, no auto-rebalance** when preferences change after apply (BR-086). Admin uses the same **Tạo gợi ý AI** button to re-suggest; CP-SAT unlocks only employees whose own submitted preferences changed or whose assignment conflicts with Unavailable. Applying suggestions is keyed by exact `(shiftDefinitionId, employeeId, date)`, so multiple employees can stay on the same shift/date when policy allows; omitted assignments are removed only for affected employees when the request explicitly clears orphan assignment tuples.
 
 ### Draft leave request (before publish)
 

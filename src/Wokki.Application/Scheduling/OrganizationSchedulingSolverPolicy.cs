@@ -14,6 +14,8 @@ public sealed record OrganizationSchedulingSolverPolicy
     public bool RequireFullCoverage { get; init; }
     public bool MinStaffPerShiftEnabled { get; init; }
     public int MinStaffPerShift { get; init; }
+    public bool MaxStaffPerShiftEnabled { get; init; }
+    public int MaxStaffPerShift { get; init; }
     public bool MinRestMinutesEnabled { get; init; }
     public int MinRestMinutesBetweenShifts { get; init; }
     public bool MaxShiftsPerDayEnabled { get; init; }
@@ -27,6 +29,7 @@ public sealed record OrganizationSchedulingSolverPolicy
         || RequireRoleMatch
         || RequireFullCoverage
         || MinStaffPerShiftEnabled
+        || MaxStaffPerShiftEnabled
         || MinRestMinutesEnabled
         || MaxShiftsPerDayEnabled
         || MaxShiftsPerWeekEnabled;
@@ -48,6 +51,8 @@ public sealed record OrganizationSchedulingSolverPolicy
             RequireFullCoverage = IsEnabledBool(byKey, "require_full_coverage"),
             MinStaffPerShiftEnabled = TryGetEnabledPositiveInt(byKey, "default_min_staff_per_shift", out var minStaff),
             MinStaffPerShift = minStaff,
+            MaxStaffPerShiftEnabled = TryGetEnabledPositiveInt(byKey, "default_max_staff_per_shift", out var maxStaff),
+            MaxStaffPerShift = maxStaff,
             MinRestMinutesEnabled = TryGetEnabledPositiveInt(byKey, "min_rest_minutes_between_shifts", out var rest),
             MinRestMinutesBetweenShifts = rest,
             MaxShiftsPerDayEnabled = TryGetEnabledPositiveInt(byKey, "max_shifts_per_employee_per_day", out var maxDay),

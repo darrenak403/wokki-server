@@ -77,6 +77,7 @@ public sealed class ScheduleSuggestionContextLoader(IUnitOfWork unitOfWork)
             HistoricalAssignments = historical,
             Availabilities = availabilities,
             SubmittedPreferences = submittedPreferences,
+            PreferenceSubmissions = submissions,
             OrganizationSchedulingPolicy = orgPolicy
         }, null);
     }

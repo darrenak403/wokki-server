@@ -12,5 +12,6 @@ public sealed class ScheduleSuggestionContext
     public required IReadOnlyList<ShiftAssignment> HistoricalAssignments { get; init; }
     public required IReadOnlyList<EmployeeAvailability> Availabilities { get; init; }
     public required IReadOnlyList<SubmittedPreferenceChoice> SubmittedPreferences { get; init; }
+    public required IReadOnlyList<SchedulePreferenceSubmission> PreferenceSubmissions { get; init; }
     public OrganizationSchedulingPolicy? OrganizationSchedulingPolicy { get; init; }
 }

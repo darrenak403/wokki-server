@@ -18,10 +18,16 @@ public static class OrganizationSchedulingPolicyWizard
             SetEnabledNumber(rules, "min_rest_minutes_between_shifts", 480);
 
         if (averageEmployees >= 3)
+        {
+            SetEnabledNumber(rules, "default_max_staff_per_shift", SuggestMaxStaffPerShift(averageEmployees, shiftsPerDay));
             SetEnabledNumber(rules, "max_shifts_per_employee_per_week", Math.Min(20, shiftsPerDay * 7));
+        }
 
         if (averageEmployees >= 5)
+        {
+            SetEnabledNumber(rules, "default_min_staff_per_shift", 1);
             SetEnabledNumber(rules, "max_shifts_per_employee_per_day", Math.Min(2, shiftsPerDay));
+        }
 
         return new SchedulingPolicyWizardDraftResponse(
             SchedulingRuleCatalog.SchemaVersion,
@@ -51,4 +57,11 @@ public static class OrganizationSchedulingPolicyWizard
 
     private static string BuildSummary(int averageEmployees, int shiftsPerDay) =>
         $"Gợi ý cho ~{averageEmployees} nhân viên và ~{shiftsPerDay} ca/ngày. Hãy bật/tắt và chỉnh số trước khi lưu.";
+
+    private static int SuggestMaxStaffPerShift(int averageEmployees, int shiftsPerDay)
+    {
+        var slotsPerWeek = Math.Max(1, shiftsPerDay * 7);
+        var evenSpread = (averageEmployees + slotsPerWeek - 1) / slotsPerWeek;
+        return Math.Clamp(Math.Max(2, evenSpread), 2, Math.Min(10, averageEmployees));
+    }
 }

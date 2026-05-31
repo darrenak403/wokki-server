@@ -43,12 +43,39 @@ public sealed class CpSatScheduleSuggestionService(
             .Select(i => context.Schedule.WeekStartDate.AddDays(i))
             .ToList();
 
-        var existingSet = context.ExistingAssignments
-            .Select(a => (a.EmployeeId, a.ShiftDefinitionId, a.Date))
-            .ToHashSet();
+        var lockState = SchedulingAssignmentLockPolicy.Compute(context);
+        var openSlots = SchedulingAssignmentLockPolicy.CountOpenSlots(
+            shifts.Count,
+            days.Count,
+            lockState);
+        var restrictToUnlockedEmployees = context.ExistingAssignments.Count > 0
+            && lockState.UnlockedEmployeeIds.Count > 0;
+
+        if (openSlots == 0 && context.ExistingAssignments.Count > 0)
+        {
+            logger.LogInformation(
+                "Schedule {ScheduleId}: all {SlotCount} slots locked by existing assignments — re-suggest needs preference change or manual clear",
+                scheduleId,
+                shifts.Count * days.Count);
+            return new ScheduleSuggestionGenerationResult([], "fully_assigned", Provider: "cpsat");
+        }
+
+        if (lockState.HasPreferenceChangesAfterAssignments)
+        {
+            logger.LogInformation(
+                "Schedule {ScheduleId}: unlocking assignments for re-suggest after preference updates",
+                scheduleId);
+        }
+
+        var existingSet = lockState.LockedAssignmentKeys;
+        var lockedStaffCountBySlot = context.ExistingAssignments
+            .Where(a => existingSet.Contains((a.EmployeeId, a.ShiftDefinitionId, a.Date)))
+            .GroupBy(a => (a.ShiftDefinitionId, a.Date))
+            .ToDictionary(g => g.Key, g => g.Count());
         var shiftsById = shifts.ToDictionary(s => s.Id);
         var existingByEmployee = context.ExistingAssignments
-            .Where(a => shiftsById.ContainsKey(a.ShiftDefinitionId))
+            .Where(a => existingSet.Contains((a.EmployeeId, a.ShiftDefinitionId, a.Date))
+                        && shiftsById.ContainsKey(a.ShiftDefinitionId))
             .GroupBy(a => a.EmployeeId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -62,8 +89,10 @@ public sealed class CpSatScheduleSuggestionService(
             shifts,
             days,
             existingSet,
+            lockedStaffCountBySlot,
             existingByEmployee,
             shiftsById,
+            restrictToUnlockedEmployees ? lockState.UnlockedEmployeeIds : null,
             enforceFullCoverageLowerBound: useStrictCoverage,
             cancellationToken);
 
@@ -85,8 +114,10 @@ public sealed class CpSatScheduleSuggestionService(
             shifts,
             days,
             existingSet,
+            lockedStaffCountBySlot,
             existingByEmployee,
             shiftsById,
+            restrictToUnlockedEmployees ? lockState.UnlockedEmployeeIds : null,
             enforceFullCoverageLowerBound: false,
             cancellationToken);
 
@@ -110,8 +141,10 @@ public sealed class CpSatScheduleSuggestionService(
         IReadOnlyList<ShiftDefinition> shifts,
         IReadOnlyList<DateOnly> days,
         HashSet<(Guid EmployeeId, Guid ShiftDefinitionId, DateOnly Date)> existingSet,
+        IReadOnlyDictionary<(Guid ShiftDefinitionId, DateOnly Date), int> lockedStaffCountBySlot,
         IReadOnlyDictionary<Guid, List<ShiftAssignment>> existingByEmployee,
         IReadOnlyDictionary<Guid, ShiftDefinition> shiftsById,
+        IReadOnlySet<Guid>? unlockedEmployeeIds,
         bool enforceFullCoverageLowerBound,
         CancellationToken cancellationToken)
     {
@@ -140,6 +173,12 @@ public sealed class CpSatScheduleSuggestionService(
             var shift = shifts[s];
             var date = days[d];
 
+            if (unlockedEmployeeIds is not null && !unlockedEmployeeIds.Contains(emp.Id))
+            {
+                model.Add(x[e, s, d] == 0);
+                continue;
+            }
+
             if (existingSet.Contains((emp.Id, shift.Id, date)))
             {
                 model.Add(x[e, s, d] == 0);
@@ -166,6 +205,12 @@ public sealed class CpSatScheduleSuggestionService(
                 continue;
             }
 
+            if (!SchedulingAssignmentRules.MayAssignBySubmittedPreference(emp.Id, shift.Id, date, context))
+            {
+                model.Add(x[e, s, d] == 0);
+                continue;
+            }
+
             if (solverPolicy.RequireRoleMatch && !RoleMatches(emp, shift))
             {
                 model.Add(x[e, s, d] == 0);
@@ -185,7 +230,9 @@ public sealed class CpSatScheduleSuggestionService(
             {
                 var dayVars = Enumerable.Range(0, shifts.Count).Select(s => (ILiteral)x[e, s, d]).ToArray();
                 var existingCount = context.ExistingAssignments.Count(a =>
-                    a.EmployeeId == employees[e].Id && a.Date == days[d]);
+                    a.EmployeeId == employees[e].Id
+                    && a.Date == days[d]
+                    && existingSet.Contains((a.EmployeeId, a.ShiftDefinitionId, a.Date)));
                 var remaining = Math.Max(0, solverPolicy.MaxShiftsPerEmployeePerDay - existingCount);
                 model.Add(LinearExpr.Sum(dayVars) <= remaining);
             }
@@ -199,13 +246,15 @@ public sealed class CpSatScheduleSuggestionService(
                                 from d in Enumerable.Range(0, days.Count)
                                 select (ILiteral)x[e, s, d]).ToArray();
 
-                var existingCount = context.ExistingAssignments.Count(a => a.EmployeeId == employees[e].Id);
+                var existingCount = context.ExistingAssignments.Count(a =>
+                    a.EmployeeId == employees[e].Id
+                    && existingSet.Contains((a.EmployeeId, a.ShiftDefinitionId, a.Date)));
                 var remaining = Math.Max(0, solverPolicy.MaxShiftsPerEmployeePerWeek - existingCount);
                 model.Add(LinearExpr.Sum(weekVars) <= remaining);
             }
         }
 
-        if (solverPolicy.MinStaffPerShiftEnabled)
+        if (solverPolicy.MinStaffPerShiftEnabled || solverPolicy.MaxStaffPerShiftEnabled)
         {
             ApplySlotStaffingConstraints(
                 model,
@@ -213,8 +262,9 @@ public sealed class CpSatScheduleSuggestionService(
                 employees.Count,
                 shifts,
                 days,
-                context,
-                solverPolicy.MinStaffPerShift,
+                lockedStaffCountBySlot,
+                solverPolicy.MinStaffPerShiftEnabled ? solverPolicy.MinStaffPerShift : 0,
+                solverPolicy.MaxStaffPerShiftEnabled ? solverPolicy.MaxStaffPerShift : null,
                 enforceFullCoverageLowerBound);
         }
 
@@ -291,6 +341,9 @@ public sealed class CpSatScheduleSuggestionService(
                 Guid.NewGuid(), shifts[s].Id, employees[e].Id, days[d], Score: 10 + prefScore));
         }
 
+        if (results.Count == 0 && context.ExistingAssignments.Count > 0)
+            return new ScheduleSuggestionGenerationResult([], "fully_assigned", Provider: "cpsat");
+
         return new ScheduleSuggestionGenerationResult(results, null, Provider: "cpsat");
     }
 
@@ -300,21 +353,36 @@ public sealed class CpSatScheduleSuggestionService(
         int employeeCount,
         IReadOnlyList<ShiftDefinition> shifts,
         IReadOnlyList<DateOnly> days,
-        ScheduleSuggestionContext context,
+        IReadOnlyDictionary<(Guid ShiftDefinitionId, DateOnly Date), int> lockedStaffCountBySlot,
         int minStaffPerSlot,
+        int? maxStaffPerSlot,
         bool enforceFullCoverageLowerBound)
     {
         for (var s = 0; s < shifts.Count; s++)
         for (var d = 0; d < days.Count; d++)
         {
+            var slotKey = (shifts[s].Id, days[d]);
             var slotVars = Enumerable.Range(0, employeeCount).Select(e => (ILiteral)x[e, s, d]).ToArray();
-            var existingCount = context.ExistingAssignments.Count(a =>
-                a.ShiftDefinitionId == shifts[s].Id && a.Date == days[d]);
-            var remainingNeed = Math.Max(0, minStaffPerSlot - existingCount);
+            var lockedCount = lockedStaffCountBySlot.GetValueOrDefault(slotKey, 0);
+            var sum = LinearExpr.Sum(slotVars);
 
-            model.Add(LinearExpr.Sum(slotVars) <= remainingNeed);
-            if (enforceFullCoverageLowerBound && remainingNeed > 0)
-                model.Add(LinearExpr.Sum(slotVars) >= remainingNeed);
+            if (maxStaffPerSlot.HasValue)
+            {
+                var remainingCapacity = Math.Max(0, maxStaffPerSlot.Value - lockedCount);
+                model.Add(sum <= remainingCapacity);
+            }
+            else if (minStaffPerSlot > 0)
+            {
+                var remainingNeed = Math.Max(0, minStaffPerSlot - lockedCount);
+                model.Add(sum <= remainingNeed);
+            }
+
+            if (enforceFullCoverageLowerBound && minStaffPerSlot > 0)
+            {
+                var remainingNeed = Math.Max(0, minStaffPerSlot - lockedCount);
+                if (remainingNeed > 0)
+                    model.Add(sum >= remainingNeed);
+            }
         }
     }
 

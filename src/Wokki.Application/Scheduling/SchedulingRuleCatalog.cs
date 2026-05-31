@@ -13,7 +13,7 @@ public static class SchedulingRuleCatalog
     public static readonly IReadOnlyList<SchedulingRuleCatalogCategoryDto> Categories =
     [
         new("preferenceRules", "Đăng ký ca", "Chuẩn bị trước khi Manager chạy gợi ý lịch."),
-        new("coverageRules", "Đủ người ca", "Số nhân viên tối thiểu mỗi ca khi ca không khai báo riêng."),
+        new("coverageRules", "Đủ người ca", "Số nhân viên tối thiểu / tối đa mỗi ca khi ca không khai báo riêng."),
         new("schedulingLimits", "Giới hạn ca", "Nghỉ giữa ca và trần số ca mỗi nhân viên."),
         new("employeeEligibilityRules", "Vai trò", "Xếp đúng vị trí công việc (Barista, Phục vụ…)."),
         new("customRules", "Luật ghi chú", "Ghi chú nội bộ; solver không đọc."),
@@ -60,6 +60,9 @@ public static class SchedulingRuleCatalog
         Number("default_min_staff_per_shift", "coverageRules",
             "Mặc định mỗi ca cần bao nhiêu người (nếu ca không khai báo riêng).",
             "Số người tối thiểu / ca", 1, false, 110),
+        Number("default_max_staff_per_shift", "coverageRules",
+            "Giới hạn tối đa nhân viên trên cùng một ca/ngày — tránh xếp quá nhiều người ưu tiên vào một ô.",
+            "Số người tối đa / ca", 3, false, 115),
         Bool("require_full_coverage", "coverageRules",
             "Bắt gợi ý phải phủ đủ số người tối thiểu mỗi ca (cần bật min staff).",
             "Yêu cầu phủ đủ ca", true, false, 120),

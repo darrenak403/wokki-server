@@ -1,4 +1,5 @@
 using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
@@ -44,12 +45,10 @@ public sealed class ScheduleRebalanceAnalyzer(IUnitOfWork unitOfWork) : ISchedul
             .Where(a => unavailableKeys.Contains((a.EmployeeId, a.ShiftDefinitionId, a.Date)))
             .ToList();
 
-        var maxAssignmentCreated = assignments.Max(a => a.CreatedAt);
-        var hasRecentPreferenceChanges = submissions.Any(s =>
-        {
-            var changedAt = s.SubmittedAt ?? s.UpdatedAt ?? s.CreatedAt;
-            return changedAt > maxAssignmentCreated;
-        });
+        var preferenceBaseline = ScheduleRebalanceBaseline.GetPreferenceChangeBaseline(schedule, assignments);
+        var hasRecentPreferenceChanges = ScheduleRebalanceBaseline.HasPreferenceChangesAfterBaseline(
+            submissions,
+            preferenceBaseline);
 
         if (conflictAssignments.Count == 0 && !hasRecentPreferenceChanges && pendingLeaveCount == 0)
             return ScheduleRebalanceHintsResponse.Empty;

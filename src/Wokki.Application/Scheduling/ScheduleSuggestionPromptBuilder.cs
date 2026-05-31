@@ -42,6 +42,7 @@ public sealed class ScheduleSuggestionPromptBuilder
         sb.AppendLine($"requireRoleMatch={policy.RequireRoleMatch}");
         sb.AppendLine($"requireFullCoverage={policy.RequireFullCoverage}");
         sb.AppendLine($"minStaffPerShift={(policy.MinStaffPerShiftEnabled ? policy.MinStaffPerShift.ToString() : "off")}");
+        sb.AppendLine($"maxStaffPerShift={(policy.MaxStaffPerShiftEnabled ? policy.MaxStaffPerShift.ToString() : "off")}");
         sb.AppendLine($"minRestMinutes={(policy.MinRestMinutesEnabled ? policy.MinRestMinutesBetweenShifts.ToString() : "off")}");
         sb.AppendLine($"maxShiftsPerDay={(policy.MaxShiftsPerDayEnabled ? policy.MaxShiftsPerEmployeePerDay.ToString() : "off")}");
         sb.AppendLine($"maxShiftsPerWeek={(policy.MaxShiftsPerWeekEnabled ? policy.MaxShiftsPerEmployeePerWeek.ToString() : "off")}");

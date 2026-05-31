@@ -19,6 +19,13 @@ public sealed class OrganizationSchedulingPolicyFeasibilityValidator(IUnitOfWork
             errors.Add("Bật \"Số người tối thiểu / ca\" khi dùng \"Yêu cầu phủ đủ ca\".");
         }
 
+        if (solverPolicy.MinStaffPerShiftEnabled && solverPolicy.MaxStaffPerShiftEnabled
+            && solverPolicy.MinStaffPerShift > solverPolicy.MaxStaffPerShift)
+        {
+            errors.Add(
+                $"Số người tối thiểu / ca ({solverPolicy.MinStaffPerShift}) không được lớn hơn số người tối đa / ca ({solverPolicy.MaxStaffPerShift}).");
+        }
+
         if (solverPolicy.MinStaffPerShiftEnabled && solverPolicy.MinStaffPerShift > 0)
         {
             var employeeCount = await CountActiveEmployeesAsync(organizationId, cancellationToken);

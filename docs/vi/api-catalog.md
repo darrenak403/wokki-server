@@ -62,7 +62,7 @@ Rate limit: **`Fixed`** (100/phút) mặc định; **`Clock`** (300/phút) cho c
 | GET/POST            | `/schedules/{id}/assignments`                | Admin, Manager | Danh sách / thêm phân ca                                        |
 | DELETE              | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Xóa phân ca                                                     |
 | POST                | `/schedules/{id}/suggest`                    | Admin, Manager | Gợi ý phân ca (không ghi DB; không dùng Bedrock)                |
-| POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Áp dụng gợi ý (chỉ Draft)                                       |
+| POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Áp dụng gợi ý (chỉ Draft; upsert theo `(shiftDefinitionId, employeeId, date)`) |
 | GET                 | `/schedules/{id}/preference-board`           | Admin, Manager | Bảng đăng ký ca (read-only): NV × ca × ngày; có `submittedCount` / `employeeCount` |
 | POST                | `/schedules/{id}/insights/context`           | Admin, Manager | Tạo/refresh snapshot JSON cho insight lịch                      |
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Đọc context snapshot mới nhất                                   |

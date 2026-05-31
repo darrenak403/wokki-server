@@ -64,7 +64,7 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | GET/POST            | `/schedules/{id}/assignments`                | Admin, Manager | List / add assignment                                                  |
 | DELETE              | `/schedules/{id}/assignments/{assignmentId}` | Admin, Manager | Remove assignment                                                      |
 | POST                | `/schedules/{id}/suggest`                    | Admin, Manager | CP-SAT suggestions (read-only; `useAi` ignored; auto-refreshes insight context snapshot; Bedrock not used) |
-| POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Apply suggestions (Draft only)                                         |
+| POST                | `/schedules/{id}/apply-suggestions`          | Admin, Manager | Apply suggestions (Draft only; upsert by `(shiftDefinitionId, employeeId, date)`) |
 | GET                 | `/schedules/{id}/preference-board`           | Admin, Manager | Read-only grid: all dept employees × shifts × days with preference cells; includes `submittedCount` / `employeeCount` |
 | POST                | `/schedules/{id}/insights/context`           | Admin, Manager | Generate/refresh JSON context snapshot for schedule insight            |
 | GET                 | `/schedules/{id}/insights/context`           | Admin, Manager | Read latest context snapshot                                           |

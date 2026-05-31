@@ -236,7 +236,7 @@ Export: `POST /payroll/summary/export` → CSV (Admin, tối đa 500 dòng).
 
 Solver MVP = **CP-SAT only** (`useAi` trên suggest bị bỏ qua). Bedrock chỉ chat hỗ trợ (BR-077).
 
-Luồng: suggest (đọc org policy + NV + ca + đăng ký **Submitted** + phân ca hiện có) → context JSON → Admin **Áp dụng** (explicit) → Publish. **Không auto-rebalance** khi NV đổi đăng ký sau apply (BR-086) — banner trên Lịch ca, Admin dùng lại **Tạo gợi ý AI**.
+Luồng: suggest (đọc org policy + NV + ca + đăng ký **Submitted** + phân ca hiện có) → context JSON → Admin **Áp dụng** (explicit) → Publish. **Không auto-rebalance** khi NV đổi đăng ký sau apply (BR-086) — banner trên Lịch ca, Admin dùng lại **Tạo gợi ý AI**; CP-SAT chỉ mở khóa NV tự đổi đăng ký hoặc đang conflict Unavailable. Apply gợi ý theo tuple chính xác `(shiftDefinitionId, employeeId, date)`, nên nhiều NV có thể cùng ca/ngày nếu policy cho phép; chỉ xóa phân ca bị omit của nhóm NV bị ảnh hưởng khi request bật clear orphan tuple.
 
 **Xin nghỉ (Draft):** NV `POST /self/leave-requests` → Manager duyệt → Unavailable + xóa phân ca conflict (BR-087).
 
