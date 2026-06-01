@@ -14,6 +14,7 @@ Read these **before** implementing or changing behavior. Technical how-to stays 
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket surface by role |
 | 5 | [glossary.md](./glossary.md) | Domain terms and enums |
 | 6 | [fe/self-serve-org-handoff.md](./fe/self-serve-org-handoff.md) | **FE handoff (2026-05-29):** self-serve org, register, platform vs org app, package gate |
+| 6b | [fe/org-join-request-handoff.md](./fe/org-join-request-handoff.md) | **FE handoff (draft):** employee self-onboard, org directory, join request inbox — [spec](../plans/org-join-request/spec.md) |
 | 7 | [fe/2026-05-29-feat-platform-org-subscription.md](./fe/2026-05-29-feat-platform-org-subscription.md) | Concise FE contract for platform user/org list and org package activation |
 | 8 | [architecture.md](./architecture.md) | Clean Architecture layers and code conventions |
 | 9 | [minimal-api.md](./minimal-api.md) | Endpoint module pattern in `Wokki.Api` |

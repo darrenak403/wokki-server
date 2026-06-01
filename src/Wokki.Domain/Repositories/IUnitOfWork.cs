@@ -27,6 +27,7 @@ public interface IUnitOfWork : IAsyncDisposable
     IOvertimeRequestRepository OvertimeRequests { get; }
     ILocationMembershipRepository LocationMemberships { get; }
     ILocationManagerRepository LocationManagers { get; }
+    IOrgJoinRequestRepository OrgJoinRequests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

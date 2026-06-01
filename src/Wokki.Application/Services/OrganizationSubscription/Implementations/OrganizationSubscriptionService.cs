@@ -16,7 +16,12 @@ public sealed class OrganizationSubscriptionService(IUnitOfWork unitOfWork) : IO
             return null;
 
         if (!organizationId.HasValue)
+        {
+            if (string.Equals(role, RoleConstants.User, StringComparison.OrdinalIgnoreCase))
+                return null;
+
             return AppMessages.Organization.Required;
+        }
 
         var organization = await unitOfWork.Organizations.GetByIdAsync(organizationId.Value, cancellationToken);
         return GetAccessFailure(organization);

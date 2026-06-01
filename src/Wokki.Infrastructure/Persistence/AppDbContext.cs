@@ -32,6 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OvertimeRequest> OvertimeRequests => Set<OvertimeRequest>();
     public DbSet<LocationManager> LocationManagers => Set<LocationManager>();
     public DbSet<LocationMembership> LocationMemberships => Set<LocationMembership>();
+    public DbSet<OrgJoinRequest> OrgJoinRequests => Set<OrgJoinRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

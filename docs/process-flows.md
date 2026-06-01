@@ -43,7 +43,7 @@ Expired org packages return `ORG_PACKAGE_EXPIRED` (402) on login/refresh and aut
 
 ## 1.1 Branch workspace access
 
-Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** vào app — **không** có luồng `/join` hay duyệt yêu cầu tham gia.
+Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** vào app. **Song song:** nhân viên tự đăng ký → chọn org → Admin duyệt (xem §1.2). Luồng `/join` cấp chi nhánh (2026-05-29) đã bỏ.
 
 ```mermaid
 sequenceDiagram
@@ -58,6 +58,30 @@ sequenceDiagram
     E->>API: GET /location-memberships/my
     Note over E,API: Active membership — vào /app ngay
 ```
+
+### 1.2 Employee self-onboard (org join request)
+
+```mermaid
+sequenceDiagram
+    participant S as Prospective employee
+    participant Auth as Auth API
+    participant Dir as Organizations API
+    participant JR as Org join API
+    participant A as Org Admin
+
+    S->>Auth: POST /auth/register-employee
+    Auth-->>S: JWT (no organization_id)
+    S->>Dir: GET /organizations/directory
+    S->>JR: POST /org-join-requests { organizationId }
+    JR-->>S: Pending
+    A->>JR: GET /org-join-requests/pending
+    A->>JR: PATCH /{id}/approve { departmentId, hourlyRate }
+    JR-->>A: Approved
+    S->>Auth: POST /auth/login
+    Auth-->>S: JWT with organization_id → /app
+```
+
+BR-020. One Pending request per user globally. Directory lists only orgs with active package.
 
 Đổi chi nhánh sau này: Admin/Manager dùng `POST /api/v1/workspace/location/transfer`. Admin quản mọi chi nhánh trong org; Manager chỉ scope `LocationManager`. Chuyển phòng ban (`/workspace/department/transfer`) chỉ hợp lệ trong chi nhánh Active hiện tại của nhân viên; đổi chi nhánh trước nếu phòng ban đích thuộc chi nhánh khác.
 

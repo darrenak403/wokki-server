@@ -31,6 +31,7 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private IOvertimeRequestRepository? _overtimeRequests;
     private ILocationMembershipRepository? _locationMemberships;
     private ILocationManagerRepository? _locationManagers;
+    private IOrgJoinRequestRepository? _orgJoinRequests;
     private IDbContextTransaction? _transaction;
 
     public IOrganizationRepository Organizations => _organizations ??= new OrganizationRepository(context);
@@ -67,6 +68,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
         _locationMemberships ??= new LocationMembershipRepository(context);
     public ILocationManagerRepository LocationManagers =>
         _locationManagers ??= new LocationManagerRepository(context);
+    public IOrgJoinRequestRepository OrgJoinRequests =>
+        _orgJoinRequests ??= new OrgJoinRequestRepository(context);
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
         context.SaveChangesAsync(cancellationToken);

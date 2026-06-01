@@ -42,6 +42,14 @@ public static class AuthEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
+        group.MapPost("/register-employee", RegisterEmployeeAsync)
+            .WithName("RegisterEmployee")
+            .WithDescription("Tự đăng ký nhân viên: email + password + họ tên → User không thuộc org + JWT.")
+            .AllowAnonymous()
+            .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status201Created)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
         group.MapPost("/refresh-token", RefreshTokenAsync)
             .WithName("RefreshToken")
             .WithDescription("Làm mới access token bằng refresh token (không cần access token còn hạn).")
@@ -123,6 +131,19 @@ public static class AuthEndpoints
             return validationResult!;
 
         var response = await authService.RegisterAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> RegisterEmployeeAsync(
+        [FromBody] RegisterEmployeeRequest request,
+        [FromServices] IAuthService authService,
+        [FromServices] IValidator<RegisterEmployeeRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await authService.RegisterEmployeeAsync(request, cancellationToken);
         return response.ToHttpResult();
     }
 

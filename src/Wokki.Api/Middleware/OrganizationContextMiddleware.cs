@@ -1,3 +1,4 @@
+using Wokki.Application.Common;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Services.OrganizationSubscription.Interfaces;
 using Wokki.Common.Extensions;
@@ -21,7 +22,10 @@ public sealed class OrganizationContextMiddleware(RequestDelegate next)
                              string.Equals(currentUser.Role, RoleConstants.PlatformOperator, StringComparison.OrdinalIgnoreCase);
             tenantContext.SetOrganization(currentUser.OrganizationId, isPlatform);
 
-            if (!IsOrgSubscriptionStatusRequest(context))
+            var skipPackageGate = OrgLessUserAccess.IsOrgLessUser(currentUser.Role, currentUser.OrganizationId)
+                                  && OrgLessUserAccess.IsAllowedPath(context.Request.Path.Value);
+
+            if (!skipPackageGate && !IsOrgSubscriptionStatusRequest(context))
             {
                 var accessFailure = await organizationSubscription.GetAccessFailureAsync(
                     currentUser.OrganizationId,
