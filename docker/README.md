@@ -67,10 +67,9 @@ Không để `your-dockerhub-username` hay placeholder từ `.env.example` → l
 
 Deploy **BE trước FE** — tạo network `wokki-network`.
 
-**Domains (prod):** API `https://wokki-api.beyond8.io.vn` · FE `https://wokki.beyond8.io.vn`
+**Domains (prod):** FE `https://wokki.io.vn` · API `https://api.wokki.io.vn`
 
-> Cloudflare Universal SSL (free) chỉ cover **một cấp** subdomain (`*.beyond8.io.vn`).
-> Không dùng `api.wokki.beyond8.io.vn` (hai cấp) — dùng `wokki-api.beyond8.io.vn`.
+> CORS phải có `https://wokki.io.vn`. FE Dokploy: `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_API_URL` khớp hai URL trên.
 
 ### Tối ưu (prod)
 
