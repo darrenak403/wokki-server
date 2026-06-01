@@ -19,6 +19,7 @@ using Wokki.Api.Apis.ScheduleLeaveRequest;
 using Wokki.Api.Apis.Shifts;
 using Wokki.Api.Apis.SwapPosts;
 using Wokki.Api.Apis.Users;
+using Wokki.Api.Apis.OrgJoinRequest;
 using Wokki.Api.Apis.Organization;
 using Wokki.Api.Apis.Platform;
 using Wokki.Api.Apis.Scheduling;
@@ -79,6 +80,8 @@ public static class PipelineExtensions
         app.MapHealthApi();
         app.MapBedrockApi();
         app.MapAuthApi();
+        app.MapOrganizationDirectoryApi();
+        app.MapOrgJoinRequestApi();
         app.MapUserApi();
         app.MapEmployeeApi();
         app.MapLocationApi();

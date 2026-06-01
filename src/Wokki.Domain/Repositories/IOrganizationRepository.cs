@@ -14,4 +14,10 @@ public interface IOrganizationRepository
     Task AddAsync(Organization organization, CancellationToken cancellationToken = default);
     Task<PlatformStatsSnapshot> GetPlatformStatsAsync(CancellationToken cancellationToken = default);
     Task<OrgStatsSnapshot> GetOrgStatsAsync(Guid organizationId, CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<OrganizationDirectoryItem> Items, int TotalCount)> ListDirectoryAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        CancellationToken cancellationToken = default);
+    Task<bool> HasActivePackageAsync(Guid organizationId, CancellationToken cancellationToken = default);
 }

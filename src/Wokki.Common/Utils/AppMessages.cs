@@ -337,6 +337,39 @@ public static class AppMessages
         public static readonly AppMessage OtpSendLocked = new("AUTH_OTP_SEND_LOCKED", "Too many verification requests. Try again in 30 minutes.", StatusCodes.Status429TooManyRequests);
         public static readonly AppMessage PasswordConfirmMismatch = new("AUTH_PASSWORD_CONFIRM_MISMATCH", "New password and confirmation do not match.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage PasswordResetSuccess = new("AUTH_PASSWORD_RESET", "Password reset successful.", StatusCodes.Status200OK);
+        public static readonly AppMessage RegisterEmployeeSuccess = new(
+            "AUTH_REGISTER_EMPLOYEE_SUCCESS",
+            "Employee account created.",
+            StatusCodes.Status201Created);
+    }
+
+    public static class OrgJoin
+    {
+        public static readonly AppMessage Submitted = new("ORG_JOIN_SUBMITTED", "Join request submitted.", StatusCodes.Status201Created);
+        public static readonly AppMessage Found = new("ORG_JOIN_FOUND", "Join request found.", StatusCodes.Status200OK);
+        public static readonly AppMessage NotFound = new("ORG_JOIN_NOT_FOUND", "Join request not found.", StatusCodes.Status404NotFound);
+        public static readonly AppMessage Listed = new("ORG_JOIN_LISTED", "Join requests listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage Approved = new("ORG_JOIN_APPROVED", "Join request approved.", StatusCodes.Status200OK);
+        public static readonly AppMessage Rejected = new("ORG_JOIN_REJECTED", "Join request rejected.", StatusCodes.Status200OK);
+        public static readonly AppMessage Cancelled = new("ORG_JOIN_CANCELLED", "Join request cancelled.", StatusCodes.Status200OK);
+        public static readonly AppMessage PendingExists = new(
+            "ORG_JOIN_PENDING_EXISTS",
+            "You already have a pending join request.",
+            StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyMember = new(
+            "ORG_JOIN_ALREADY_MEMBER",
+            "You already belong to an organization.",
+            StatusCodes.Status409Conflict);
+        public static readonly AppMessage OrgNotAvailable = new(
+            "ORG_JOIN_ORG_NOT_AVAILABLE",
+            "Organization is not available for join requests.",
+            StatusCodes.Status404NotFound);
+        public static readonly AppMessage Forbidden = new("ORG_JOIN_FORBIDDEN", "Not allowed for this join request.", StatusCodes.Status403Forbidden);
+        public static readonly AppMessage NotPending = new("ORG_JOIN_NOT_PENDING", "Join request is not pending.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage DirectoryListed = new(
+            "ORG_DIRECTORY_LISTED",
+            "Organizations listed.",
+            StatusCodes.Status200OK);
     }
 
     public static class OvertimeRequest

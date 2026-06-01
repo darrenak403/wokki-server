@@ -77,4 +77,48 @@ public sealed class OrganizationRepository(AppDbContext context) : IOrganization
             cancellationToken);
         return new OrgStatsSnapshot(userCount, locationCount, departmentCount, employeeCount, activeMembershipCount);
     }
+
+    public async Task<(IReadOnlyList<OrganizationDirectoryItem> Items, int TotalCount)> ListDirectoryAsync(
+        int page,
+        int pageSize,
+        string? search = null,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var query = context.Organizations.AsNoTracking()
+            .Where(o => o.IsActive
+                        && o.SubscriptionEnabled
+                        && o.SubscriptionExpiresAt != null
+                        && o.SubscriptionExpiresAt > now);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(o => o.Name.ToLower().Contains(term));
+        }
+
+        query = query.OrderBy(o => o.Name);
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(o => new OrganizationDirectoryItem(o.Id, o.Name))
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public Task<bool> HasActivePackageAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        return context.Organizations.AsNoTracking()
+            .AnyAsync(
+                o => o.Id == organizationId
+                     && o.IsActive
+                     && o.SubscriptionEnabled
+                     && o.SubscriptionExpiresAt != null
+                     && o.SubscriptionExpiresAt > now,
+                cancellationToken);
+    }
 }

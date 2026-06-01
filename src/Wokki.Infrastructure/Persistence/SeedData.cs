@@ -48,6 +48,8 @@ public static class SeedData
             PasswordHash = passwordHasher.HashPassword(PlatformSeedPassword),
             Role = RoleConstants.PlatformOperator,
             OrganizationId = null,
+            FirstName = "Platform",
+            LastName = "Admin",
             CreatedAt = DateTime.UtcNow
         });
 

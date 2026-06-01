@@ -10,7 +10,8 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | ------ | ------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/login`           | Anonymous     | Issue tokens                                                                                                                             |
 | POST   | `/register`        | Anonymous     | Self-serve org signup: `email`, `password`, `organizationName` → Org Admin + JWT with `organization_id`; org package starts NotActivated |
-| POST   | `/refresh-token`   | Authenticated | Refresh JWT                                                                                                                              |
+| POST   | `/register-employee` | Anonymous   | Self-serve employee signup: `email`, `password`, `firstName`, `lastName`, optional `phone` → `User` with **no** `organization_id`; JWT for org-less shell |
+| POST   | `/refresh-token`   | Authenticated | Refresh JWT (org-less `User` allowed)                                                                                                    |
 | GET    | `/me`              | Authenticated | Current user                                                                                                                             |
 | POST   | `/logout`          | Authenticated | Logout                                                                                                                                   |
 | POST   | `/reset-password`  | Authenticated | Change password while logged in: `{ currentPassword, newPassword, confirmNewPassword }`; clears `mustChangePassword`                   |
@@ -43,7 +44,26 @@ Rate limits: **`Fixed`** (100/min) default; **`Clock`** (300/min) for attendance
 | GET    | `/my`                         | Authenticated (+ employee profile) | Current user's **Active** location membership (auto-provisioned when Org Admin creates employee) |
 | GET    | `/locations/{id}/memberships` | Admin, Manager                     | List memberships for a branch; Manager must manage that branch                                   |
 
-**Removed (2026-05-29):** self-serve join flow — `POST /request`, `GET /pending`, `PATCH /{id}/review`. Org Admin creates employees; branch membership is provisioned automatically from `DepartmentId`.
+**Removed (2026-05-29):** location-level self-serve join — `POST /location-memberships/request`, `GET /pending`, `PATCH /{id}/review`. Replaced by **org-level** join requests below (2026-06-01).
+
+## Organizations — directory (`/api/v1/organizations`)
+
+| Method | Path         | Roles                         | Description                                                                 |
+| ------ | ------------ | ----------------------------- | --------------------------------------------------------------------------- |
+| GET    | `/directory` | `User` without `organization_id` | Paged list of orgs with **active package** (`id`, `name` only); query `search` |
+
+## Org join requests (`/api/v1/org-join-requests`)
+
+Parallel to `POST /employees` for admin-driven onboarding. **User** role only; one global **Pending** request per user.
+
+| Method | Path                  | Roles   | Description                                                                 |
+| ------ | --------------------- | ------- | --------------------------------------------------------------------------- |
+| POST   | `/`                   | Org-less `User` | Submit `{ organizationId }` → 409 `ORG_JOIN_PENDING_EXISTS` if pending exists |
+| GET    | `/me`                 | Org-less `User` | Latest request (Pending / Rejected / Expired / Cancelled) + org name        |
+| DELETE | `/me`                 | Org-less `User` | Cancel own Pending request                                                  |
+| GET    | `/pending`            | Admin   | Pending requests for caller's org (lazy-expire if org lost package)         |
+| PATCH  | `/{id}/approve`       | Admin   | `{ departmentId, hourlyRate, phone? }` → sets `User.OrganizationId`, creates `Employee` + Active `LocationMembership` |
+| PATCH  | `/{id}/reject`        | Admin   | `{ note? }` (max 500 chars)                                                 |
 
 ## Workspace transfer (`/api/v1/workspace`)
 

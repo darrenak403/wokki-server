@@ -106,6 +106,37 @@ public sealed class AuthService(
             AppMessages.User.Created);
     }
 
+    public async Task<ApiResponse<LoginResponse>> RegisterEmployeeAsync(
+        RegisterEmployeeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var existing = await unitOfWork.Users.GetByEmailAsync(normalizedEmail, cancellationToken);
+        if (existing is not null)
+            return ApiResponse<LoginResponse>.FailureResponse(AppMessages.User.Exists);
+
+        var user = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = normalizedEmail,
+            PasswordHash = _passwordHasher.HashPassword(request.Password),
+            Role = RoleConstants.User,
+            OrganizationId = null,
+            FirstName = request.FirstName.Trim(),
+            LastName = request.LastName.Trim(),
+            Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+            MustChangePassword = false,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        await unitOfWork.Users.AddAsync(user, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse<LoginResponse>.SuccessResponse(
+            BuildLoginResponse(user),
+            AppMessages.Auth.RegisterEmployeeSuccess);
+    }
+
     public async Task<ApiResponse<UserSimpleResponse>> ResetPasswordAsync(
         Guid userId,
         ResetPasswordRequest request,
