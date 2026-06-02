@@ -5,9 +5,11 @@ using Wokki.Application.Mappings.Schedules;
 using Wokki.Application.Notifications;
 using Wokki.Application.Scheduling;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
+using Wokki.Domain.Exceptions;
 using Wokki.Domain.Repositories;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
@@ -24,7 +26,9 @@ public sealed class ScheduleService(
     IScheduleSuggestionOrchestrator scheduleSuggestions,
     IScheduleInsightService scheduleInsights,
     IScheduleRebalanceAnalyzer rebalanceAnalyzer,
-    IOrganizationScopeService organizationScope) : IScheduleService
+    IOrganizationScopeService organizationScope,
+    ICurrentUserService currentUser,
+    IPlatformActivityRecorder platformActivityRecorder) : IScheduleService
 {
     public async Task<ApiResponse<PagedResponse<ScheduleResponse>>> ListAsync(
         ScheduleListRequest request,
@@ -88,7 +92,14 @@ public sealed class ScheduleService(
 
         var entity = request.ToEntity(createdByUserId, organizationId);
         await unitOfWork.Schedules.AddAsync(entity, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (UniqueConstraintViolationException ex) when (IsScheduleWeekUniqueViolation(ex))
+        {
+            return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyExists);
+        }
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(entity.ToResponse(), AppMessages.Schedule.Created);
     }
@@ -115,7 +126,14 @@ public sealed class ScheduleService(
 
         schedule.ApplyUpdate(request);
         unitOfWork.Schedules.Update(schedule);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (UniqueConstraintViolationException ex) when (IsScheduleWeekUniqueViolation(ex))
+        {
+            return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyExists);
+        }
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(schedule.ToResponse(), AppMessages.Schedule.Updated);
     }
@@ -193,6 +211,14 @@ public sealed class ScheduleService(
             await NotifyEmployeeSafeAsync(employee.Id, "schedule.published", payload, cancellationToken);
         }
 
+        await platformActivityRecorder.TryRecordAsync(
+            schedule.OrganizationId,
+            currentUser.UserId,
+            "schedule.publish",
+            "Schedule",
+            schedule.Id,
+            cancellationToken);
+
         return ApiResponse<ScheduleResponse>.SuccessResponse(schedule.ToResponse(), AppMessages.Schedule.Published);
     }
 
@@ -266,6 +292,7 @@ public sealed class ScheduleService(
             {
                 Id = Guid.NewGuid(),
                 DepartmentId = source.DepartmentId,
+                OrganizationId = source.OrganizationId,
                 WeekStartDate = request.TargetWeekStartDate,
                 Status = ScheduleStatus.Draft,
                 CreatedBy = createdByUserId,
@@ -303,6 +330,11 @@ public sealed class ScheduleService(
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
         }
+        catch (UniqueConstraintViolationException ex) when (IsScheduleWeekUniqueViolation(ex))
+        {
+            await unitOfWork.RollbackTransactionAsync(cancellationToken);
+            return ApiResponse<ScheduleResponse>.FailureResponse(AppMessages.Schedule.AlreadyExists);
+        }
         catch
         {
             await unitOfWork.RollbackTransactionAsync(cancellationToken);
@@ -311,6 +343,10 @@ public sealed class ScheduleService(
 
         return ApiResponse<ScheduleResponse>.SuccessResponse(target.ToResponse(), AppMessages.Schedule.Copied);
     }
+
+    private static bool IsScheduleWeekUniqueViolation(UniqueConstraintViolationException ex) =>
+        string.Equals(ex.ConstraintName, "IX_schedules_DepartmentId_WeekStartDate", StringComparison.Ordinal)
+        || string.Equals(ex.TableName, "schedules", StringComparison.OrdinalIgnoreCase);
 
     private async Task ClearTargetScheduleContentAsync(Guid targetScheduleId, CancellationToken cancellationToken)
     {
@@ -563,6 +599,14 @@ public sealed class ScheduleService(
             BuildInsightContextRequest(items, generated.Provider, generated.FallbackUsed, generated.Reason),
             cancellationToken);
 
+        await platformActivityRecorder.TryRecordAsync(
+            schedule.OrganizationId,
+            currentUser.UserId,
+            "schedule.suggest",
+            "Schedule",
+            schedule.Id,
+            cancellationToken);
+
         return ApiResponse<ScheduleSuggestionsResponse>.SuccessResponse(
             new ScheduleSuggestionsResponse(items, generated.Reason, generated.Provider, generated.FallbackUsed),
             AppMessages.Schedule.SuggestionsGenerated);
@@ -679,6 +723,14 @@ public sealed class ScheduleService(
         var created = new List<ShiftAssignmentResponse>(preparedItems.Count);
         foreach (var (assignment, shift) in preparedItems)
             created.Add(await MapAssignmentAsync(assignment, shift, cancellationToken));
+
+        await platformActivityRecorder.TryRecordAsync(
+            schedule.OrganizationId,
+            currentUser.UserId,
+            "schedule.apply_suggestions",
+            "Schedule",
+            schedule.Id,
+            cancellationToken);
 
         return ApiResponse<IReadOnlyList<ShiftAssignmentResponse>>.SuccessResponse(
             created,

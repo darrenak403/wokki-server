@@ -674,6 +674,66 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                     b.ToTable("organization_scheduling_policies", (string)null);
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.OrganizationSubscriptionLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("NewDurationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("NewExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PreviousDurationDays")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PreviousExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PreviousStatus")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("ChangedByUserId");
+
+                    b.HasIndex("OrganizationId", "ChangedAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("organization_subscription_ledger_entries", (string)null);
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.OvertimeRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -825,6 +885,46 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("payroll_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.PlatformActivityEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("EventType", "OccurredAt")
+                        .IsDescending(false, true);
+
+                    b.HasIndex("OrganizationId", "OccurredAt")
+                        .IsDescending(false, true);
+
+                    b.ToTable("platform_activity_events", (string)null);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Schedule", b =>
@@ -1605,6 +1705,21 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Wokki.Domain.Entities.OrganizationSubscriptionLedgerEntry", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Wokki.Domain.Entities.OvertimeRequest", b =>
                 {
                     b.HasOne("Wokki.Domain.Entities.Employee", "Employee")
@@ -1671,6 +1786,20 @@ namespace Wokki.Infrastructure.Persistence.Migrations
                         .HasForeignKey("PayPeriodId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Wokki.Domain.Entities.PlatformActivityEvent", b =>
+                {
+                    b.HasOne("Wokki.Domain.Entities.Organization", null)
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Wokki.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Wokki.Domain.Entities.Schedule", b =>

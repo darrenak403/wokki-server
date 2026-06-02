@@ -8,7 +8,7 @@
 | **Product**      | Wokki Shift Ops                                    |
 | **Component**    | `wokki-server` (REST + SignalR API)                |
 | **Status**       | Approved for implementation (Phases 1–5 delivered) |
-| **Last updated** | 2026-05-29                                         |
+| **Last updated** | 2026-06-02                                         |
 
 ---
 
@@ -36,6 +36,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | OBJ-04 | Accelerate payroll prep                                                          | Department summary + CSV export                                                                           |
 | OBJ-05 | Reduce reliance on external chat for shift coordination                          | In-app channels + real-time messages                                                                      |
 | OBJ-06 | Assist managers with assignment suggestions and explain weekly schedule outcomes | Deterministic suggest/apply on Draft schedules; optional Bedrock insight chat reads schedule context only |
+| OBJ-07 | Give Wokki admins operational control over tenant packages and support           | Platform org registry, immutable subscription ledger, support lookup, health, and usage analytics         |
 
 ### 2.3 Deployment model
 
@@ -50,7 +51,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | Stakeholder                 | Role                              | Interest                                                                           | Primary capabilities                                                            |
 | --------------------------- | --------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | **System Admin**            | IT / HR systems                   | Users, org data, payroll export, compliance                                        | All branches, admin APIs, user management, payroll CSV                          |
-| **Wokki Platform Operator** | Wokki admin                       | Platform oversight, org package activation/renewal                                 | `/platform`, platform stats, system user/org lists, org package toggle          |
+| **Wokki Platform Operator** | Wokki admin                       | Platform oversight, org package activation/renewal, customer support               | `/platform`, org registry, subscription ledger, support console, diagnostics    |
 | **Operations Manager**      | Branch/department lead            | Build/publish schedules, approve swaps, review attendance inside assigned branches | Assigned branch workspace, schedules, assignments, swaps override, payroll view |
 | **Employee (User)**         | Frontline staff                   | See own shifts, swap shifts, clock in/out                                          | `/self/*`, swap peer actions, attendance clock                                  |
 | **Payroll clerk**           | Finance (may share Admin account) | Period totals, export                                                              | Payroll summary + export                                                        |
@@ -70,6 +71,7 @@ Operations teams spend excessive time on manual schedules, paper timesheets, and
 | 3     | Swap requests, peer accept/decline, manager override, notifications                                 |
 | 4     | Clock-in/out, attendance list/adjust, payroll summary & CSV export                                  |
 | 5     | Internal chat (REST + SignalR), schedule suggest/apply, optional Bedrock schedule insight assistant |
+| Platform | Wokki admin control center: org registry, subscription ledger, support console, health, usage analytics |
 
 ### 4.2 Out of scope (MVP)
 
@@ -117,6 +119,7 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 | FR-106 | P1       | Anonymous register shall create an Organization and Org Admin, but the org is not usable until Wokki admin activates its package.                                                                                |
 | FR-108 | P1       | Prospective employees may self-register (`POST /auth/register-employee`), browse organizations with an active package (`GET /organizations/directory`), and submit one org join request at a time. Org Admin reviews pending requests and approves with branch/department assignment (creates `Employee` + Active `LocationMembership`) or rejects. Parallel to FR-105; does not replace admin-driven `POST /employees`. FE: [fe/org-join-request-handoff.md](./fe/org-join-request-handoff.md). |
 | FR-107 | P1       | PlatformOperator shall list platform users/orgs and enable, disable, or renew an org package for a Wokki-admin-chosen number of days (`durationDays` on platform console).                                       |
+| FR-109 | P1       | PlatformOperator shall use a Platform Control Center to filter orgs by package state, review subscription history, search support context, and view platform-only diagnostics/usage analytics.                  |
 
 ### 5.2 Scheduling (Phase 2)
 
@@ -164,6 +167,17 @@ Requirements use **`FR-xxx`**. Priority: **P1** = MVP must-have.
 | FR-507 | P1       | Manager/Admin shall generate a weekly schedule insight context snapshot without calling Bedrock or changing assignments.          |
 | FR-508 | P1       | Manager/Admin shall ask Bedrock questions about a generated schedule context; answers are advisory and must not mutate schedules. |
 
+### 5.6 Platform control center
+
+| ID     | Priority | Requirement                                                                                                                                                                           |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FR-601 | P1       | PlatformOperator shall filter/sort org registry by subscription status, org name, expiry date, and "expiring soon" window.                                                           |
+| FR-602 | P1       | Every platform subscription update shall write an immutable subscription ledger entry and an `AuditLog` entry in the same transaction as the org package change.                      |
+| FR-603 | P1       | PlatformOperator shall list subscription ledger history globally and per org. Ledger history stores state/duration changes only; revenue amount and external billing are out of scope. |
+| FR-604 | P1       | PlatformOperator shall search by org id, org name, or user email and read org support context without impersonation, tenant business data edits, or destructive tenant actions.        |
+| FR-605 | P2       | PlatformOperator shall view platform health for API, Bedrock, and email diagnostics. Public `/health` stays unchanged.                                                                |
+| FR-606 | P2       | PlatformOperator shall view usage analytics by time window. Active orgs are based on successful login, schedule publish/suggest/apply, attendance clock-in/out, or chat message.       |
+
 ---
 
 ## 6. Business rules
@@ -179,6 +193,7 @@ Summary by domain:
 5. **Payroll** — minutes × rate; snapshot on locked period when lines exist.
 6. **Chat** — membership; sanitization; soft-delete policy.
 7. **Suggestions** — read-only suggest; transactional apply; history threshold.
+8. **Platform operations** — subscription ledger/audit, read-only support console, PlatformOperator-only diagnostics, active org analytics.
 
 ---
 
@@ -229,6 +244,8 @@ Summary by domain:
 1. Log in as `PlatformOperator`.
 2. Review platform users/orgs.
 3. Enable or renew an org package with a Wokki-admin-chosen `durationDays` (platform console; no fixed default in FE).
+4. Review immutable subscription ledger/audit history for package changes.
+5. Use support search/context, platform health, and usage analytics for customer operations.
 
 Detailed diagrams: **[process-flows.md](./process-flows.md)**.
 
@@ -257,6 +274,8 @@ Detailed diagrams: **[process-flows.md](./process-flows.md)**.
 | AttendanceRecord                | Time tracking                       |
 | PayPeriod, PayrollLine          | Payroll                             |
 | Channel, ChannelMember, Message | Chat                                |
+| OrganizationSubscriptionLedgerEntry | Immutable platform package change history |
+| PlatformActivityEvent           | Platform usage analytics signals   |
 
 Glossary: **[glossary.md](./glossary.md)**.
 
@@ -271,6 +290,7 @@ Glossary: **[glossary.md](./glossary.md)**.
 | Phase 3     | `phase-03-swap-workflow.md`                  |
 | Phase 4     | `phase-04-attendance-payroll.md`             |
 | Phase 5     | `phase-05-chat-ai.md`                        |
+| Platform Control Center | `plans/platform-admin-control-center/plan.md` |
 
 | BRD section      | Code pointers                               |
 | ---------------- | ------------------------------------------- |

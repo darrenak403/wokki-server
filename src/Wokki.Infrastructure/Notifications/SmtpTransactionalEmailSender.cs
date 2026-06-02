@@ -3,13 +3,17 @@ using System.Net.Mail;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 
 namespace Wokki.Infrastructure.Notifications;
 
 public sealed class SmtpTransactionalEmailSender(
     IOptions<SmtpSettings> smtpOptions,
+    IPlatformDiagnosticState diagnosticState,
     ILogger<SmtpTransactionalEmailSender> logger) : ITransactionalEmailSender
 {
+    private const string ComponentName = "email";
+
     public async Task SendAsync(
         string toEmail,
         string subject,
@@ -35,7 +39,15 @@ public sealed class SmtpTransactionalEmailSender(
             Credentials = new NetworkCredential(settings.Username, settings.Password),
         };
 
-        await client.SendMailAsync(message, cancellationToken);
-        logger.LogInformation("Transactional email sent to {Email}: {Subject}", toEmail, subject);
+        try
+        {
+            await client.SendMailAsync(message, cancellationToken);
+            logger.LogInformation("Transactional email sent to {Email}: {Subject}", toEmail, subject);
+        }
+        catch (Exception ex)
+        {
+            diagnosticState.RecordFailure(ComponentName, ex.GetType().Name, ex.Message, DateTime.UtcNow);
+            throw;
+        }
     }
 }

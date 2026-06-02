@@ -28,6 +28,8 @@ public interface IUnitOfWork : IAsyncDisposable
     ILocationMembershipRepository LocationMemberships { get; }
     ILocationManagerRepository LocationManagers { get; }
     IOrgJoinRequestRepository OrgJoinRequests { get; }
+    IOrganizationSubscriptionLedgerRepository OrganizationSubscriptionLedgers { get; }
+    IPlatformActivityEventRepository PlatformActivityEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task BeginTransactionAsync(CancellationToken cancellationToken = default);

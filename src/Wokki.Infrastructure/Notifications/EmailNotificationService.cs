@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Notifications;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Domain.Repositories;
 
 namespace Wokki.Infrastructure.Notifications;
@@ -13,8 +14,11 @@ namespace Wokki.Infrastructure.Notifications;
 public sealed class EmailNotificationService(
     IUnitOfWork unitOfWork,
     IOptions<SmtpSettings> smtpOptions,
+    IPlatformDiagnosticState diagnosticState,
     ILogger<EmailNotificationService> logger) : INotificationService
 {
+    private const string ComponentName = "email";
+
     public async Task SendAsync(
         Guid userId,
         string eventName,
@@ -66,6 +70,7 @@ public sealed class EmailNotificationService(
         }
         catch (Exception ex)
         {
+            diagnosticState.RecordFailure(ComponentName, ex.GetType().Name, ex.Message, DateTime.UtcNow);
             logger.LogWarning(ex, "Failed to send email {EventName} to {Email}", eventName, user.Email);
             throw;
         }

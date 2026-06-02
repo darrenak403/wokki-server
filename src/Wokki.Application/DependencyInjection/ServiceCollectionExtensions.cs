@@ -90,6 +90,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<OrganizationSchedulingPolicyFeasibilityValidator>();
         services.AddScoped<IOrganizationSchedulingPolicyService, OrganizationSchedulingPolicyService>();
         services.AddScoped<IPlatformAdminService, PlatformAdminService>();
+        services.AddScoped<IPlatformActivityRecorder, PlatformActivityRecorder>();
+        services.AddScoped<IPlatformDiagnosticsService, PlatformDiagnosticsService>();
+        services.AddScoped<IPlatformUsageAnalyticsService, PlatformUsageAnalyticsService>();
+        services.AddSingleton<IPlatformDiagnosticState, PlatformDiagnosticState>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<IWorkspaceService, WorkspaceService>();
 

@@ -14,9 +14,19 @@ public interface IPlatformAdminService
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<PagedResponse<PlatformOrganizationResponse>>> ListOrganizationsAsync(
-        int page,
-        int pageSize,
-        string? search = null,
+        PlatformOrganizationListRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PagedResponse<PlatformSubscriptionLedgerEntryResponse>>> ListSubscriptionLedgerAsync(
+        PlatformSubscriptionLedgerListRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PagedResponse<PlatformSupportSearchResponse>>> SearchSupportAsync(
+        PlatformSupportSearchRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PlatformOrganizationSupportContextResponse>> GetSupportOrganizationContextAsync(
+        Guid organizationId,
         CancellationToken cancellationToken = default);
 
     Task<ApiResponse<PlatformOrganizationResponse>> UpdateOrganizationSubscriptionAsync(

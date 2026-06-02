@@ -41,11 +41,16 @@ public static class AppMessages
     {
         public static readonly AppMessage UsersListed = new("PLATFORM_USERS_LISTED", "Platform users listed.", StatusCodes.Status200OK);
         public static readonly AppMessage OrganizationsListed = new("PLATFORM_ORGS_LISTED", "Platform organizations listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage SubscriptionLedgerListed = new("PLATFORM_SUBSCRIPTION_LEDGER_LISTED", "Subscription ledger listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage SupportSearchListed = new("PLATFORM_SUPPORT_SEARCH_LISTED", "Platform support search results listed.", StatusCodes.Status200OK);
+        public static readonly AppMessage SupportContextFound = new("PLATFORM_SUPPORT_CONTEXT_FOUND", "Platform support organization context found.", StatusCodes.Status200OK);
+        public static readonly AppMessage HealthFound = new("PLATFORM_HEALTH_FOUND", "Platform health diagnostics found.", StatusCodes.Status200OK);
+        public static readonly AppMessage UsageAnalyticsFound = new("PLATFORM_USAGE_ANALYTICS_FOUND", "Platform usage analytics found.", StatusCodes.Status200OK);
         public static readonly AppMessage OrganizationUpdated = new("PLATFORM_ORG_UPDATED", "Organization subscription updated.", StatusCodes.Status200OK);
         public static readonly AppMessage OrganizationNotFound = new("PLATFORM_ORG_NOT_FOUND", "Organization not found.", StatusCodes.Status404NotFound);
         public static readonly AppMessage SubscriptionDurationRequired = new(
             "SUBSCRIPTION_DURATION_REQUIRED",
-            "durationDays is required (1–3650) when enabling or renewing an org package.",
+            "durationDays is required (1–3650) when enabling or renewing an org package without a stored duration.",
             StatusCodes.Status400BadRequest);
     }
 

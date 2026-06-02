@@ -26,12 +26,18 @@ sequenceDiagram
     participant API as Auth API
     participant P as PlatformOperator
     participant PA as Platform API
+    participant DB as Database
 
     C->>API: POST /auth/register
     API-->>C: JWT Org Admin; package NotActivated
     C->>API: POST /auth/login
     API-->>C: 403 ORG_PACKAGE_NOT_ACTIVATED
     P->>PA: PUT /platform/organizations/{id}/subscription { enabled: true, durationDays }
+    PA->>DB: BEGIN
+    PA->>DB: Update Organization subscription fields
+    PA->>DB: Insert OrganizationSubscriptionLedgerEntry
+    PA->>DB: Insert AuditLog
+    DB-->>PA: COMMIT
     PA-->>P: subscriptionStatus Active + expiresAt
     C->>API: POST /auth/login
     API-->>C: accessToken + refreshToken
@@ -39,11 +45,13 @@ sequenceDiagram
 
 Org hết hạn trả `ORG_PACKAGE_EXPIRED` (402) khi login/refresh và khi gọi API org bằng token cũ. Org chưa kích hoạt hoặc bị tắt trả `ORG_PACKAGE_NOT_ACTIVATED` (403).
 
+Ledger subscription và audit là bắt buộc, commit cùng thay đổi gói (`BR-090`). Ledger chỉ lưu lịch sử gói bất biến; không lưu doanh thu, hóa đơn hoặc dữ liệu thanh toán ngoài.
+
 ---
 
 ## 1.1 Quyền truy cập workspace chi nhánh
 
-Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** — **không** có `/join` hay duyệt yêu cầu tham gia.
+Org Admin **tạo nhân viên** (email + phòng ban) → hệ thống tự gán **Active** `LocationMembership` tại chi nhánh của phòng ban. Nhân viên **đăng nhập trực tiếp** vào app. **Song song:** nhân viên tự đăng ký → chọn org → Admin duyệt (xem §1.2). Luồng `/join` cấp chi nhánh (2026-05-29) đã bỏ.
 
 ```mermaid
 sequenceDiagram
@@ -59,7 +67,67 @@ sequenceDiagram
     Note over E,API: Active membership — vào /app ngay
 ```
 
+### 1.2 Employee self-onboard (org join request)
+
+```mermaid
+sequenceDiagram
+    participant S as Nhân viên tự đăng ký
+    participant Auth as Auth API
+    participant Dir as Organizations API
+    participant JR as Org join API
+    participant A as Org Admin
+
+    S->>Auth: POST /auth/register-employee
+    Auth-->>S: JWT (không có organization_id)
+    S->>Dir: GET /organizations/directory
+    S->>JR: POST /org-join-requests { organizationId }
+    JR-->>S: Pending
+    A->>JR: GET /org-join-requests/pending
+    A->>JR: PATCH /{id}/approve { departmentId, hourlyRate }
+    JR-->>A: Approved
+    S->>Auth: POST /auth/login
+    Auth-->>S: JWT có organization_id → /app
+```
+
+BR-020. Mỗi user chỉ có một request Pending toàn hệ thống. Directory chỉ trả org đang có gói active.
+
 Đổi chi nhánh sau này: Admin/Manager dùng `POST /api/v1/workspace/location/transfer`. Chuyển phòng ban (`/workspace/department/transfer`) chỉ hợp lệ trong chi nhánh Active hiện tại của nhân viên; nếu phòng ban đích thuộc chi nhánh khác thì phải chuyển chi nhánh trước.
+
+---
+
+## 1.3 Platform support console
+
+```mermaid
+sequenceDiagram
+    participant P as PlatformOperator
+    participant API as Platform API
+    participant S as PlatformAdminService
+    participant DB as Database
+
+    P->>API: GET /platform/support/search?query=email|orgName|orgId
+    API->>S: SearchSupportAsync
+    S->>DB: Query org/user matches, counts, latest activity timestamps
+    API-->>P: Search rows có org + user metadata nếu khớp
+    P->>API: GET /platform/support/organizations/{id}/context
+    API->>S: GetSupportOrganizationContextAsync
+    S->>DB: Package status, counts, latest operational timestamps, latest ledger
+    API-->>P: Support context read-only
+```
+
+Support Console phase 1 không impersonate và không sửa dữ liệu nghiệp vụ tenant (`BR-091`). API chỉ trả metadata vận hành: trạng thái gói, số lượng, timestamp lịch/chấm công/chat mới nhất và ledger subscription mới nhất.
+
+## 1.4 Platform health & usage analytics
+
+```mermaid
+flowchart TD
+    H[GET /platform/health] --> API[API component]
+    H --> B[Bedrock component]
+    H --> E[Email config + last failure]
+    U[GET /platform/usage-analytics] --> A[platform_activity_events]
+    A --> C[Active orgs + event counts + weekly trend]
+```
+
+Platform diagnostics chỉ dành cho `PlatformOperator` và không thay đổi public `/health`. Usage analytics tính active org từ login, publish/suggest/apply lịch, clock-in/out hoặc gửi tin chat (`BR-092`, `BR-093`).
 
 ---
 
@@ -70,7 +138,7 @@ stateDiagram-v2
     [*] --> Draft: Tạo / Copy tuần
     Draft --> Published: Publish
     Published --> Draft: Unpublish
-    note right of Published: Nhân viên xem /self/schedule\nCho phép đổi ca
+    note right of Published: Nhân viên xem /self/schedule\nBảng tin đổi ca bị khóa
 ```
 
 `ScheduleStatus.Locked` có trong code nhưng **chưa có API** gán trạng thái này.

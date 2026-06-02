@@ -5,6 +5,7 @@ using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Application.Services.Chat.Interfaces;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.OrganizationSubscription.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Entities;
@@ -22,7 +23,8 @@ public sealed class AuthService(
     ITransactionalEmailSender emailSender,
     IAuthOtpStore otpStore,
     IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner,
-    IOrgChannelService orgChannelService) : IAuthService
+    IOrgChannelService orgChannelService,
+    IPlatformActivityRecorder platformActivityRecorder) : IAuthService
 {
     private readonly IPasswordHasher _passwordHasher = passwordHasher;
 
@@ -38,6 +40,15 @@ public sealed class AuthService(
             cancellationToken);
         if (accessFailure is not null)
             return ApiResponse<LoginResponse>.FailureResponse(accessFailure);
+
+        if (user.OrganizationId.HasValue)
+            await platformActivityRecorder.TryRecordAsync(
+                user.OrganizationId.Value,
+                user.Id,
+                "auth.login",
+                "User",
+                user.Id,
+                cancellationToken);
 
         return ApiResponse<LoginResponse>.SuccessResponse(
             BuildLoginResponse(user),
