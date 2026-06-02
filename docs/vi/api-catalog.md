@@ -147,11 +147,29 @@ Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 ## Platform admin (`/api/v1/platform`) — PlatformOperator
 
-| Method | Path                                                   | Mô tả                                                   |
-| ------ | ------------------------------------------------------ | ------------------------------------------------------- |
-| GET    | `/users?page=&pageSize=&organizationId=&role=&search=` | Danh sách user toàn hệ thống, có org name nếu thuộc org |
-| GET    | `/organizations?page=&pageSize=&search=`               | Danh sách org kèm trạng thái gói và số liệu             |
-| PUT    | `/organizations/{id}/subscription`                     | Bật/tắt hoặc gia hạn gói org                            |
+| Method | Path                                                                                         | Mô tả                                                   |
+| ------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| GET    | `/stats`                                                                                     | Tổng số liệu platform                                   |
+| GET    | `/health`                                                                                    | Diagnostics API, Bedrock, email chỉ dành cho platform   |
+| GET    | `/usage-analytics?windowDays=&organizationId=`                                              | Active org metrics và tín hiệu sử dụng                  |
+| GET    | `/users?page=&pageSize=&organizationId=&role=&search=`                                       | Danh sách user toàn hệ thống, có org name nếu thuộc org |
+| GET    | `/organizations?page=&pageSize=&search=&status=&sortBy=&sortDirection=&expiringWithinDays=` | Org registry kèm trạng thái gói, filter, counts         |
+| PUT    | `/organizations/{id}/subscription`                                                           | Bật/tắt hoặc gia hạn gói org                            |
+| GET    | `/subscription-ledger?page=&pageSize=&organizationId=&action=&from=&to=`                     | Lịch sử gói bất biến toàn platform                      |
+| GET    | `/organizations/{id}/subscription-ledger?page=&pageSize=&action=&from=&to=`                 | Lịch sử gói bất biến của một org                        |
+| GET    | `/support/search?query=&page=&pageSize=`                                                    | Tìm theo org id, tên org hoặc email user                |
+| GET    | `/support/organizations/{id}/context`                                                        | Support context read-only của một org                   |
+
+Query `GET /platform/organizations`:
+
+| Query | Giá trị |
+| ----- | ------- |
+| `status` | `NotActivated`, `Active`, `Expired`, `Disabled` |
+| `sortBy` | `createdAt`, `name`, `expiryDate` |
+| `sortDirection` | `asc`, `desc` |
+| `expiringWithinDays` | Mặc định `7`; quyết định `isExpiringSoon` |
+
+Item org registry có `daysUntilExpiry`, `isExpiringSoon`, `userCount`, `locationCount`, `employeeCount`.
 
 Body `PUT /platform/organizations/{id}/subscription`:
 
@@ -163,6 +181,12 @@ Body `PUT /platform/organizations/{id}/subscription`:
 ```
 
 `durationDays` optional trên API (`1..3650`). FE platform gửi số ngày admin chọn (không hardcode 30). Bỏ trống → BE dùng `subscriptionDurationDays` đã lưu của org. Khi bật: `subscriptionExpiresAt = now + durationDays`. Khi tắt, org không dùng được nhưng không xóa dữ liệu.
+
+Mọi cập nhật subscription ghi ledger bất biến và `AuditLog` trong cùng transaction. Ledger item có `organizationId`, `action`, trạng thái trước/sau, duration trước/sau, expiry trước/sau, `changedByUserId`, `changedAt`. Ledger không lưu doanh thu, hóa đơn hoặc dữ liệu thanh toán.
+
+Support Console chỉ trả metadata vận hành read-only: org/user metadata liên quan, trạng thái gói, số lượng, timestamp vận hành mới nhất và ledger mới nhất. Không impersonate, không lộ nội dung dòng nghiệp vụ tenant, không sửa dữ liệu tenant.
+
+Usage analytics định nghĩa active org là org có ít nhất một event trong window: login thành công, publish/suggest/apply lịch, clock-in/out hoặc gửi tin chat. `windowDays` mặc định 7 và hỗ trợ truy vấn 30 ngày.
 
 Mã gate gói cho user org:
 

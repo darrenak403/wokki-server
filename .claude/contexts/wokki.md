@@ -23,6 +23,8 @@ Use this file for **business meaning** and **where code lives**. Locked rules: `
 
 Org package gate: register creates `Organization` + Org Admin but package is NotActivated. `PlatformOperator` uses platform APIs to activate/disable/renew with admin-chosen `durationDays` (no FE default of 30 days). Org users blocked with `ORG_PACKAGE_NOT_ACTIVATED` or `ORG_PACKAGE_EXPIRED` until activated/renewed.
 
+Platform control center invariants: subscription changes must write immutable `OrganizationSubscriptionLedgerEntry` + `AuditLog` in the same transaction; ledger writes are mandatory. Support Console phase 1 is read-only for tenant business data: no impersonation, no tenant row contents, no schedule/payroll/attendance/chat edits. Active org analytics are based only on tracked `PlatformActivityEvent` types: login, schedule publish/suggest/apply, attendance clock-in/out, or chat message. `/api/v1/platform/health` is PlatformOperator-only; public `/health` remains anonymous and unchanged.
+
 ---
 
 ## Core domain flows
@@ -110,7 +112,7 @@ Use **department membership** for guards when employee spans multiple department
 | `PayrollEndpoints`      | `PayrollService`                                                                                                                 |
 | `ChannelEndpoints`      | `ChannelService`                                                                                                                 |
 | `BedrockEndpoints`      | `BedrockService`                                                                                                                 |
-| `PlatformEndpoints`     | `StatsService`, `PlatformAdminService`                                                                                           |
+| `PlatformEndpoints`     | `StatsService`, `PlatformAdminService`, `PlatformDiagnosticsService`, `PlatformUsageAnalyticsService`                             |
 
 ### Adding a feature (checklist)
 

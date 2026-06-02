@@ -26,18 +26,26 @@ sequenceDiagram
     participant API as Auth API
     participant P as PlatformOperator
     participant PA as Platform API
+    participant DB as Database
 
     C->>API: POST /auth/register
     API-->>C: Org Admin JWT; package NotActivated
     C->>API: POST /auth/login
     API-->>C: 403 ORG_PACKAGE_NOT_ACTIVATED
     P->>PA: PUT /platform/organizations/{id}/subscription { enabled: true, durationDays }
+    PA->>DB: BEGIN
+    PA->>DB: Update Organization subscription fields
+    PA->>DB: Insert OrganizationSubscriptionLedgerEntry
+    PA->>DB: Insert AuditLog
+    DB-->>PA: COMMIT
     PA-->>P: subscriptionStatus Active + expiresAt
     C->>API: POST /auth/login
     API-->>C: accessToken + refreshToken
 ```
 
 Expired org packages return `ORG_PACKAGE_EXPIRED` (402) on login/refresh and authenticated org API calls. Disabled or not-yet-activated packages return `ORG_PACKAGE_NOT_ACTIVATED` (403).
+
+Subscription ledger and audit writes are mandatory and committed with the subscription update (`BR-090`). The ledger is immutable package history only; it does not store revenue amount, invoices, or external payment data.
 
 ---
 
@@ -84,6 +92,42 @@ sequenceDiagram
 BR-020. One Pending request per user globally. Directory lists only orgs with active package.
 
 Đổi chi nhánh sau này: Admin/Manager dùng `POST /api/v1/workspace/location/transfer`. Admin quản mọi chi nhánh trong org; Manager chỉ scope `LocationManager`. Chuyển phòng ban (`/workspace/department/transfer`) chỉ hợp lệ trong chi nhánh Active hiện tại của nhân viên; đổi chi nhánh trước nếu phòng ban đích thuộc chi nhánh khác.
+
+---
+
+## 1.3 Platform support console
+
+```mermaid
+sequenceDiagram
+    participant P as PlatformOperator
+    participant API as Platform API
+    participant S as PlatformAdminService
+    participant DB as Database
+
+    P->>API: GET /platform/support/search?query=email|orgName|orgId
+    API->>S: SearchSupportAsync
+    S->>DB: Query org/user matches, counts, latest activity timestamps
+    API-->>P: Search rows with org + optional user metadata
+    P->>API: GET /platform/support/organizations/{id}/context
+    API->>S: GetSupportOrganizationContextAsync
+    S->>DB: Package status, counts, latest operational timestamps, latest ledger
+    API-->>P: Read-only support context
+```
+
+Support Console phase 1 has no impersonation and no tenant business data edits (`BR-091`). It returns operational metadata only: package state, counts, latest schedule/attendance/chat timestamps, and latest subscription ledger entry.
+
+## 1.4 Platform health & usage analytics
+
+```mermaid
+flowchart TD
+    H[GET /platform/health] --> API[API component]
+    H --> B[Bedrock component]
+    H --> E[Email config + last failure]
+    U[GET /platform/usage-analytics] --> A[platform_activity_events]
+    A --> C[Active orgs + event counts + weekly trend]
+```
+
+Platform diagnostics are `PlatformOperator`-only and do not change public `/health`. Usage analytics defines an active org from tracked activity events: login, schedule publish/suggest/apply, attendance clock-in/out, or chat message (`BR-092`, `BR-093`).
 
 ---
 

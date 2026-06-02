@@ -10,6 +10,17 @@ public interface IOrganizationRepository
         int page,
         int pageSize,
         string? search = null,
+        string? status = null,
+        string? sortBy = null,
+        string? sortDirection = null,
+        CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<PlatformSupportSearchSnapshot> Items, int TotalCount)> SearchPlatformSupportAsync(
+        int page,
+        int pageSize,
+        string? query,
+        CancellationToken cancellationToken = default);
+    Task<PlatformOrganizationSupportContextSnapshot?> GetPlatformSupportContextAsync(
+        Guid organizationId,
         CancellationToken cancellationToken = default);
     Task AddAsync(Organization organization, CancellationToken cancellationToken = default);
     Task<PlatformStatsSnapshot> GetPlatformStatsAsync(CancellationToken cancellationToken = default);

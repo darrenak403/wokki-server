@@ -12,7 +12,7 @@
 | 4 | [api-catalog.md](./api-catalog.md) | REST + WebSocket theo vai trò |
 | 5 | [glossary.md](./glossary.md) | Thuật ngữ và enum |
 | 6 | [../fe/self-serve-org-handoff.md](../fe/self-serve-org-handoff.md) | Bàn giao FE self-serve org, platform shell, package gate |
-| 7 | [../fe/2026-05-29-feat-platform-org-subscription.md](../fe/2026-05-29-feat-platform-org-subscription.md) | Contract FE cho list user/org platform và bật/tắt gói |
+| 7 | [../fe/2026-05-29-feat-platform-org-subscription.md](../fe/2026-05-29-feat-platform-org-subscription.md) | Contract FE cho Platform Admin Control Center: org registry, ledger, support, health, usage analytics |
 | 8 | [../fe/2026-05-29-feat-branch-workspace-scope.md](../fe/2026-05-29-feat-branch-workspace-scope.md) | Bàn giao FE cho branch scope, membership, manager scope và React Flow |
 | 9 | **[fe-integration-guide.md](./fe-integration-guide.md)** | Luồng FE cũ — chỉ tham khảo phần chưa bị thay bởi self-serve org |
 | 10 | [../architecture.md](../architecture.md) | Kiến trúc Clean Architecture (EN) |
@@ -31,7 +31,7 @@
 | Sản phẩm | Wokki Shift Ops MVP |
 | Repository | `wokki-server` |
 | Phiên bản BRD | 1.0 (vi) |
-| Cập nhật | 2026-05-29 |
+| Cập nhật | 2026-06-02 |
 | Trạng thái triển khai | Phase 1–5 hoàn tất (`plans/shift-ops-mvp/plan.md`) |
 | Nguồn sự thật khi code | `docs/vi/` + `docs/` (EN) + `Wokki.Domain` + `AppMessages` |
 

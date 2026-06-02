@@ -33,6 +33,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LocationManager> LocationManagers => Set<LocationManager>();
     public DbSet<LocationMembership> LocationMemberships => Set<LocationMembership>();
     public DbSet<OrgJoinRequest> OrgJoinRequests => Set<OrgJoinRequest>();
+    public DbSet<OrganizationSubscriptionLedgerEntry> OrganizationSubscriptionLedgerEntries =>
+        Set<OrganizationSubscriptionLedgerEntry>();
+    public DbSet<PlatformActivityEvent> PlatformActivityEvents => Set<PlatformActivityEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

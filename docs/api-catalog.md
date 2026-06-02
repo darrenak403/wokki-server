@@ -176,11 +176,29 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 ## Platform admin (`/api/v1/platform`) — PlatformOperator
 
-| Method | Path                                                   | Description                                               |
-| ------ | ------------------------------------------------------ | --------------------------------------------------------- |
-| GET    | `/users?page=&pageSize=&organizationId=&role=&search=` | Paged platform user list, including org name when present |
-| GET    | `/organizations?page=&pageSize=&search=`               | Paged org list with package status and counts             |
-| PUT    | `/organizations/{id}/subscription`                     | Enable/disable or renew org package                       |
+| Method | Path                                                                                                          | Description                                               |
+| ------ | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| GET    | `/stats`                                                                                                      | Aggregate platform counts                                 |
+| GET    | `/health`                                                                                                     | Platform-only API, Bedrock, and email diagnostics         |
+| GET    | `/usage-analytics?windowDays=&organizationId=`                                                               | Active org metrics and usage signals                      |
+| GET    | `/users?page=&pageSize=&organizationId=&role=&search=`                                                        | Paged platform user list, including org name when present |
+| GET    | `/organizations?page=&pageSize=&search=&status=&sortBy=&sortDirection=&expiringWithinDays=`                  | Paged org registry with package status, filters, counts   |
+| PUT    | `/organizations/{id}/subscription`                                                                            | Enable/disable or renew org package                       |
+| GET    | `/subscription-ledger?page=&pageSize=&organizationId=&action=&from=&to=`                                      | Global immutable subscription history                     |
+| GET    | `/organizations/{id}/subscription-ledger?page=&pageSize=&action=&from=&to=`                                  | Immutable subscription history for one org                |
+| GET    | `/support/search?query=&page=&pageSize=`                                                                     | Search by org id, org name, or user email                 |
+| GET    | `/support/organizations/{id}/context`                                                                         | Read-only org support context                             |
+
+`GET /platform/organizations` query notes:
+
+| Query | Values |
+| ----- | ------ |
+| `status` | `NotActivated`, `Active`, `Expired`, `Disabled` |
+| `sortBy` | `createdAt`, `name`, `expiryDate` |
+| `sortDirection` | `asc`, `desc` |
+| `expiringWithinDays` | Defaults to `7`; controls `isExpiringSoon` |
+
+Org registry response items include `daysUntilExpiry`, `isExpiringSoon`, `userCount`, `locationCount`, and `employeeCount`.
 
 `PUT /platform/organizations/{id}/subscription` body:
 
@@ -192,6 +210,12 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 ```
 
 `durationDays` is optional on the API (`1..3650`). Platform FE should send the value the Wokki admin chooses in settings (no fixed 30-day default in UI). When omitted, BE reuses the org’s stored `subscriptionDurationDays`. Enabling sets `subscriptionExpiresAt = now + durationDays`. Disabling makes the org unusable without deleting data.
+
+Every subscription update writes an immutable subscription ledger entry and an `AuditLog` entry in the same transaction. Ledger entries include `organizationId`, `action`, previous/new status, previous/new duration days, previous/new expiry, `changedByUserId`, and `changedAt`. Ledger history does not include revenue amount, invoices, or payment data.
+
+Support Console responses are read-only operational metadata. They may include linked org/user metadata, package status, counts, latest operational timestamps, and latest subscription ledger entry; they must not expose tenant business row contents or enable impersonation.
+
+Usage analytics defines an active org as one with at least one tracked activity event in the window: successful login, schedule publish, schedule suggest/apply, attendance clock-in/out, or chat message. `windowDays` defaults to 7 and supports 30-day queries.
 
 Package gate codes for org users:
 

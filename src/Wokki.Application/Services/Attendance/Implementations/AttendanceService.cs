@@ -3,6 +3,7 @@ using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Mappings.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
@@ -19,7 +20,8 @@ namespace Wokki.Application.Services.Attendance.Implementations;
 public sealed class AttendanceService(
     IUnitOfWork unitOfWork,
     IAutoCloseAttendanceService autoCloseService,
-    IOrganizationScopeService organizationScope) : IAttendanceService
+    IOrganizationScopeService organizationScope,
+    IPlatformActivityRecorder platformActivityRecorder) : IAttendanceService
 {
     public async Task<ApiResponse<AttendanceResponse>> ClockInAsync(
         Guid userId,
@@ -94,6 +96,14 @@ public sealed class AttendanceService(
         await unitOfWork.Attendance.AddAsync(record, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
+        await platformActivityRecorder.TryRecordAsync(
+            employee.OrganizationId,
+            employee.UserId,
+            "attendance.clock_in",
+            "AttendanceRecord",
+            record.Id,
+            cancellationToken);
+
         return ApiResponse<AttendanceResponse>.SuccessResponse(
             await BuildAttendanceResponseAsync(record, cancellationToken),
             AppMessages.Attendance.ClockedIn);
@@ -122,6 +132,14 @@ public sealed class AttendanceService(
         record.WorkedMinutes = ComputeWorkedMinutes(record.ClockIn, record.ClockOut.Value);
         unitOfWork.Attendance.Update(record);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await platformActivityRecorder.TryRecordAsync(
+            record.OrganizationId,
+            employee.UserId,
+            "attendance.clock_out",
+            "AttendanceRecord",
+            record.Id,
+            cancellationToken);
 
         return ApiResponse<AttendanceResponse>.SuccessResponse(
             await BuildAttendanceResponseAsync(record, cancellationToken),

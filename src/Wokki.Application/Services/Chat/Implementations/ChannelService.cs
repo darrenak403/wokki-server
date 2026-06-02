@@ -4,6 +4,7 @@ using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Services.Chat.Interfaces;
 using Wokki.Application.Services.Employee.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
@@ -21,7 +22,8 @@ public sealed partial class ChannelService(
     IOrgChannelService orgChannelService,
     IChatRealtimeNotifier realtime,
     IOrganizationScopeService organizationScope,
-    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner) : IChannelService
+    IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner,
+    IPlatformActivityRecorder platformActivityRecorder) : IChannelService
 {
     private const int MaxBodyLength = 4000;
     private const int MaxOrgMembers = 200;
@@ -290,6 +292,14 @@ public sealed partial class ChannelService(
 
         await unitOfWork.Messages.AddAsync(message, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await platformActivityRecorder.TryRecordAsync(
+            channel.OrganizationId,
+            userId,
+            "chat.message",
+            "Message",
+            message.Id,
+            cancellationToken);
 
         var response = await MapMessageAsync(message, cancellationToken);
 

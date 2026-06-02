@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Services.Auth.Interfaces;
+using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Auth;
@@ -60,6 +61,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<SmtpTransactionalEmailSender>();
         services.AddScoped<ITransactionalEmailSender, DevLoggingTransactionalEmailSender>();
+        services.AddScoped<IEmailDiagnosticService, EmailDiagnosticService>();
         services.Configure<RedisSettings>(configuration.GetSection(RedisSettings.SectionName));
         if (environment.IsEnvironment("Testing"))
         {

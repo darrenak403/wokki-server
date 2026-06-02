@@ -31,6 +31,18 @@ public static class PlatformEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
 
+        group.MapGet("/health", GetPlatformHealthAsync)
+            .WithName("GetPlatformHealth")
+            .WithDescription("Chẩn đoán API và dependency cho Wokki admin.")
+            .Produces<ApiResponse<PlatformHealthResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/usage-analytics", GetUsageAnalyticsAsync)
+            .WithName("GetPlatformUsageAnalytics")
+            .WithDescription("Tín hiệu sử dụng org theo cửa sổ thời gian.")
+            .Produces<ApiResponse<PlatformUsageAnalyticsResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
         group.MapGet("/users", ListUsersAsync)
             .WithName("ListPlatformUsers")
             .WithDescription("Danh sách user toàn hệ thống cho Wokki admin.")
@@ -42,6 +54,31 @@ public static class PlatformEndpoints
             .WithDescription("Danh sách org và trạng thái gói sử dụng cho Wokki admin.")
             .Produces<ApiResponse<PagedResponse<PlatformOrganizationResponse>>>(StatusCodes.Status200OK)
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/subscription-ledger", ListSubscriptionLedgerAsync)
+            .WithName("ListPlatformSubscriptionLedger")
+            .WithDescription("Lịch sử thay đổi gói sử dụng toàn platform.")
+            .Produces<ApiResponse<PagedResponse<PlatformSubscriptionLedgerEntryResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/organizations/{id:guid}/subscription-ledger", ListOrganizationSubscriptionLedgerAsync)
+            .WithName("ListOrganizationSubscriptionLedger")
+            .WithDescription("Lịch sử thay đổi gói sử dụng của một org.")
+            .Produces<ApiResponse<PagedResponse<PlatformSubscriptionLedgerEntryResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/support/search", SearchSupportAsync)
+            .WithName("SearchPlatformSupport")
+            .WithDescription("Tìm kiếm hỗ trợ theo org id, tên org hoặc email user.")
+            .Produces<ApiResponse<PagedResponse<PlatformSupportSearchResponse>>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
+        group.MapGet("/support/organizations/{id:guid}/context", GetSupportOrganizationContextAsync)
+            .WithName("GetPlatformSupportOrganizationContext")
+            .WithDescription("Ngữ cảnh hỗ trợ của một org cho Wokki admin.")
+            .Produces<ApiResponse<PlatformOrganizationSupportContextResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
         group.MapPut("/organizations/{id:guid}/subscription", UpdateOrganizationSubscriptionAsync)
             .WithName("UpdateOrganizationSubscription")
@@ -59,6 +96,23 @@ public static class PlatformEndpoints
         CancellationToken cancellationToken)
     {
         var result = await statsService.GetPlatformStatsAsync(cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetPlatformHealthAsync(
+        [FromServices] IPlatformDiagnosticsService diagnosticsService,
+        CancellationToken cancellationToken)
+    {
+        var result = await diagnosticsService.GetHealthAsync(cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetUsageAnalyticsAsync(
+        [AsParameters] PlatformUsageAnalyticsRequest request,
+        [FromServices] IPlatformUsageAnalyticsService usageAnalyticsService,
+        CancellationToken cancellationToken)
+    {
+        var result = await usageAnalyticsService.GetAsync(request, cancellationToken);
         return result.ToHttpResult();
     }
 
@@ -81,16 +135,60 @@ public static class PlatformEndpoints
     }
 
     private static async Task<IResult> ListOrganizationsAsync(
-        [AsParameters] PaginationRequest pagination,
+        [AsParameters] PlatformOrganizationListRequest request,
         [FromServices] IPlatformAdminService platformAdminService,
-        [FromQuery] string? search,
         CancellationToken cancellationToken)
     {
         var result = await platformAdminService.ListOrganizationsAsync(
-            pagination.Page,
-            pagination.PageSize,
-            search,
+            request,
             cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListSubscriptionLedgerAsync(
+        [AsParameters] PlatformSubscriptionLedgerListRequest request,
+        [FromServices] IPlatformAdminService platformAdminService,
+        CancellationToken cancellationToken)
+    {
+        var result = await platformAdminService.ListSubscriptionLedgerAsync(request, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> ListOrganizationSubscriptionLedgerAsync(
+        [FromRoute] Guid id,
+        [AsParameters] PlatformSubscriptionLedgerListRequest request,
+        [FromServices] IPlatformAdminService platformAdminService,
+        CancellationToken cancellationToken)
+    {
+        var scopedRequest = new PlatformSubscriptionLedgerListRequest
+        {
+            Page = request.Page,
+            PageSize = request.PageSize,
+            OrganizationId = id,
+            Action = request.Action,
+            From = request.From,
+            To = request.To
+        };
+
+        var result = await platformAdminService.ListSubscriptionLedgerAsync(scopedRequest, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> SearchSupportAsync(
+        [AsParameters] PlatformSupportSearchRequest request,
+        [FromServices] IPlatformAdminService platformAdminService,
+        CancellationToken cancellationToken)
+    {
+        var result = await platformAdminService.SearchSupportAsync(request, cancellationToken);
+        return result.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetSupportOrganizationContextAsync(
+        [FromRoute] Guid id,
+        [FromServices] IPlatformAdminService platformAdminService,
+        CancellationToken cancellationToken)
+    {
+        var result = await platformAdminService.GetSupportOrganizationContextAsync(id, cancellationToken);
         return result.ToHttpResult();
     }
 

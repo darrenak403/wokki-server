@@ -1,4 +1,7 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Npgsql;
+using Wokki.Domain.Exceptions;
 using Wokki.Domain.Repositories;
 using Wokki.Infrastructure.Persistence;
 
@@ -32,6 +35,8 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
     private ILocationMembershipRepository? _locationMemberships;
     private ILocationManagerRepository? _locationManagers;
     private IOrgJoinRequestRepository? _orgJoinRequests;
+    private IOrganizationSubscriptionLedgerRepository? _organizationSubscriptionLedgers;
+    private IPlatformActivityEventRepository? _platformActivityEvents;
     private IDbContextTransaction? _transaction;
 
     public IOrganizationRepository Organizations => _organizations ??= new OrganizationRepository(context);
@@ -70,9 +75,28 @@ public sealed class UnitOfWork(AppDbContext context) : IUnitOfWork
         _locationManagers ??= new LocationManagerRepository(context);
     public IOrgJoinRequestRepository OrgJoinRequests =>
         _orgJoinRequests ??= new OrgJoinRequestRepository(context);
+    public IOrganizationSubscriptionLedgerRepository OrganizationSubscriptionLedgers =>
+        _organizationSubscriptionLedgers ??= new OrganizationSubscriptionLedgerRepository(context);
+    public IPlatformActivityEventRepository PlatformActivityEvents =>
+        _platformActivityEvents ??= new PlatformActivityEventRepository(context);
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        context.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+                                          {
+                                              SqlState: PostgresErrorCodes.UniqueViolation
+                                          } postgres)
+        {
+            throw new UniqueConstraintViolationException(
+                postgres.TableName,
+                postgres.ConstraintName,
+                ex);
+        }
+    }
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
