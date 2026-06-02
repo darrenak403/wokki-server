@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["Directory.Build.props", "global.json", "./"]
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
     /p:DebugType=None \
     /p:DebugSymbols=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 ENV ASPNETCORE_URLS=http://+:8386 \
@@ -31,9 +31,11 @@ ENV ASPNETCORE_URLS=http://+:8386 \
     DOTNET_EnableDiagnostics=0 \
     ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
 
-RUN apk add --no-cache wget icu-libs krb5-libs \
-    && addgroup -S wokki \
-    && adduser -S wokki -G wokki -u 10001
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget libicu-dev libkrb5-3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system wokki \
+    && useradd --system --gid wokki --uid 10001 --create-home wokki
 
 COPY --from=build --chown=wokki:wokki /app/publish .
 
