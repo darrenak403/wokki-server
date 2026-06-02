@@ -75,11 +75,17 @@ Deploy **BE trước FE** — tạo network `wokki-network`.
 
 | | Chi tiết |
 |---|----------|
-| **Image** | Alpine, non-root, build cache (NuGet/npm), GHA cache CI |
+| **Image** | Debian-based .NET runtime (OR-Tools compatible), non-root, build cache (NuGet/npm), GHA cache CI |
 | **BE concurrency** | Kestrel 1000 conn / 256 WS, Npgsql pool 5–100, Redis LRU 256MB |
 | **Postgres** | shared_buffers 256MB, max_connections 100 |
 | **Log** | Giới hạn 10MB × 3 file |
 | **RAM limit** | Tune qua `API_MEMORY_LIMIT`, `POSTGRES_MEMORY_LIMIT`, `REDIS_MEMORY_LIMIT`, `CLIENT_MEMORY_LIMIT` |
+
+### CI reliability notes
+
+- `docker-publish.yml` dùng retry 2 lần cho push để giảm lỗi mạng thoáng qua từ Docker Hub.
+- Workflow có bước verify `latest` bằng `docker pull` + kiểm tra `/etc/os-release` để ngăn publish nhầm Alpine runtime.
+- Prod compose hỗ trợ `DOCKER_PLATFORM` (mặc định `linux/amd64`) để tránh pull nhầm kiến trúc.
 
 ## Dev
 

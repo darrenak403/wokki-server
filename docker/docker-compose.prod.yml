@@ -17,6 +17,7 @@ services:
   wokki_api:
     container_name: wokki_api
     pull_policy: always
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     image: ${DOCKER_USERNAME:?DOCKER_USERNAME is required}/wokki-backend:${IMAGE_TAG:-latest}
     init: true
     logging: *wokki-logging
