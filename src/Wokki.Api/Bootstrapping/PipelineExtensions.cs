@@ -54,6 +54,8 @@ public static class PipelineExtensions
 
         app.MapHub<ChatHub>("/ws/chat")
             .RequireCors(CorsSettings.FrontendPolicy);
+        app.MapHub<AppHub>("/hubs/app")
+            .RequireCors(CorsSettings.FrontendPolicy);
 
         return app;
     }
