@@ -41,7 +41,9 @@ public sealed class LocationManagerService(IUnitOfWork unitOfWork, IOrganization
         await unitOfWork.SaveChangesAsync(ct);
 
         var created = await unitOfWork.LocationManagers.GetAsync(locationId, dto.UserId, ct);
-        return ApiResponse<LocationManagerResponse>.SuccessResponse(MapResponse(created!), AppMessages.LocationManager.Assigned);
+        return ApiResponse<LocationManagerResponse>.SuccessResponse(
+            await MapResponseAsync(created!, ct),
+            AppMessages.LocationManager.Assigned);
     }
 
     public async Task<ApiResponse<object>> RemoveAsync(Guid locationId, Guid userId, CancellationToken ct = default)
@@ -67,8 +69,12 @@ public sealed class LocationManagerService(IUnitOfWork unitOfWork, IOrganization
             return ApiResponse<IReadOnlyList<LocationManagerResponse>>.FailureResponse(AppMessages.LocationManager.LocationNotFound);
 
         var managers = await unitOfWork.LocationManagers.GetByLocationAsync(locationId, ct);
+        var responses = new List<LocationManagerResponse>(managers.Count);
+        foreach (var manager in managers)
+            responses.Add(await MapResponseAsync(manager, ct));
+
         return ApiResponse<IReadOnlyList<LocationManagerResponse>>.SuccessResponse(
-            managers.Select(MapResponse).ToList(),
+            responses,
             AppMessages.LocationManager.Listed);
     }
 
@@ -90,12 +96,19 @@ public sealed class LocationManagerService(IUnitOfWork unitOfWork, IOrganization
         return ApiResponse<IReadOnlyList<LocationResponse>>.SuccessResponse(locations, AppMessages.LocationManager.MyLocationsListed);
     }
 
-    private static LocationManagerResponse MapResponse(Domain.Entities.LocationManager m) => new(
-        m.Id,
-        m.LocationId,
-        m.Location?.Name ?? string.Empty,
-        m.UserId,
-        m.User?.Email ?? string.Empty,
-        m.AssignedById,
-        m.AssignedAt);
+    private async Task<LocationManagerResponse> MapResponseAsync(
+        Domain.Entities.LocationManager m,
+        CancellationToken cancellationToken)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(m.UserId, cancellationToken);
+        return new(
+            m.Id,
+            m.LocationId,
+            m.Location?.Name ?? string.Empty,
+            m.UserId,
+            m.User?.Email ?? string.Empty,
+            m.AssignedById,
+            m.AssignedAt,
+            employee?.Id);
+    }
 }

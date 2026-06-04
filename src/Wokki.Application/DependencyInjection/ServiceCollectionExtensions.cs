@@ -60,6 +60,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+        services.AddScoped<IStaffPlacementCoordinator, StaffPlacementCoordinator>();
+        services.AddScoped<IEmployeeRoleTransitionService, EmployeeRoleTransitionService>();
         services.AddScoped<IEmployeeProvisioner, EmployeeProvisioner>();
         services.AddScoped<IOrgAdminEmployeeProvisioner, OrgAdminEmployeeProvisioner>();
         services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
