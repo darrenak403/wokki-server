@@ -35,6 +35,14 @@ public sealed class LocationManagerRepository(AppDbContext context) : ILocationM
             .OrderBy(lm => lm.AssignedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<LocationManager>> GetTrackedByUserIdAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        await context.LocationManagers
+            .Where(lm => lm.UserId == userId)
+            .OrderBy(lm => lm.AssignedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(LocationManager manager, CancellationToken cancellationToken = default) =>
         await context.LocationManagers.AddAsync(manager, cancellationToken);
 

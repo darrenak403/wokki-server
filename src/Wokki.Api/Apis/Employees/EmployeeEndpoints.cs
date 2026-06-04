@@ -63,6 +63,17 @@ public static class EmployeeEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
             .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
 
+        group.MapPost("/{id:guid}/role-transition", RoleTransitionAsync)
+            .WithName("TransitionEmployeeRole")
+            .WithDescription("Org Admin: chuyển nhân viên User ↔ Manager (đồng bộ chi nhánh/phòng ban, LocationManager, membership).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
+            .Produces<ApiResponse<EmployeeResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status400BadRequest)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound)
+            .Produces<ApiResponse<object>>(StatusCodes.Status409Conflict);
+
         group.MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateEmployee")
             .WithDescription("Cập nhật hồ sơ nhân viên.")
@@ -162,6 +173,20 @@ public static class EmployeeEndpoints
             return validationResult!;
 
         var response = await service.CreateAsync(request, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> RoleTransitionAsync(
+        [FromRoute] Guid id,
+        [FromBody] EmployeeRoleTransitionRequest request,
+        [FromServices] IEmployeeRoleTransitionService service,
+        [FromServices] IValidator<EmployeeRoleTransitionRequest> validator,
+        CancellationToken cancellationToken = default)
+    {
+        if (!request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
+
+        var response = await service.TransitionAsync(id, request, cancellationToken);
         return response.ToHttpResult();
     }
 

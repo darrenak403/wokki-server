@@ -7,4 +7,5 @@ public sealed record LocationManagerResponse(
     Guid UserId,
     string UserEmail,
     Guid AssignedById,
-    DateTime AssignedAt);
+    DateTime AssignedAt,
+    Guid? EmployeeId = null);

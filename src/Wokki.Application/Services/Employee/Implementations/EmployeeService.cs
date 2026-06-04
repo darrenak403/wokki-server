@@ -7,14 +7,10 @@ using Wokki.Application.Services.Chat.Interfaces;
 using Wokki.Application.Services.OrganizationScope.Interfaces;
 using Wokki.Common.Utils;
 using Wokki.Domain.Constants;
-using Wokki.Domain.Enums;
 using Wokki.Domain.Repositories;
 using EmployeeEntity = Wokki.Domain.Entities.Employee;
 using DepartmentEntity = Wokki.Domain.Entities.Department;
 using LocationEntity = Wokki.Domain.Entities.Location;
-using LocationMembershipEntity = Wokki.Domain.Entities.LocationMembership;
-using LocationManagerEntity = Wokki.Domain.Entities.LocationManager;
-
 namespace Wokki.Application.Services.Employee.Implementations;
 
 public sealed class EmployeeService(
@@ -23,7 +19,7 @@ public sealed class EmployeeService(
     IOrganizationScopeService organizationScope,
     IOrgChannelService orgChannelService,
     IOrgAdminEmployeeProvisioner orgAdminEmployeeProvisioner,
-    ICurrentUserService currentUser) : IEmployeeService
+    IStaffPlacementCoordinator placement) : IEmployeeService
 {
     public async Task<ApiResponse<EmployeeResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -197,7 +193,7 @@ public sealed class EmployeeService(
                     departmentIds,
                     request.DepartmentId.Value,
                     cancellationToken);
-                await EnsureActiveLocationMembershipAsync(
+                await placement.EnsureActiveLocationMembershipAsync(
                     employee.Id,
                     organizationId,
                     department.LocationId,
@@ -205,18 +201,7 @@ public sealed class EmployeeService(
             }
 
             if (requiresManagerLocations)
-            {
-                var assignResult = await AssignManagerLocationsAsync(
-                    user.Id,
-                    organizationId,
-                    managerLocationIds,
-                    cancellationToken);
-                if (assignResult is not null)
-                {
-                    await unitOfWork.RollbackTransactionAsync(cancellationToken);
-                    return assignResult;
-                }
-            }
+                await placement.AssignManagerLocationsAsync(user.Id, organizationId, managerLocationIds, cancellationToken);
 
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
@@ -265,7 +250,7 @@ public sealed class EmployeeService(
             departmentIds,
             request.DepartmentId,
             cancellationToken);
-        await EnsureActiveLocationMembershipAsync(
+        await placement.EnsureActiveLocationMembershipAsync(
             employee.Id,
             employee.OrganizationId,
             department.LocationId,
@@ -352,63 +337,4 @@ public sealed class EmployeeService(
         return true;
     }
 
-    private async Task<ApiResponse<CreateEmployeeResponse>?> AssignManagerLocationsAsync(
-        Guid userId,
-        Guid organizationId,
-        IReadOnlyList<Guid> locationIds,
-        CancellationToken cancellationToken)
-    {
-        if (!currentUser.UserId.HasValue)
-            return ApiResponse<CreateEmployeeResponse>.FailureResponse(AppMessages.Auth.Unauthorized);
-
-        var assignedById = currentUser.UserId.Value;
-        foreach (var locationId in locationIds)
-        {
-            var existing = await unitOfWork.LocationManagers.GetAsync(locationId, userId, cancellationToken);
-            if (existing is not null)
-                continue;
-
-            await unitOfWork.LocationManagers.AddAsync(new LocationManagerEntity
-            {
-                Id = Guid.NewGuid(),
-                OrganizationId = organizationId,
-                LocationId = locationId,
-                UserId = userId,
-                AssignedById = assignedById,
-                AssignedAt = DateTime.UtcNow,
-            }, cancellationToken);
-        }
-
-        return null;
-    }
-
-    private async Task EnsureActiveLocationMembershipAsync(
-        Guid employeeId,
-        Guid organizationId,
-        Guid locationId,
-        CancellationToken cancellationToken)
-    {
-        var active = await unitOfWork.LocationMemberships.GetActiveByEmployeeAsync(
-            employeeId, track: true, cancellationToken: cancellationToken);
-        if (active?.LocationId == locationId)
-            return;
-
-        if (active is not null)
-        {
-            active.Status = LocationMembershipStatus.Transferred;
-            active.ReviewedAt = DateTime.UtcNow;
-            unitOfWork.LocationMemberships.Update(active);
-        }
-
-        await unitOfWork.LocationMemberships.AddAsync(new LocationMembershipEntity
-        {
-            Id = Guid.NewGuid(),
-            OrganizationId = organizationId,
-            EmployeeId = employeeId,
-            LocationId = locationId,
-            Status = LocationMembershipStatus.Active,
-            RequestedAt = DateTime.UtcNow,
-            ReviewedAt = DateTime.UtcNow,
-        }, cancellationToken);
-    }
 }

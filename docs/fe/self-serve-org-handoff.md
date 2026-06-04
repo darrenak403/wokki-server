@@ -370,6 +370,8 @@ Authorization: Bearer {adminToken}
 
 BE tạo `LocationManager` cho từng chi nhánh trong `locationIds`. Manager không cần `departmentId`. Khi đăng nhập chỉ thấy chi nhánh được giao.
 
+**Đổi role nhân viên hiện có (User ↔ Manager):** dùng `POST /api/v1/employees/{employeeId}/role-transition` — xem [employee-role-transition-handoff.md](./employee-role-transition-handoff.md). Không dùng `PATCH /api/v1/users/{id}/role`.
+
 Response có `temporaryPassword` — hiển thị **một lần** cho Admin copy gửi nhân viên.
 Nếu email đã tồn tại trong cùng org nhưng chưa có `Employee` (dữ liệu legacy từ tab “Tài khoản hệ thống”), gọi API này với email đó sẽ chuyển account thành nhân viên và trả mật khẩu tạm mới.
 

@@ -20,7 +20,7 @@ public static class WorkspaceEndpoints
 
         usersGroup.MapPatch("/{id:guid}/role", ChangeRoleAsync)
             .WithName("ChangeUserRole")
-            .WithDescription("Change a user's role (Admin only). Cannot modify Admin accounts.")
+            .WithDescription("Deprecated — use POST /api/v1/employees/{employeeId}/role-transition. Returns 400.")
             .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin))
             .RequireRateLimiting(RateLimitPolicies.Fixed)
             .Produces<ApiResponse<object>>(StatusCodes.Status200OK)

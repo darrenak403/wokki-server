@@ -16,7 +16,6 @@ namespace Wokki.Application.Services.Workspace.Implementations;
 
 public sealed class WorkspaceService(
     IUnitOfWork unitOfWork,
-    IJwtTokenService jwtTokenService,
     ILocationScopeService locationScopeService,
     IOrganizationScopeService organizationScope,
     ILogger<WorkspaceService> logger) : IWorkspaceService
@@ -34,14 +33,7 @@ public sealed class WorkspaceService(
         if (target.Role == RoleConstants.Admin)
             return ApiResponse<object>.FailureResponse(AppMessages.Workspace.CannotModifyAdmin);
 
-        target.Role = request.Role;
-        unitOfWork.Users.Update(target);
-        await unitOfWork.SaveChangesAsync(ct);
-
-        // Revoke refresh token so the user must re-authenticate to receive a JWT with the new role claim.
-        jwtTokenService.RevokeRefreshToken(targetUserId);
-
-        return ApiResponse<object>.SuccessResponse(new { targetUserId, newRole = request.Role }, AppMessages.Workspace.RoleChanged);
+        return ApiResponse<object>.FailureResponse(AppMessages.Workspace.RoleTransitionUseEmployeeEndpoint);
     }
 
     public async Task<ApiResponse<LocationMembershipResponse>> TransferLocationAsync(

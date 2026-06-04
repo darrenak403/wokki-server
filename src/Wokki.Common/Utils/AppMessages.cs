@@ -73,6 +73,26 @@ public static class AppMessages
             "EMPLOYEE_ORG_ADMIN_NO_DEPARTMENT",
             "Org Admin is not assigned to a branch department.",
             StatusCodes.Status400BadRequest);
+        public static readonly AppMessage RoleTransitionCompleted = new(
+            "EMPLOYEE_ROLE_TRANSITION_COMPLETED",
+            "Employee role transition completed.",
+            StatusCodes.Status200OK);
+        public static readonly AppMessage InvalidRoleTransition = new(
+            "EMPLOYEE_INVALID_ROLE_TRANSITION",
+            "This role transition is not allowed for the employee's current role.",
+            StatusCodes.Status400BadRequest);
+        public static readonly AppMessage DepartmentOrLocationRequired = new(
+            "EMPLOYEE_DEPARTMENT_OR_LOCATION_REQUIRED",
+            "Branch (locationId) or an assigned department is required to promote to Manager.",
+            StatusCodes.Status400BadRequest);
+        public static readonly AppMessage AlreadyManagerAtLocation = new(
+            "EMPLOYEE_ALREADY_MANAGER_AT_LOCATION",
+            "Employee is already a manager of this branch.",
+            StatusCodes.Status409Conflict);
+        public static readonly AppMessage AlreadyUserInDepartment = new(
+            "EMPLOYEE_ALREADY_USER_IN_DEPARTMENT",
+            "Employee is already a user in this department.",
+            StatusCodes.Status409Conflict);
     }
 
     public static class Self
@@ -433,6 +453,10 @@ public static class AppMessages
         public static readonly AppMessage AlreadyAtLocation = new("WS_ALREADY_AT_LOCATION", "Employee already has an active membership at this location.", StatusCodes.Status409Conflict);
         public static readonly AppMessage AlreadyInDepartment = new("WS_ALREADY_IN_DEPT", "Employee is already in this department.", StatusCodes.Status409Conflict);
         public static readonly AppMessage EmployeeWrongLocation = new("WS_EMPLOYEE_WRONG_LOCATION", "Employee must have an active membership in the target department's location before department transfer.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage RoleTransitionUseEmployeeEndpoint = new(
+            "WS_ROLE_TRANSITION_USE_EMPLOYEE_ENDPOINT",
+            "Use POST /api/v1/employees/{employeeId}/role-transition to change User or Manager roles.",
+            StatusCodes.Status400BadRequest);
     }
 
     public static class Stats
