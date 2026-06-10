@@ -59,8 +59,10 @@ public static class ServiceCollectionExtensions
         else
             services.AddScoped<INotificationService, NoOpNotificationService>();
 
-        services.AddScoped<SmtpTransactionalEmailSender>();
-        services.AddScoped<ITransactionalEmailSender, DevLoggingTransactionalEmailSender>();
+        if (smtp?.IsConfigured == true)
+            services.AddScoped<ITransactionalEmailSender, SmtpTransactionalEmailSender>();
+        else
+            services.AddScoped<ITransactionalEmailSender, DevLoggingTransactionalEmailSender>();
         services.AddScoped<IEmailDiagnosticService, EmailDiagnosticService>();
         services.Configure<RedisSettings>(configuration.GetSection(RedisSettings.SectionName));
         if (environment.IsEnvironment("Testing"))
