@@ -36,18 +36,24 @@ public static class ServiceCollectionExtensions
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-            options.AddFixedWindowLimiter(RateLimitPolicies.Fixed, limiter =>
-            {
-                limiter.PermitLimit = 100;
-                limiter.Window = TimeSpan.FromMinutes(1);
-                limiter.QueueLimit = 0;
-            });
-            options.AddFixedWindowLimiter(RateLimitPolicies.Clock, limiter =>
-            {
-                limiter.PermitLimit = 300;
-                limiter.Window = TimeSpan.FromMinutes(1);
-                limiter.QueueLimit = 0;
-            });
+            options.AddPolicy(RateLimitPolicies.Fixed, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 100,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
+            options.AddPolicy(RateLimitPolicies.Clock, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 300,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
         });
 
         return services;
