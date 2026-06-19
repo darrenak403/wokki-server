@@ -249,6 +249,8 @@ public static class AppMessages
         public static readonly AppMessage GroupNotAllowed = new("CHAT_GROUP_NOT_ALLOWED", "Custom group channels are not allowed.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage OrgMembersListed = new("CHAT_ORG_MEMBERS_LISTED", "Organization chat members listed.", StatusCodes.Status200OK);
         public static readonly AppMessage BodyRequired = new("CHAT_BODY_REQUIRED", "Message body is required.", StatusCodes.Status400BadRequest);
+        public static readonly AppMessage UnreadCountFound = new("CHAT_UNREAD_COUNT_FOUND", "Unread message count retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage MarkedRead = new("CHAT_MARKED_READ", "Channel marked as read.", StatusCodes.Status200OK);
     }
 
     public static class Swap
@@ -323,6 +325,7 @@ public static class AppMessages
         public static readonly AppMessage FlexibleNotAllowed = new("ATTENDANCE_FLEXIBLE_NOT_ALLOWED", "Flexible clock-in is not allowed for this department.", StatusCodes.Status403Forbidden);
         public static readonly AppMessage AssignmentRequired = new("ATTENDANCE_ASSIGNMENT_REQUIRED", "This department requires clock-in on a published shift.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage EligibleUpdated = new("ATTENDANCE_ELIGIBLE_UPDATED", "Payroll eligibility updated.", StatusCodes.Status200OK);
+        public static readonly AppMessage SummaryFound = new("ATTENDANCE_SUMMARY_FOUND", "Attendance daily summary retrieved.", StatusCodes.Status200OK);
     }
 
     public static class Payroll
@@ -464,6 +467,7 @@ public static class AppMessages
         public static readonly AppMessage PlatformFound = new("STATS_PLATFORM_FOUND", "Platform statistics retrieved.", StatusCodes.Status200OK);
         public static readonly AppMessage OrgFound = new("STATS_ORG_FOUND", "Organization statistics retrieved.", StatusCodes.Status200OK);
         public static readonly AppMessage OrgSubscriptionFound = new("STATS_ORG_SUBSCRIPTION_FOUND", "Organization subscription retrieved.", StatusCodes.Status200OK);
+        public static readonly AppMessage OrgUsageAnalyticsFound = new("STATS_ORG_USAGE_ANALYTICS_FOUND", "Organization usage analytics retrieved.", StatusCodes.Status200OK);
         public static readonly AppMessage Forbidden = new("STATS_FORBIDDEN", "You are not authorized to view these statistics.", StatusCodes.Status403Forbidden);
     }
 

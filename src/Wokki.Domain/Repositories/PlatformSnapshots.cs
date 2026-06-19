@@ -81,3 +81,5 @@ public sealed record PlatformUsageOrgActivitySnapshot(
 public sealed record PlatformUsageEventTypeCountSnapshot(string EventType, int Count);
 
 public sealed record PlatformUsageWeeklyActiveSnapshot(DateOnly WeekStartDate, int ActiveOrgCount);
+
+public sealed record PlatformUsageDailyEventTypeCountSnapshot(DateOnly Date, string EventType, int Count);

@@ -74,6 +74,24 @@ public sealed class ChannelRepository(AppDbContext context) : IChannelRepository
             .Where(m => m.ChannelId == channelId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ChannelMember>> ListMembershipsByEmployeeAsync(
+        Guid employeeId,
+        CancellationToken cancellationToken = default) =>
+        await context.ChannelMembers.AsNoTracking()
+            .Where(m => m.EmployeeId == employeeId)
+            .ToListAsync(cancellationToken);
+
+    public async Task MarkReadAsync(
+        Guid channelId,
+        Guid employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        var member = await context.ChannelMembers
+            .FirstOrDefaultAsync(m => m.ChannelId == channelId && m.EmployeeId == employeeId, cancellationToken);
+        if (member is not null)
+            member.LastReadAt = DateTime.UtcNow;
+    }
+
     public async Task AddAsync(Channel channel, CancellationToken cancellationToken = default) =>
         await context.Channels.AddAsync(channel, cancellationToken);
 

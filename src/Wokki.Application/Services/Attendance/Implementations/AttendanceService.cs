@@ -223,6 +223,24 @@ public sealed class AttendanceService(
             AppMessages.Attendance.Adjusted);
     }
 
+    public async Task<ApiResponse<AttendanceDailySummaryResponse>> GetDailySummaryAsync(
+        Guid locationId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
+    {
+        var summary = await unitOfWork.Attendance.GetLocationDailySummaryAsync(locationId, date, cancellationToken);
+
+        return ApiResponse<AttendanceDailySummaryResponse>.SuccessResponse(
+            new AttendanceDailySummaryResponse(
+                locationId,
+                date,
+                summary.ScheduledCount,
+                summary.ClockedInCount,
+                summary.ClockedOutCount,
+                summary.NotClockedInCount),
+            AppMessages.Attendance.SummaryFound);
+    }
+
     private async Task<IReadOnlyList<AttendanceResponse>> BuildAttendanceResponsesAsync(
         IReadOnlyList<AttendanceEntity> records,
         CancellationToken cancellationToken)

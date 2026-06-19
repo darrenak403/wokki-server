@@ -145,6 +145,7 @@ Not the same as `GET /api/v1/auth/me` (login account). These routes require a li
 | POST   | `/clock-out`   | User           | Clock | End + minutes              |
 | GET    | `/`            | Admin, Manager | Fixed | List/filter                |
 | PUT    | `/{id}/adjust` | Admin, Manager | Fixed | Manual adjust + audit note |
+| GET    | `/summary`     | Admin, Manager | Fixed | Daily count summary by location + date (clockedIn, total assigned) |
 
 ## Payroll (`/api/v1/payroll`)
 
@@ -161,6 +162,7 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 | Method | Path                     | Roles                      | Description                    |
 | ------ | ------------------------ | -------------------------- | ------------------------------ |
 | GET    | `/`                      | Authenticated (Employee)   | Org channel + Direct DMs only  |
+| GET    | `/unread-count`          | Authenticated (Employee)   | Unread message count per channel (self only) |
 | GET    | `/org/members`           | Authenticated (Employee)   | Active org employees for DM    |
 | POST   | `/`                      | Authenticated (Employee)   | Create **Direct** only (403 Group) |
 | GET    | `/{id}/messages`         | Member (Admin bypass read) | Cursor: `?before=&limit=`      |
@@ -169,10 +171,11 @@ Query/body: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 ## Stats
 
-| Method | Path              | Roles            | Description                                                   |
-| ------ | ----------------- | ---------------- | ------------------------------------------------------------- |
-| GET    | `/platform/stats` | PlatformOperator | Aggregate platform counts (orgs, users, locations, employees) |
-| GET    | `/org/stats`      | Admin, Manager   | Org-scoped operational counts for current tenant              |
+| Method | Path                    | Roles            | Description                                                   |
+| ------ | ----------------------- | ---------------- | ------------------------------------------------------------- |
+| GET    | `/platform/stats`       | PlatformOperator | Aggregate platform counts (orgs, users, locations, employees) |
+| GET    | `/org/stats`            | Admin, Manager   | Org-scoped operational counts for current tenant              |
+| GET    | `/org/usage-analytics`  | Admin            | Activity trends by event type (login, schedule, attendance, chat) over configurable window |
 
 ## Platform admin (`/api/v1/platform`) — PlatformOperator
 

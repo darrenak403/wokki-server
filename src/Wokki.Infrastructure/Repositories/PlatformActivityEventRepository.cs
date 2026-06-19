@@ -102,6 +102,25 @@ public sealed class PlatformActivityEventRepository(AppDbContext context) : IPla
             .ToList();
     }
 
+    public async Task<IReadOnlyList<PlatformUsageDailyEventTypeCountSnapshot>> CountDailyByEventTypeAsync(
+        DateTime from,
+        DateTime to,
+        Guid? organizationId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = ApplyWindow(context.PlatformActivityEvents.AsNoTracking(), from, to, organizationId);
+        var events = await query
+            .Select(x => new { x.OccurredAt, x.EventType })
+            .ToListAsync(cancellationToken);
+
+        return events
+            .GroupBy(x => (Date: DateOnly.FromDateTime(x.OccurredAt), x.EventType))
+            .Select(g => new PlatformUsageDailyEventTypeCountSnapshot(g.Key.Date, g.Key.EventType, g.Count()))
+            .OrderBy(x => x.Date)
+            .ThenBy(x => x.EventType)
+            .ToList();
+    }
+
     private static IQueryable<PlatformActivityEvent> ApplyWindow(
         IQueryable<PlatformActivityEvent> query,
         DateTime from,

@@ -15,4 +15,8 @@ public interface IMessageRepository
     Task<IReadOnlyDictionary<Guid, DateTime>> GetLatestCreatedAtByChannelsAsync(
         IEnumerable<Guid> channelIds,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, int>> CountUnreadByChannelsAsync(
+        IReadOnlyDictionary<Guid, DateTime?> sinceByChannel,
+        Guid excludeSenderId,
+        CancellationToken cancellationToken = default);
 }

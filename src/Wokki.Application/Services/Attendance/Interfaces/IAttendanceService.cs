@@ -31,4 +31,9 @@ public interface IAttendanceService
         AdjustAttendanceRequest request,
         Guid adjustedByUserId,
         CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<AttendanceDailySummaryResponse>> GetDailySummaryAsync(
+        Guid locationId,
+        DateOnly date,
+        CancellationToken cancellationToken = default);
 }
