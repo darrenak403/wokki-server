@@ -92,7 +92,17 @@ Fix: {concrete recommendation — one sentence}
 | LOW      | 0     | note   |
 
 Verdict: APPROVED | WARNING | BLOCK
+
+<!-- Scale: 1 = critical gap · 2 = significant gap · 3 = acceptable · 4 = solid · 5 = exemplary -->
+| Dimension     | Score (1–5) | Justification |
+|---------------|-------------|---------------|
+| Correctness   | {N}         | {one line}    |
+| Security      | {N}         | {one line}    |
+| Simplicity    | {N}         | {one line}    |
+| Test Coverage | {N}         | {one line}    |
 ```
+
+Score each dimension based on findings above — scores must be consistent with verdict (e.g. BLOCK → Correctness or Security ≤ 2).
 
 ## Approval Criteria
 

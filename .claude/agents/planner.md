@@ -46,6 +46,15 @@ Mode: {Fast | Hard | Parallel | Two}
 
 {1–2 sentences describing what this plan delivers and why}
 
+## Sprint Contract
+
+{If Fast: N/A — fast mode}
+{All other modes:}
+
+**In Scope:** {list feature IDs from spec.md P1 stories this plan delivers; if no spec, list phase outcomes}
+**Explicit Exclusions:** {what is deliberately not included — prevents scope creep during cook}
+**Verification Standard:** {the observable bar that determines "done" — e.g. "all P1 acceptance criteria pass", "build green + smoke test passes"}
+
 ## Phases
 
 - [ ] Phase 1: {name} — {1-line summary}

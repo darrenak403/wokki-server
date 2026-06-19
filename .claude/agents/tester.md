@@ -32,6 +32,8 @@ Write comprehensive tests covering:
 
 Follow existing test conventions in the project. Find existing test files to understand patterns before writing new ones.
 
+As you write, track which test file paths you are creating for the first time versus which pre-existing test files you are only editing. Only newly-created paths are reported in step 4 — a file you opened and added a test case to, but which already existed before this invocation, is never a "newly-created" path.
+
 ### 3. Run the test suite
 
 Detect the project stack first, then run the full test suite — not just the new tests:
@@ -73,6 +75,11 @@ Status: PASS | FAIL
 |-------|-------|------|------|
 | Unit  | N     | N    | N    |
 | Integration | N | N  | N    |
+
+Test files written:
+- {path/to/newly_created_test_file}
+- {path/to/another_newly_created_test_file}
+(absent or "(none)" if every test file touched this run already existed before this invocation)
 
 {If FAIL:}
 Failed tests:

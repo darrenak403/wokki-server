@@ -30,7 +30,25 @@
       "totalLoc": 400,
       "fileCount": 8,
       "singleFileLoc": 200,
-      "sourceExtensions": [".py", ".js", ".ts", ".tsx", ".jsx", ".cs"]
+      "sourceExtensions": [
+        ".py",
+        ".js",
+        ".ts",
+        ".tsx",
+        ".jsx",
+        ".go",
+        ".rs",
+        ".java",
+        ".cs",
+        ".cpp",
+        ".c",
+        ".rb",
+        ".php",
+        ".swift",
+        ".kt",
+        ".vue",
+        ".svelte"
+      ]
     }
   }
 }
