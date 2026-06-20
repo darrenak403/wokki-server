@@ -143,6 +143,7 @@ services:
   wokki_dbgate:
     container_name: wokki_dbgate
     image: dbgate/dbgate:latest
+    pull_policy: always
     logging: *wokki-logging
     ports:
       - "127.0.0.1:${DBGATE_PORT:-5050}:3000"

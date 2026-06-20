@@ -22,7 +22,7 @@
   },
   "privacyBlock": {
     "enabled": true,
-    "allowList": []
+    "allowList": [".env.example"]
   },
   "simplify": {
     "threshold": {
