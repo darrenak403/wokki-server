@@ -327,16 +327,18 @@ MVP solver is **CP-SAT only** (`ScheduleSuggestionOrchestrator`; `useAi` on `POS
 ```mermaid
 sequenceDiagram
     participant M as Admin/Manager
+    participant I as Insight Chat
     participant API as Schedule API
     participant L as ScheduleSuggestionContextLoader
     participant C as CpSatScheduleSuggestionService
-    participant I as ScheduleInsightService
 
-    M->>API: POST /schedules/{id}/suggest
+    M->>I: Ask natural-language hint (optional)
+    I-->>M: Confirm structured hint (a/b/c shape)
+    
+    M->>API: POST /schedules/{id}/suggest [+ optional Hint]
     API->>L: Load org policy, employees, shifts, submitted prefs, assignments, history
-    L->>C: GenerateAsync (read-only)
-    C-->>API: Suggestions DTO + reason
-    API->>I: GenerateContextAsync (JSON snapshot, no Bedrock)
+    L->>C: GenerateAsync + validate hint (read-only)
+    C-->>API: Suggestions DTO + reason (hint_infeasible if hint caused infeasibility)
     API-->>M: 200 suggestions only — no DB assignment write
 
     M->>API: POST /schedules/{id}/apply-suggestions
@@ -346,6 +348,8 @@ sequenceDiagram
     M->>API: POST /schedules/{id}/publish
     API-->>M: Published schedule; preferences read-only
 ```
+
+**Hints are ephemeral** (BR-097) — pass optional hint to `suggest` call only; not persisted. Three shapes: PreferenceWeight (boost/reduce scoring for group), TempMinMax (temporary min/max override), AvoidPairing (prevent two employees on same shift+date). Invalid hint → `invalid_hint` reason; infeasible hint → `hint_infeasible` reason. `apply-suggestions` has no hint field.
 
 **No auto-apply, no auto-rebalance** when preferences change after apply (BR-086). Admin uses the same **Tạo gợi ý AI** button to re-suggest; CP-SAT unlocks only employees whose own submitted preferences changed or whose assignment conflicts with Unavailable. Applying suggestions is keyed by exact `(shiftDefinitionId, employeeId, date)`, so multiple employees can stay on the same shift/date when policy allows; omitted assignments are removed only for affected employees when the request explicitly clears orphan assignment tuples.
 

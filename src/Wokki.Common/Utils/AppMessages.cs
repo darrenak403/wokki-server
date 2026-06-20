@@ -211,6 +211,8 @@ public static class AppMessages
         public static readonly AppMessage ContextExpired = new("SCHEDULE_INSIGHT_CONTEXT_EXPIRED", "Schedule insight context expired. Generate or refresh it first.", StatusCodes.Status400BadRequest);
         public static readonly AppMessage ChatAnswered = new("SCHEDULE_INSIGHT_CHAT_ANSWERED", "Schedule insight assistant answered.", StatusCodes.Status200OK);
         public static readonly AppMessage ChatUnavailable = new("SCHEDULE_INSIGHT_CHAT_UNAVAILABLE", "Schedule insight assistant is unavailable. Scheduling is not affected.", StatusCodes.Status503ServiceUnavailable);
+        public static readonly AppMessage HintGenerated = new("SCHEDULE_INSIGHT_HINT_GENERATED", "Schedule suggestion hint understood and ready for confirmation.", StatusCodes.Status200OK);
+        public static readonly AppMessage HintNotUnderstood = new("SCHEDULE_INSIGHT_HINT_NOT_UNDERSTOOD", "Could not understand this as a schedulable hint.", StatusCodes.Status200OK);
     }
 
     public static class ScheduleLeaveRequest

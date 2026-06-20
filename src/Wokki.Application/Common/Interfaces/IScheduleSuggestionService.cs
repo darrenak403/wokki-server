@@ -1,9 +1,12 @@
+using Wokki.Application.Dtos.Scheduling;
+
 namespace Wokki.Application.Common.Interfaces;
 
 public interface IScheduleSuggestionService
 {
     Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
+        ScheduleSuggestionHint? hint = null,
         CancellationToken cancellationToken = default);
 }
 

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Dtos.Scheduling;
 
 namespace Wokki.Infrastructure.Scheduling;
 
@@ -10,6 +11,7 @@ public sealed class ScheduleSuggestionOrchestrator(
     public async Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
         bool useAi,
+        ScheduleSuggestionHint? hint = null,
         CancellationToken cancellationToken = default)
     {
         if (useAi)
@@ -19,6 +21,6 @@ public sealed class ScheduleSuggestionOrchestrator(
                 scheduleId);
         }
 
-        return await cpSat.GenerateAsync(scheduleId, cancellationToken);
+        return await cpSat.GenerateAsync(scheduleId, hint, cancellationToken);
     }
 }
