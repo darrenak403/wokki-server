@@ -8,7 +8,6 @@ vars:
   MIGRATION_PROJECT: src/Wokki.Infrastructure
   MIGRATIONS_DIR: Persistence/Migrations
   COMPOSE: docker compose -f docker/docker-compose.dev.yml --env-file docker/.env.local
-  COMPOSE_PROD: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env
 
 tasks:
   default:
@@ -64,6 +63,13 @@ tasks:
           --project {{.MIGRATION_PROJECT}}
           --startup-project {{.API_PROJECT}}
 
+  'migration:list':
+    desc: List migrations and show which are not yet applied
+    cmds:
+      - dotnet ef migrations list
+          --project {{.MIGRATION_PROJECT}}
+          --startup-project {{.API_PROJECT}}
+
   # ── Docker ───────────────────────────────────────────────────────────────────
 
   'docker:up':
@@ -90,17 +96,6 @@ tasks:
     desc: Stop dev containers and remove all volumes
     cmds:
       - '{{.COMPOSE}} down -v'
-
-  'docker:prod':
-    desc: Pull and start prod stack (requires docker/.env)
-    cmds:
-      - '{{.COMPOSE_PROD}} pull wokki_api'
-      - '{{.COMPOSE_PROD}} up -d'
-
-  'docker:prod:down':
-    desc: Stop prod stack (volumes preserved)
-    cmds:
-      - '{{.COMPOSE_PROD}} down'
 
   # ── Git ──────────────────────────────────────────────────────────────────────
 
