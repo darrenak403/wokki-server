@@ -25,10 +25,12 @@ cp docker/.env.example docker/.env         # prod
 ## CI/CD → Dokploy
 
 ```
-push main → GitHub Actions build/push image
-         → Dokploy pull ${DOCKER_USERNAME}/wokki-backend:latest
-         → compose up (env từ Dokploy UI)
+push main → GitHub Actions build/push image (+ verify non-Alpine)
+         → bấm Deploy trên Dokploy UI (thủ công)
+         → Dokploy compose pull (pull_policy: always) + up -d (env từ Dokploy UI)
 ```
+
+`pull_policy: always` trên `wokki_api` (và `wokki_dbgate`) trong `docker-compose.prod.yml` đảm bảo mỗi lần bấm Deploy trên Dokploy, image luôn được kiểm tra/pull lại từ registry — không bị kẹt ở image cũ cache local trên server.
 
 ## Prod compose
 

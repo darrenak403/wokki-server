@@ -136,6 +136,15 @@ Fill in the template with what was established during Steps 0–4:
 // The brainstorm report is exploration narrative — context only.
 ```
 
+Also write `.claude/session-data/.current-brainstorm.md` with:
+```
+slug: {slug}
+spec: plans/{slug}/spec.md
+report: plans/reports/YYMMDD-{slug}-brainstorm.md
+date: {YYYY-MM-DD}
+```
+This is the pointer file `/ck:journal` reads to locate the latest brainstorm without relying on in-context memory.
+
 ---
 
 ### Step 6 — Handoff

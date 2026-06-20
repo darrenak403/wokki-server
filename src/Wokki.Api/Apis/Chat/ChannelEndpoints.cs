@@ -34,6 +34,23 @@ public static class ChannelEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/unread-count", GetUnreadCountAsync)
+            .WithName("GetChannelUnreadCount")
+            .WithDescription("Tổng số tin nhắn chưa đọc của nhân viên đang đăng nhập, theo từng kênh.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<UnreadCountResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
+        group.MapPost("/{id:guid}/read", MarkReadAsync)
+            .WithName("MarkChannelRead")
+            .WithDescription("Đánh dấu kênh đã đọc tới thời điểm hiện tại.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<object>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapGet("/org/members", ListOrgMembersAsync)
             .WithName("ListOrgChatMembers")
             .WithDescription("Danh sách nhân viên trong org để nhắn riêng.")
@@ -158,6 +175,31 @@ public static class ChannelEndpoints
             return Results.Json(ApiResponse<MessageResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.SendMessageAsync(id, request, currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetUnreadCountAsync(
+        [FromServices] IChannelService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<UnreadCountResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetUnreadCountAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> MarkReadAsync(
+        [FromRoute] Guid id,
+        [FromServices] IChannelService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<object>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.MarkChannelReadAsync(id, currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
     }
 

@@ -15,6 +15,8 @@ public interface IChannelRepository
     Task<bool> IsMemberAsync(Guid channelId, Guid employeeId, CancellationToken cancellationToken = default);
     Task RemoveMemberAsync(Guid channelId, Guid employeeId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ChannelMember>> ListMembersAsync(Guid channelId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ChannelMember>> ListMembershipsByEmployeeAsync(Guid employeeId, CancellationToken cancellationToken = default);
+    Task MarkReadAsync(Guid channelId, Guid employeeId, CancellationToken cancellationToken = default);
     Task AddAsync(Channel channel, CancellationToken cancellationToken = default);
     Task AddMemberAsync(ChannelMember member, CancellationToken cancellationToken = default);
     Task AddMembersAsync(IEnumerable<ChannelMember> members, CancellationToken cancellationToken = default);

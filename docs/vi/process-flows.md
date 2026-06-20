@@ -312,11 +312,13 @@ Export: `POST /payroll/summary/export` → CSV (Admin, tối đa 500 dòng).
 
 Solver MVP = **CP-SAT only** (`useAi` trên suggest bị bỏ qua). Bedrock chỉ chat hỗ trợ (BR-077).
 
-Luồng: suggest (đọc org policy + NV + ca + đăng ký **Submitted** + phân ca hiện có) → context JSON → Admin **Áp dụng** (explicit) → Publish. **Không auto-rebalance** khi NV đổi đăng ký sau apply (BR-086) — banner trên Lịch ca, Admin dùng lại **Tạo gợi ý AI**; CP-SAT chỉ mở khóa NV tự đổi đăng ký hoặc đang conflict Unavailable. Apply gợi ý theo tuple chính xác `(shiftDefinitionId, employeeId, date)`, nên nhiều NV có thể cùng ca/ngày nếu policy cho phép; chỉ xóa phân ca bị omit của nhóm NV bị ảnh hưởng khi request bật clear orphan tuple.
+Luồng: suggest (đọc org policy + NV + ca + đăng ký **Submitted** + phân ca hiện có + tùy chọn Hint) → context JSON → Admin **Áp dụng** (explicit) → Publish. **Không auto-rebalance** khi NV đổi đăng ký sau apply (BR-086) — banner trên Lịch ca, Admin dùng lại **Tạo gợi ý AI**; CP-SAT chỉ mở khóa NV tự đổi đăng ký hoặc đang conflict Unavailable. Apply gợi ý theo tuple chính xác `(shiftDefinitionId, employeeId, date)`, nên nhiều NV có thể cùng ca/ngày nếu policy cho phép; chỉ xóa phân ca bị omit của nhóm NV bị ảnh hưởng khi request bật clear orphan tuple.
+
+**Gợi ý tạm thời (BR-097):** Manager xác nhận gợi ý từ chat → truyền `Hint` tùy chọn vào request `suggest`. Ba hình dạng: PreferenceWeight (tăng/giảm điểm nhóm), TempMinMax (giới hạn tạm số phân ca), AvoidPairing (tránh cặp NV cùng ca+ngày). Gợi ý không bao giờ lưu policy; chỉ ảnh hưởng lần gọi đó. Lỗi = `invalid_hint`, không khả thi = `hint_infeasible`.
 
 **Xin nghỉ (Draft):** NV `POST /self/leave-requests` → Manager duyệt → Unavailable + xóa phân ca conflict (BR-087).
 
-### Trợ lý insight lịch (Bedrock hỗ trợ)
+### Trợ lý insight lịch (Bedrock hỗ trợ, có thể sinh gợi ý)
 
 ```mermaid
 sequenceDiagram
@@ -325,16 +327,14 @@ sequenceDiagram
     participant I as ScheduleInsightService
     participant B as AWS Bedrock
 
-    M->>API: POST /schedules/{id}/suggest
-    API->>I: GenerateContextAsync sau khi gợi ý thành công
-    I->>I: Serialize luật, preference, phân ca, gợi ý, summary
-    API-->>M: 200 danh sách gợi ý; context được refresh trong DB
-
-    M->>API: POST /schedules/{id}/insights/chat
-    API->>I: ChatAsync(câu hỏi)
+    M->>API: POST /schedules/{id}/insights/chat [+ HintMode=true]
+    API->>I: ChatAsync(câu hỏi hoặc yêu cầu gợi ý)
     I->>B: Converse với context snapshot
-    B-->>I: Giải thích hỗ trợ
-    API-->>M: 200 câu trả lời
+    B-->>I: Giải thích hoặc gợi ý có cấu trúc
+    API-->>M: 200 câu trả lời hoặc gợi ý (xác nhận trước suggest)
+    
+    M->>API: POST /schedules/{id}/suggest [+ Hint]
+    API-->>M: 200 danh sách gợi ý (hoặc hint_infeasible nếu gợi ý không khả thi)
 ```
 
 Bedrock không nằm trong bước sinh lịch hoặc apply. Nếu Bedrock không hoạt động, `suggest` và `apply-suggestions` vẫn chạy; chỉ endpoint chat lỗi độc lập.

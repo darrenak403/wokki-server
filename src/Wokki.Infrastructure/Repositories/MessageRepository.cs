@@ -58,4 +58,27 @@ public sealed class MessageRepository(AppDbContext context) : IMessageRepository
 
         return rows.ToDictionary(r => r.ChannelId, r => r.Latest);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, int>> CountUnreadByChannelsAsync(
+        IReadOnlyDictionary<Guid, DateTime?> sinceByChannel,
+        Guid excludeSenderId,
+        CancellationToken cancellationToken = default)
+    {
+        var channelIds = sinceByChannel.Keys.ToList();
+        if (channelIds.Count == 0)
+            return new Dictionary<Guid, int>();
+
+        var rows = await context.Messages.AsNoTracking()
+            .Where(m => channelIds.Contains(m.ChannelId) && m.DeletedAt == null && m.SenderId != excludeSenderId)
+            .Select(m => new { m.ChannelId, m.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        return channelIds.ToDictionary(
+            id => id,
+            id =>
+            {
+                var since = sinceByChannel[id];
+                return rows.Count(r => r.ChannelId == id && (since == null || r.CreatedAt > since));
+            });
+    }
 }

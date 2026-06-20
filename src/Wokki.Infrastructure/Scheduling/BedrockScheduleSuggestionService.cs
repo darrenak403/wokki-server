@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Bedrock;
+using Wokki.Application.Dtos.Scheduling;
 using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Bedrock.Interfaces;
 
@@ -13,8 +14,10 @@ public sealed class BedrockScheduleSuggestionService(
     IBedrockService bedrockService,
     ILogger<BedrockScheduleSuggestionService> logger) : IScheduleSuggestionService
 {
+    /// <summary>Legacy provider, not wired into <see cref="ScheduleSuggestionOrchestrator"/> (CP-SAT only) — hints are not supported here.</summary>
     public async Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
+        ScheduleSuggestionHint? hint = null,
         CancellationToken cancellationToken = default)
     {
         var (context, reason) = await contextLoader.LoadAsync(scheduleId, cancellationToken);

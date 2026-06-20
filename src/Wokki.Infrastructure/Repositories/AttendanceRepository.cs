@@ -192,6 +192,30 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
               .AsNoTracking()
               .ToListAsync(cancellationToken);
 
+    public async Task<LocationAttendanceSummary> GetLocationDailySummaryAsync(Guid locationId, DateOnly date, CancellationToken cancellationToken = default)
+    {
+        var assignmentIds = await context.ShiftAssignments.AsNoTracking()
+            .Where(sa => sa.Date == date &&
+                context.Schedules.Any(sc => sc.Id == sa.ScheduleId &&
+                    context.Departments.Any(d => d.Id == sc.DepartmentId && d.LocationId == locationId)))
+            .Select(sa => sa.Id)
+            .ToListAsync(cancellationToken);
+
+        if (assignmentIds.Count == 0)
+            return new LocationAttendanceSummary(0, 0, 0, 0);
+
+        var clockOutStatuses = await context.AttendanceRecords
+            .Where(a => a.AssignmentId != null && assignmentIds.Contains(a.AssignmentId.Value))
+            .Select(a => a.ClockOut != null)
+            .ToListAsync(cancellationToken);
+
+        var clockedOut = clockOutStatuses.Count(closed => closed);
+        var clockedIn = clockOutStatuses.Count - clockedOut;
+        var notClockedIn = assignmentIds.Count - clockOutStatuses.Count;
+
+        return new LocationAttendanceSummary(assignmentIds.Count, clockedIn, clockedOut, notClockedIn);
+    }
+
     public async Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default) =>
         await context.AttendanceRecords.AddAsync(record, cancellationToken);
 

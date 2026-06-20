@@ -1,10 +1,13 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Wokki.Application.Dtos.Bedrock;
 using Wokki.Application.Dtos.Schedule;
+using Wokki.Application.Dtos.Scheduling;
 using Wokki.Application.Scheduling;
 using Wokki.Application.Services.Bedrock.Interfaces;
 using Wokki.Application.Services.Schedule.Interfaces;
+using Wokki.Application.Validators.Scheduling;
 using Wokki.Common.Utils;
 using Wokki.Domain.Entities;
 using Wokki.Domain.Enums;
@@ -158,24 +161,25 @@ public sealed class ScheduleInsightService(
         {
             var refused = "Tôi chỉ hỗ trợ giải thích và gợi ý dựa trên snapshot lịch tuần này. Tôi không thể áp dụng, ghi, cập nhật hoặc thay đổi phân công; Manager/Admin cần thao tác trong màn hình lịch.";
             return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
-                new ScheduleInsightChatResponse(scheduleId, refused, "local-guard", context.GeneratedAt),
+                new ScheduleInsightChatResponse(scheduleId, refused, "local-guard", context.GeneratedAt, request.HintMode),
                 AppMessages.ScheduleInsight.ChatAnswered);
         }
 
+        string bedrockText;
         try
         {
-            var prompt = BuildPrompt(context.JsonContent, request.Question);
-            var result = await bedrockService.ConverseAsync(
-                prompt,
-                new BedrockConverseOptions(MaxTokens: 1200, Temperature: 0.2f, TimeoutSeconds: 30),
-                cancellationToken);
+            var prompt = request.HintMode
+                ? BuildHintPrompt(context.JsonContent, request.Question)
+                : BuildPrompt(context.JsonContent, request.Question);
+            var options = request.HintMode
+                ? new BedrockConverseOptions(MaxTokens: 600, Temperature: 0f, TimeoutSeconds: 30)
+                : new BedrockConverseOptions(MaxTokens: 1200, Temperature: 0.2f, TimeoutSeconds: 30);
+            var result = await bedrockService.ConverseAsync(prompt, options, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(result.Text))
                 return ApiResponse<ScheduleInsightChatResponse>.FailureResponse(AppMessages.ScheduleInsight.ChatUnavailable);
 
-            return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
-                new ScheduleInsightChatResponse(scheduleId, result.Text.Trim(), "bedrock", context.GeneratedAt),
-                AppMessages.ScheduleInsight.ChatAnswered);
+            bedrockText = result.Text.Trim();
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -185,6 +189,154 @@ public sealed class ScheduleInsightService(
         {
             return ApiResponse<ScheduleInsightChatResponse>.FailureResponse(AppMessages.ScheduleInsight.ChatUnavailable);
         }
+
+        if (!request.HintMode)
+        {
+            return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
+                new ScheduleInsightChatResponse(scheduleId, bedrockText, "bedrock", context.GeneratedAt),
+                AppMessages.ScheduleInsight.ChatAnswered);
+        }
+
+        // Hint-mode parsing/validation runs outside the Bedrock try/catch above: a successfully
+        // returned response that fails to parse/validate is "could not understand," never the
+        // same outcome as a Bedrock-unavailable failure (FR-02).
+        var parsedHint = TryParseHint(bedrockText);
+        if (parsedHint is null)
+            return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
+                NotUnderstoodResponse(scheduleId, context.GeneratedAt),
+                AppMessages.ScheduleInsight.HintNotUnderstood);
+
+        var roster = await LoadActiveRosterAsync(context, cancellationToken);
+        var validation = ScheduleSuggestionHintValidator.Validate(parsedHint, roster);
+        if (!validation.IsValid)
+            return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
+                NotUnderstoodResponse(scheduleId, context.GeneratedAt),
+                AppMessages.ScheduleInsight.HintNotUnderstood);
+
+        var summary = BuildHintSummary(parsedHint, roster);
+        return ApiResponse<ScheduleInsightChatResponse>.SuccessResponse(
+            new ScheduleInsightChatResponse(
+                scheduleId,
+                summary,
+                "bedrock",
+                context.GeneratedAt,
+                HintMode: true,
+                Hint: parsedHint,
+                HintSummary: summary,
+                HintUnderstood: true),
+            AppMessages.ScheduleInsight.HintGenerated);
+    }
+
+    private async Task<IReadOnlyList<EmployeeEntity>> LoadActiveRosterAsync(
+        ScheduleInsightContext context,
+        CancellationToken cancellationToken)
+    {
+        var employeePage = await unitOfWork.Employees.ListAsync(
+            1,
+            500,
+            context.OrganizationId,
+            context.DepartmentId,
+            locationIds: new HashSet<Guid> { context.LocationId },
+            cancellationToken: cancellationToken);
+        return employeePage.Items.Where(e => e.TerminatedAt is null).ToList();
+    }
+
+    private const string HintNotUnderstoodMessageVi =
+        "Không hiểu được yêu cầu này là gợi ý xếp ca. Thử mô tả ngắn gọn hơn, ví dụ: ưu tiên nhóm nào, hoặc giới hạn bao nhiêu ca.";
+
+    private static ScheduleInsightChatResponse NotUnderstoodResponse(Guid scheduleId, DateTime contextGeneratedAt) =>
+        new(scheduleId, HintNotUnderstoodMessageVi, "bedrock", contextGeneratedAt, HintMode: true);
+
+    private static readonly JsonSerializerOptions HintParseOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
+    private static ScheduleSuggestionHint? TryParseHint(string rawText)
+    {
+        var json = ExtractJsonObject(rawText);
+        if (json is null)
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<ScheduleSuggestionHint>(json, HintParseOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static string? ExtractJsonObject(string text)
+    {
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        return start < 0 || end <= start ? null : text[start..(end + 1)];
+    }
+
+    private static string BuildHintSummary(ScheduleSuggestionHint hint, IReadOnlyList<EmployeeEntity> roster) =>
+        hint.Kind switch
+        {
+            ScheduleSuggestionHintKind.PreferenceWeight =>
+                $"{(hint.Direction == HintWeightDirection.Boost ? "Ưu tiên" : "Giảm ưu tiên")} {DescribeGroup(hint.Group, roster)} trong lần Suggest tiếp theo (không lưu vào chính sách lịch của tổ chức).",
+            ScheduleSuggestionHintKind.TempMinMax =>
+                $"Đặt {DescribeMinMax(hint)} cho {DescribeGroup(hint.Group, roster)} chỉ trong lần Suggest tiếp theo (không lưu vào chính sách lịch của tổ chức).",
+            ScheduleSuggestionHintKind.AvoidPairing =>
+                $"Tránh xếp {EmployeeDisplayName(hint.EmployeeId1, roster)} và {EmployeeDisplayName(hint.EmployeeId2, roster)} cùng ca trong lần Suggest tiếp theo (không lưu vào chính sách lịch của tổ chức).",
+            _ => "Không rõ loại gợi ý."
+        };
+
+    private static string DescribeMinMax(ScheduleSuggestionHint hint)
+    {
+        var parts = new List<string>();
+        if (hint.MinCount.HasValue)
+            parts.Add($"tối thiểu {hint.MinCount} người");
+        if (hint.MaxCount.HasValue)
+            parts.Add($"tối đa {hint.MaxCount} người");
+        return string.Join(" và ", parts);
+    }
+
+    private static string DescribeGroup(HintGroupRef? group, IReadOnlyList<EmployeeEntity> roster) =>
+        group?.GroupType switch
+        {
+            HintGroupType.RoleDepartment => $"nhân viên có vai trò \"{group!.Role}\"",
+            HintGroupType.ExplicitEmployeeIds => string.Join(
+                ", ",
+                (group!.EmployeeIds ?? []).Select(id => EmployeeDisplayName(id, roster))),
+            _ => "nhóm không xác định"
+        };
+
+    private static string EmployeeDisplayName(Guid? id, IReadOnlyList<EmployeeEntity> roster) =>
+        id is null
+            ? "?"
+            : roster.FirstOrDefault(e => e.Id == id) is { } employee
+                ? $"{employee.FirstName} {employee.LastName}".Trim()
+                : id.ToString()!;
+
+    private static string BuildHintPrompt(string contextJson, string question)
+    {
+        var prompt = new StringBuilder();
+        prompt.AppendLine("Bạn là bộ phân loại yêu cầu xếp ca cho Wokki. Chỉ trả về DUY NHẤT một JSON object, không markdown, không chữ giải thích.");
+        prompt.AppendLine("Chỉ có đúng 3 loại hint hợp lệ, dùng field \"kind\":");
+        prompt.AppendLine("1. {\"kind\":\"PreferenceWeight\",\"group\":<group>,\"direction\":\"Boost\"|\"Reduce\"}");
+        prompt.AppendLine("2. {\"kind\":\"TempMinMax\",\"group\":<group>,\"minCount\":number|null,\"maxCount\":number|null}");
+        prompt.AppendLine("3. {\"kind\":\"AvoidPairing\",\"employeeId1\":\"<id>\",\"employeeId2\":\"<id>\"}");
+        prompt.AppendLine("<group> là {\"groupType\":\"RoleDepartment\",\"role\":\"<Position lấy đúng từ Employees trong context>\"} hoặc {\"groupType\":\"ExplicitEmployeeIds\",\"employeeIds\":[\"<id>\"]}.");
+        prompt.AppendLine("employeeIds/employeeId1/employeeId2 PHẢI là Employees[].Id có thật trong context JSON bên dưới, không tự tạo id.");
+        prompt.AppendLine("Nếu câu hỏi của Manager không thể quy về đúng 1 trong 3 dạng trên, trả về {\"kind\":\"Unknown\"}.");
+        prompt.AppendLine();
+        prompt.AppendLine("Schedule context JSON:");
+        prompt.AppendLine(contextJson);
+        prompt.AppendLine();
+        prompt.AppendLine("Câu hỏi của Manager:");
+        prompt.AppendLine(question);
+        return prompt.ToString();
     }
 
     private static object BuildPayload(
@@ -296,6 +448,14 @@ public sealed class ScheduleInsightService(
             ScheduleStatus = schedule.Status.ToString(),
             Rules = new
             {
+                RequireSubmittedPreferences = solverPolicy.RequireSubmittedPreferences,
+                UnavailableIsHardBlock = solverPolicy.UnavailableIsHardBlock,
+                RequireRoleMatch = solverPolicy.RequireRoleMatch,
+                RequireFullCoverage = solverPolicy.RequireFullCoverage,
+                MinStaffPerShift = solverPolicy.MinStaffPerShiftEnabled ? solverPolicy.MinStaffPerShift : (int?)null,
+                MaxStaffPerShift = solverPolicy.MaxStaffPerShiftEnabled ? solverPolicy.MaxStaffPerShift : (int?)null,
+                MinRestMinutesBetweenShifts = solverPolicy.MinRestMinutesEnabled ? solverPolicy.MinRestMinutesBetweenShifts : (int?)null,
+                MaxShiftsPerEmployeePerDay = solverPolicy.MaxShiftsPerDayEnabled ? solverPolicy.MaxShiftsPerEmployeePerDay : (int?)null,
                 MaxShiftsPerEmployeePerWeek = maxWeekly
             },
             Employees = employees.Select(e => new

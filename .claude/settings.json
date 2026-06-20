@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_init.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_init.py\""
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/subagent_init.py"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent_init.py\""
           }
         ]
       }
@@ -21,12 +21,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/dev_rules_reminder.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/dev_rules_reminder.py\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/caveman_watch.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/caveman_watch.py\"",
             "timeout": 5
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/privacy_block.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/privacy_block.py\"",
             "timeout": 5
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/suggest_compact.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/suggest_compact.py\"",
             "timeout": 5
           }
         ]
@@ -60,13 +60,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/build_check.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/build_check.py\"",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "python .claude/hooks/simplify_gate.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/simplify_gate.py\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/test_runner.py\"",
+            "timeout": 35
           }
         ]
       },
@@ -75,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/artifact_fold.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/artifact_fold.py\"",
             "timeout": 5
           }
         ]
@@ -87,7 +92,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/pre_compact.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre_compact.py\"",
             "timeout": 5
           }
         ]
@@ -99,7 +104,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_end.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_end.py\"",
             "async": true,
             "timeout": 10
           }
@@ -112,7 +117,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_end.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_end.py\"",
             "async": true,
             "timeout": 10
           }

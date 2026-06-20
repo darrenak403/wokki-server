@@ -33,4 +33,11 @@ public interface IChannelService
         Guid userId,
         string? role,
         CancellationToken cancellationToken = default);
+    Task<ApiResponse<UnreadCountResponse>> GetUnreadCountAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+    Task<ApiResponse<object>> MarkChannelReadAsync(
+        Guid channelId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
 }

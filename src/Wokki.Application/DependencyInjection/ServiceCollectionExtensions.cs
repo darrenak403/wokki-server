@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmployeeProvisioner, EmployeeProvisioner>();
         services.AddScoped<IOrgAdminEmployeeProvisioner, OrgAdminEmployeeProvisioner>();
         services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
+        services.AddScoped<IOrgUsageAnalyticsService, OrgUsageAnalyticsService>();
         services.AddScoped<IOrgJoinRequestService, OrgJoinRequestService>();
         services.AddScoped<IEmployeeSelfProfileService, EmployeeSelfProfileService>();
         services.AddScoped<ILocationService, LocationService>();

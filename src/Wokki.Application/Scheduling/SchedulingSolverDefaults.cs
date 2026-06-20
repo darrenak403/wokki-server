@@ -21,4 +21,7 @@ public static class SchedulingSolverDefaults
 
     public const int CpSatMaxTimeSeconds = 10;
     public const int CpSatSearchWorkers = 4;
+
+    /// <summary>Ephemeral per-call hint weight shift; same order of magnitude as <see cref="PreferencePreferredScore"/> so it measurably outranks ordinary preference scoring without making it absolute.</summary>
+    public const int HintPreferenceWeightDelta = 20;
 }

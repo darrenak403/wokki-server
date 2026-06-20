@@ -40,8 +40,30 @@ def walk_up_glob(file_path: Path, pattern: str) -> Path | None:
 
 
 def run(cmd: list[str], cwd: str) -> str:
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, timeout=30)
-    return result.stdout + result.stderr
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, timeout=30)
+        return result.stdout + result.stderr
+    except FileNotFoundError:
+        # Underlying tool binary not installed — caller's outer try/except is a
+        # second safety net; this makes the skip explicit at the source too.
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# Per-language commands (capability name → command template)
+# ---------------------------------------------------------------------------
+
+COMMANDS: dict[str, list[str]] = {
+    "dotnet_build": ["dotnet", "build", "{target}", "--no-restore", "-q"],
+    "typescript_check": ["{tsc_cmd}", "--noEmit", "--pretty", "false"],
+    "python_compile": ["{python}", "-m", "py_compile", "{file}"],
+    "go_build": ["go", "build", "./..."],
+    "rust_check": ["cargo", "check", "-q", "--message-format=short"],
+}
+
+
+def build_command(name: str, **placeholders: str) -> list[str]:
+    return [part.format(**placeholders) if "{" in part else part for part in COMMANDS[name]]
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +76,7 @@ def check_dotnet(file_path: Path) -> str | None:
         return None
     sln_root = walk_up_glob(file_path, "*.sln")
     cwd = str(sln_root.parent if sln_root else csproj.parent)
-    output = run(["dotnet", "build", str(csproj), "--no-restore", "-q"], cwd)
+    output = run(build_command("dotnet_build", target=str(csproj)), cwd)
     errors = [l for l in output.splitlines() if re.search(r": error CS\d+:", l)]
     if errors:
         return f"dotnet build errors in {csproj.name}:\n" + "\n".join(errors[:5])
@@ -69,7 +91,7 @@ def check_typescript(file_path: Path) -> str | None:
     # prefer local tsc binary; fall back to global
     local_tsc = cwd / "node_modules" / ".bin" / "tsc"
     tsc_cmd = str(local_tsc) if local_tsc.exists() else "tsc"
-    output = run([tsc_cmd, "--noEmit", "--pretty", "false"], str(cwd))
+    output = run(build_command("typescript_check", tsc_cmd=tsc_cmd), str(cwd))
     errors = [l for l in output.splitlines() if re.search(r"error TS\d+:", l)]
     if errors:
         return "tsc errors:\n" + "\n".join(errors[:5])
@@ -77,10 +99,8 @@ def check_typescript(file_path: Path) -> str | None:
 
 
 def check_python(file_path: Path) -> str | None:
-    result = subprocess.run(
-        [sys.executable, "-m", "py_compile", str(file_path)],
-        capture_output=True, text=True
-    )
+    cmd = build_command("python_compile", python=sys.executable, file=str(file_path))
+    result = subprocess.run(cmd, capture_output=True, text=True)
     output = (result.stdout + result.stderr).strip()
     if result.returncode != 0 and output:
         return f"Python syntax error:\n{output}"
@@ -91,7 +111,7 @@ def check_go(file_path: Path) -> str | None:
     go_mod = walk_up(file_path, "go.mod")
     if not go_mod:
         return None
-    output = run(["go", "build", "./..."], str(go_mod.parent))
+    output = run(build_command("go_build"), str(go_mod.parent))
     errors = [l for l in output.splitlines() if l.strip()]
     if errors:
         return f"go build errors:\n" + "\n".join(errors[:5])
@@ -102,7 +122,7 @@ def check_rust(file_path: Path) -> str | None:
     cargo_toml = walk_up(file_path, "Cargo.toml")
     if not cargo_toml:
         return None
-    output = run(["cargo", "check", "-q", "--message-format=short"], str(cargo_toml.parent))
+    output = run(build_command("rust_check"), str(cargo_toml.parent))
     errors = [l for l in output.splitlines() if "error" in l.lower()]
     if errors:
         return f"cargo check errors:\n" + "\n".join(errors[:5])
@@ -120,6 +140,15 @@ CHECKERS: dict[str, callable] = {
     ".py": check_python,
     ".go": check_go,
     ".rs": check_rust,
+}
+
+HINTS: dict[str, str] = {
+    ".cs": "Fix: resolve the build error above before proceeding.",
+    ".ts": "Fix: resolve the TypeScript type error before proceeding.",
+    ".tsx": "Fix: resolve the TypeScript type error before proceeding.",
+    ".py": "Fix: correct the syntax error shown above before proceeding.",
+    ".go": "Fix: ensure the package compiles cleanly before continuing.",
+    ".rs": "Fix: resolve the Rust compiler error before continuing.",
 }
 
 
@@ -145,10 +174,11 @@ def main() -> None:
         return
 
     if error_msg:
+        hint = HINTS.get(suffix, "Fix: resolve the error above before proceeding.")
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": error_msg,
+                "additionalContext": f"{error_msg}\n\n{hint}",
             }
         }))
 

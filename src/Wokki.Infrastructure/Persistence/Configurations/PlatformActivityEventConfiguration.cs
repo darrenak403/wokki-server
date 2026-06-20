@@ -17,6 +17,7 @@ public sealed class PlatformActivityEventConfiguration : IEntityTypeConfiguratio
 
         builder.HasIndex(x => new { x.OrganizationId, x.OccurredAt }).IsDescending(false, true);
         builder.HasIndex(x => new { x.EventType, x.OccurredAt }).IsDescending(false, true);
+        builder.HasIndex(x => new { x.OrganizationId, x.EventType, x.OccurredAt }).IsDescending(false, false, true);
 
         builder.HasOne<Organization>()
             .WithMany()

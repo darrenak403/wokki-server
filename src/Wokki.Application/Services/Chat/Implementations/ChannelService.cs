@@ -345,6 +345,45 @@ public sealed partial class ChannelService(
         return ApiResponse<object>.SuccessResponse(new { }, AppMessages.Chat.MessageDeleted);
     }
 
+    public async Task<ApiResponse<UnreadCountResponse>> GetUnreadCountAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await ResolveEmployeeAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<UnreadCountResponse>.FailureResponse(AppMessages.Chat.NoEmployeeProfile);
+
+        var memberships = await unitOfWork.Channels.ListMembershipsByEmployeeAsync(employee.Id, cancellationToken);
+        var sinceByChannel = memberships.ToDictionary(m => m.ChannelId, m => m.LastReadAt);
+
+        var counts = await unitOfWork.Messages.CountUnreadByChannelsAsync(sinceByChannel, employee.Id, cancellationToken);
+        var channelCounts = counts
+            .Select(kv => new ChannelUnreadCountResponse(kv.Key, kv.Value))
+            .ToList();
+
+        return ApiResponse<UnreadCountResponse>.SuccessResponse(
+            new UnreadCountResponse(channelCounts.Sum(c => c.Count), channelCounts),
+            AppMessages.Chat.UnreadCountFound);
+    }
+
+    public async Task<ApiResponse<object>> MarkChannelReadAsync(
+        Guid channelId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await ResolveEmployeeAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<object>.FailureResponse(AppMessages.Chat.NoEmployeeProfile);
+
+        if (!await unitOfWork.Channels.IsMemberAsync(channelId, employee.Id, cancellationToken))
+            return ApiResponse<object>.FailureResponse(AppMessages.Chat.Forbidden);
+
+        await unitOfWork.Channels.MarkReadAsync(channelId, employee.Id, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return ApiResponse<object>.SuccessResponse(new { }, AppMessages.Chat.MarkedRead);
+    }
+
     private async Task<ChannelResponse> MapChannelAsync(
         ChannelEntity channel,
         IReadOnlyDictionary<Guid, DateTime>? latestByChannel = null,

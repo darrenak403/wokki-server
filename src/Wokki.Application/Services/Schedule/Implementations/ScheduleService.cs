@@ -561,7 +561,8 @@ public sealed class ScheduleService(
         if (schedule is null)
             return ApiResponse<ScheduleSuggestionsResponse>.FailureResponse(AppMessages.Schedule.NotFound);
 
-        var generated = await scheduleSuggestions.GenerateAsync(scheduleId, request.UseAi, cancellationToken);
+        var generated = await scheduleSuggestions.GenerateAsync(
+            scheduleId, request.UseAi, request.Hint, cancellationToken);
         if (generated.Reason is "schedule_not_draft")
             return ApiResponse<ScheduleSuggestionsResponse>.FailureResponse(AppMessages.Schedule.NotDraft);
 

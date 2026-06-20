@@ -116,6 +116,7 @@ API cũ `/api/v1/swap-requests` đã gỡ. Chi tiết FE: [fe/swap-marketplace-h
 | POST   | `/clock-out`   | User           | Clock | Ra ca + tính phút          |
 | GET    | `/`            | Admin, Manager | Fixed | Danh sách / lọc            |
 | PUT    | `/{id}/adjust` | Admin, Manager | Fixed | Điều chỉnh + ghi chú audit |
+| GET    | `/summary`     | Admin, Manager | Fixed | Tổng hợp số lượng NV chấm công theo chi nhánh + ngày |
 
 ## Lương (`/api/v1/payroll`)
 
@@ -132,6 +133,7 @@ Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 | Method | Path                     | Vai trò                          | Mô tả                                |
 | ------ | ------------------------ | -------------------------------- | ------------------------------------ |
 | GET    | `/`                      | Đã đăng nhập (có Employee)       | Kênh org + DM (ẩn Group cũ)          |
+| GET    | `/unread-count`          | Đã đăng nhập (có Employee)       | Số tin chưa đọc theo từng kênh (chỉ người dùng hiện tại) |
 | GET    | `/org/members`           | Đã đăng nhập (có Employee)       | NV active trong org để nhắn riêng    |
 | POST   | `/`                      | Đã đăng nhập (có Employee)       | Chỉ tạo **Direct** (Group → 403)     |
 | GET    | `/{id}/messages`         | Member (Admin đọc được mọi kênh) | Phân trang cursor: `?before=&limit=` |
@@ -140,10 +142,11 @@ Tham số: `departmentId`, `startDate`, `endDate` (`PayrollPeriodRequest`).
 
 ## Stats
 
-| Method | Path              | Vai trò          | Mô tả                                                 |
-| ------ | ----------------- | ---------------- | ----------------------------------------------------- |
-| GET    | `/platform/stats` | PlatformOperator | Tổng số org, user, chi nhánh, nhân viên toàn platform |
-| GET    | `/org/stats`      | Admin, Manager   | Số liệu vận hành trong org hiện tại                   |
+| Method | Path                    | Vai trò          | Mô tả                                                 |
+| ------ | ----------------------- | ---------------- | ----------------------------------------------------- |
+| GET    | `/platform/stats`       | PlatformOperator | Tổng số org, user, chi nhánh, nhân viên toàn platform |
+| GET    | `/org/stats`            | Admin, Manager   | Số liệu vận hành trong org hiện tại                   |
+| GET    | `/org/usage-analytics`  | Admin            | Xu hướng hoạt động theo loại sự kiện (login, schedule, attendance, chat) |
 
 ## Platform admin (`/api/v1/platform`) — PlatformOperator
 

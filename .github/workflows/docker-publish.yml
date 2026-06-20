@@ -1,4 +1,4 @@
-# Build & push wokki-backend to Docker Hub.
+# Build & push wokki-backend to Docker Hub. Deploy on Dokploy is triggered manually.
 # GitHub repo secrets (chỉ 2): DOCKER_USERNAME, DOCKER_PASSWORD
 # Mọi config runtime khác → env Dokploy / docker/.env
 
@@ -16,15 +16,16 @@ on:
       - ".github/workflows/docker-publish.yml"
   workflow_dispatch:
 
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE_NAME: wokki-backend
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    concurrency:
-      group: docker-publish-${{ github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

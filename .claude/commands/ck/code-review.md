@@ -72,11 +72,19 @@ Present the agent's findings plus build/test results:
 Build: PASS / FAIL
 Tests: PASS / FAIL
 
-Verdict: APPROVE | WARNING | BLOCK
+Verdict: APPROVED | WARNING | BLOCK
+
+<!-- Scale: 1 = critical gap · 2 = significant gap · 3 = acceptable · 4 = solid · 5 = exemplary -->
+| Dimension     | Score (1–5) | Justification |
+|---------------|-------------|---------------|
+| Correctness   | {N}         | {one line}    |
+| Security      | {N}         | {one line}    |
+| Simplicity    | {N}         | {one line}    |
+| Test Coverage | {N}         | {one line}    |
 ```
 
 Decision rules:
-- **APPROVE** — no CRITICAL/HIGH, build + tests pass
+- **APPROVED** — no CRITICAL/HIGH, build + tests pass
 - **WARNING** — HIGH issues only (can merge with caution)
 - **BLOCK** — any CRITICAL issue or build failure
 
@@ -149,6 +157,14 @@ Build: PASS / FAIL
 Tests: PASS / FAIL
 
 Next steps: <contextual suggestions>
+
+<!-- Scale: 1 = critical gap · 2 = significant gap · 3 = acceptable · 4 = solid · 5 = exemplary -->
+| Dimension     | Score (1–5) | Justification |
+|---------------|-------------|---------------|
+| Correctness   | {N}         | {one line}    |
+| Security      | {N}         | {one line}    |
+| Simplicity    | {N}         | {one line}    |
+| Test Coverage | {N}         | {one line}    |
 ```
 
 ## Related Agent

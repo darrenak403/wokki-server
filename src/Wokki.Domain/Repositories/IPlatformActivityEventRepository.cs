@@ -30,4 +30,10 @@ public interface IPlatformActivityEventRepository
         DateTime to,
         Guid? organizationId = null,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PlatformUsageDailyEventTypeCountSnapshot>> CountDailyByEventTypeAsync(
+        DateTime from,
+        DateTime to,
+        Guid? organizationId = null,
+        CancellationToken cancellationToken = default);
 }

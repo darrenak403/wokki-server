@@ -1,7 +1,9 @@
 using Google.OrTools.Sat;
 using Microsoft.Extensions.Logging;
 using Wokki.Application.Common.Interfaces;
+using Wokki.Application.Dtos.Scheduling;
 using Wokki.Application.Scheduling;
+using Wokki.Application.Validators.Scheduling;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Entities;
 
@@ -13,6 +15,7 @@ public sealed class CpSatScheduleSuggestionService(
 {
     public async Task<ScheduleSuggestionGenerationResult> GenerateAsync(
         Guid scheduleId,
+        ScheduleSuggestionHint? hint = null,
         CancellationToken cancellationToken = default)
     {
         var (context, reason) = await contextLoader.LoadAsync(scheduleId, cancellationToken);
@@ -24,6 +27,13 @@ public sealed class CpSatScheduleSuggestionService(
 
         if (context.Shifts.Count == 0)
             return new ScheduleSuggestionGenerationResult([], "no_shifts", Provider: "cpsat");
+
+        if (hint is not null)
+        {
+            var hintValidation = ScheduleSuggestionHintValidator.Validate(hint, context.Employees);
+            if (!hintValidation.IsValid)
+                return new ScheduleSuggestionGenerationResult([], "invalid_hint", Provider: "cpsat");
+        }
 
         var solverPolicy = OrganizationSchedulingSolverPolicy.FromOrgPolicy(context.OrganizationSchedulingPolicy);
 
@@ -94,13 +104,15 @@ public sealed class CpSatScheduleSuggestionService(
             shiftsById,
             restrictToUnlockedEmployees ? lockState.UnlockedEmployeeIds : null,
             enforceFullCoverageLowerBound: useStrictCoverage,
+            hint,
             cancellationToken);
 
         if (strictResult is not null)
             return strictResult;
 
         if (!useStrictCoverage)
-            return new ScheduleSuggestionGenerationResult([], "infeasible", Provider: "cpsat");
+            return new ScheduleSuggestionGenerationResult(
+                [], hint is not null ? "hint_infeasible" : "infeasible", Provider: "cpsat");
 
         logger.LogInformation(
             "CP-SAT strict coverage infeasible for schedule {ScheduleId}; retrying with partial coverage",
@@ -119,6 +131,7 @@ public sealed class CpSatScheduleSuggestionService(
             shiftsById,
             restrictToUnlockedEmployees ? lockState.UnlockedEmployeeIds : null,
             enforceFullCoverageLowerBound: false,
+            hint,
             cancellationToken);
 
         if (relaxedResult is not null)
@@ -130,7 +143,8 @@ public sealed class CpSatScheduleSuggestionService(
             };
         }
 
-        return new ScheduleSuggestionGenerationResult([], "infeasible", Provider: "cpsat");
+        return new ScheduleSuggestionGenerationResult(
+            [], hint is not null ? "hint_infeasible" : "infeasible", Provider: "cpsat");
     }
 
     private async Task<ScheduleSuggestionGenerationResult?> SolveAsync(
@@ -146,8 +160,13 @@ public sealed class CpSatScheduleSuggestionService(
         IReadOnlyDictionary<Guid, ShiftDefinition> shiftsById,
         IReadOnlySet<Guid>? unlockedEmployeeIds,
         bool enforceFullCoverageLowerBound,
+        ScheduleSuggestionHint? hint,
         CancellationToken cancellationToken)
     {
+        var hintTargetIds = hint?.Group is not null
+            ? ResolveHintTargetEmployeeIds(hint.Group, employees)
+            : null;
+
         var minRestMinutes = solverPolicy.MinRestMinutesEnabled
             ? solverPolicy.MinRestMinutesBetweenShifts
             : 0;
@@ -254,6 +273,44 @@ public sealed class CpSatScheduleSuggestionService(
             }
         }
 
+        if (hint?.Kind == ScheduleSuggestionHintKind.TempMinMax && hintTargetIds is { Count: > 0 })
+        {
+            var hintVars = (from e in Enumerable.Range(0, employees.Count)
+                            where hintTargetIds.Contains(employees[e].Id)
+                            from s in Enumerable.Range(0, shifts.Count)
+                            from d in Enumerable.Range(0, days.Count)
+                            select (ILiteral)x[e, s, d]).ToArray();
+
+            if (hintVars.Length > 0)
+            {
+                var hintSum = LinearExpr.Sum(hintVars);
+                if (hint.MaxCount.HasValue)
+                    model.Add(hintSum <= hint.MaxCount.Value);
+                if (hint.MinCount.HasValue)
+                    model.Add(hintSum >= hint.MinCount.Value);
+            }
+        }
+
+        if (hint?.Kind == ScheduleSuggestionHintKind.AvoidPairing
+            && hint.EmployeeId1 is { } pairEmployeeId1
+            && hint.EmployeeId2 is { } pairEmployeeId2)
+        {
+            var pairIndex1 = -1;
+            var pairIndex2 = -1;
+            for (var i = 0; i < employees.Count; i++)
+            {
+                if (employees[i].Id == pairEmployeeId1) pairIndex1 = i;
+                else if (employees[i].Id == pairEmployeeId2) pairIndex2 = i;
+            }
+
+            if (pairIndex1 >= 0 && pairIndex2 >= 0)
+            {
+                for (var s = 0; s < shifts.Count; s++)
+                for (var d = 0; d < days.Count; d++)
+                    model.Add(x[pairIndex1, s, d] + x[pairIndex2, s, d] <= 1);
+            }
+        }
+
         if (solverPolicy.MinStaffPerShiftEnabled || solverPolicy.MaxStaffPerShiftEnabled)
         {
             ApplySlotStaffingConstraints(
@@ -308,6 +365,16 @@ public sealed class CpSatScheduleSuggestionService(
         {
             var score = 10 + SchedulingAssignmentRules.PreferenceScore(
                 employees[e].Id, shifts[s].Id, days[d], context);
+
+            if (hint?.Kind == ScheduleSuggestionHintKind.PreferenceWeight
+                && hintTargetIds is not null
+                && hintTargetIds.Contains(employees[e].Id))
+            {
+                score += hint.Direction == HintWeightDirection.Reduce
+                    ? -SchedulingSolverDefaults.HintPreferenceWeightDelta
+                    : SchedulingSolverDefaults.HintPreferenceWeightDelta;
+            }
+
             objVars.Add(x[e, s, d]);
             objCoeffs.Add(score);
         }
@@ -384,6 +451,25 @@ public sealed class CpSatScheduleSuggestionService(
                     model.Add(sum >= remainingNeed);
             }
         }
+    }
+
+    private static HashSet<Guid> ResolveHintTargetEmployeeIds(
+        HintGroupRef group,
+        IReadOnlyList<Employee> employees)
+    {
+        if (group.GroupType == HintGroupType.ExplicitEmployeeIds)
+            return group.EmployeeIds is null ? [] : new HashSet<Guid>(group.EmployeeIds);
+
+        if (group.GroupType == HintGroupType.RoleDepartment && !string.IsNullOrWhiteSpace(group.Role))
+        {
+            var role = group.Role.Trim();
+            return employees
+                .Where(e => string.Equals(e.Position?.Trim(), role, StringComparison.OrdinalIgnoreCase))
+                .Select(e => e.Id)
+                .ToHashSet();
+        }
+
+        return [];
     }
 
     private static bool RoleMatches(Employee employee, ShiftDefinition shift)

@@ -74,6 +74,8 @@ def read_coding_level() -> str | None:
         if level == -1:
             return None
         style_file = root / ".claude" / "coding-levels" / _LEVEL_FILES[level]
+        if not style_file.exists():
+            style_file = get_claude_dir() / "coding-levels" / _LEVEL_FILES[level]
         try:
             return style_file.read_text(encoding="utf-8").strip()
         except FileNotFoundError:
@@ -175,6 +177,55 @@ def main() -> None:
                 logger.warn(f"could not read session state: {e}")
         else:
             logger.info("No previous session state found")
+
+        # Deliberate handoff written by /ck:handoff — survives across sessions
+        handoff_file = sessions_dir / ".last-handoff.md"
+        if handoff_file.exists():
+            try:
+                handoff_content = strip_ansi(handoff_file.read_text(encoding="utf-8").strip())
+                if handoff_content:
+                    context_parts.append(f"Handoff from previous session:\n{handoff_content}")
+                    logger.info("Handoff context loaded")
+            except Exception as e:
+                logger.warn(f"could not read handoff: {e}")
+
+        # Feature checklist — inject startup gate when feature_list.json exists at project root
+        if root:
+            feature_list_path = root / "feature_list.json"
+            if feature_list_path.exists():
+                try:
+                    fl = json.loads(feature_list_path.read_text(encoding="utf-8"))
+                    features = fl.get("features", [])
+                    active = [f for f in features if f.get("status") == "active"]
+                    blocked = [f for f in features if f.get("status") == "blocked" and f.get("blocked_by")]
+                    total = len(features)
+                    if active:
+                        def _fmt_active(f):
+                            prefix = f"{f['priority']}: " if f.get("priority") else ""
+                            return f"  - {prefix}{f.get('id', '?')}: {f.get('title', '')} — verify before starting new work"
+                        lines = [_fmt_active(f) for f in active]
+                        blocked_lines = [f"  - {f.get('id', '?')}: {f.get('title', '')} (blocked by: {', '.join(f.get('blocked_by', []))})" for f in blocked] if blocked else []
+                        checklist = (
+                            f"Feature baseline checklist ({total} features tracked):\n"
+                            f"  - Read feature_list.json to confirm current feature state\n"
+                            f"  - Active feature(s) requiring verification:\n"
+                            + "\n".join(lines)
+                            + ("\n  - Blocked features:\n" + "\n".join(blocked_lines) if blocked_lines else "")
+                            + "\n  - Do not mark any feature passing without running its verification_command"
+                        )
+                        context_parts.append(checklist)
+                        logger.info(f"Feature checklist injected: {len(active)} active, {len(blocked)} blocked")
+                    else:
+                        blocked_note = f" {len(blocked)} blocked." if blocked else ""
+                        context_parts.append(
+                            f"Feature baseline: {total} feature(s) tracked, none active.{blocked_note} "
+                            f"No verification required before starting work."
+                        )
+                        logger.info(f"Feature checklist: no active features ({total} tracked, {len(blocked)} blocked)")
+                except json.JSONDecodeError as e:
+                    logger.warn(f"feature_list.json is malformed — skipping checklist: {e}")
+                except Exception as e:
+                    logger.warn(f"could not read feature_list.json: {e}")
 
     # Session aliases (log only)
     aliases = list_aliases(limit=5)

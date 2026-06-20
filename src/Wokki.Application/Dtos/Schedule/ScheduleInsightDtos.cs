@@ -1,3 +1,5 @@
+using Wokki.Application.Dtos.Scheduling;
+
 namespace Wokki.Application.Dtos.Schedule;
 
 public sealed record GenerateScheduleInsightContextRequest(
@@ -29,10 +31,14 @@ public sealed record ScheduleInsightContextResponse(
     DateTime ExpiresAt,
     string JsonContent);
 
-public sealed record ScheduleInsightChatRequest(string Question);
+public sealed record ScheduleInsightChatRequest(string Question, bool HintMode = false);
 
 public sealed record ScheduleInsightChatResponse(
     Guid ScheduleId,
     string Answer,
     string Provider,
-    DateTime ContextGeneratedAt);
+    DateTime ContextGeneratedAt,
+    bool HintMode = false,
+    ScheduleSuggestionHint? Hint = null,
+    string? HintSummary = null,
+    bool HintUnderstood = false);

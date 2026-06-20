@@ -66,6 +66,15 @@ public static class AttendanceEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/summary", GetDailySummaryAsync)
+            .WithName("GetAttendanceDailySummary")
+            .WithDescription("Tổng hợp số lượng nhân viên đã/chưa chấm công theo branch và ngày (Admin/Manager).")
+            .RequireAuthorization(p => p.RequireRole(RoleConstants.Admin, RoleConstants.Manager))
+            .RequireRateLimiting(RateLimitPolicies.Fixed)
+            .Produces<ApiResponse<AttendanceDailySummaryResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status403Forbidden);
+
         return group;
     }
 
@@ -137,6 +146,23 @@ public static class AttendanceEndpoints
             return Forbidden();
 
         var response = await service.AdjustAsync(id, request, currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetDailySummaryAsync(
+        [AsParameters] AttendanceDailySummaryRequest request,
+        [FromServices] IAttendanceService service,
+        [FromServices] ILocationScopeService scopeService,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null || currentUser.Role is null)
+            return Unauthorized<AttendanceDailySummaryResponse>();
+
+        if (!await scopeService.CanManageLocationAsync(currentUser.UserId.Value, currentUser.Role, request.LocationId, cancellationToken))
+            return Forbidden();
+
+        var response = await service.GetDailySummaryAsync(request.LocationId, request.Date, cancellationToken);
         return response.ToHttpResult();
     }
 }
