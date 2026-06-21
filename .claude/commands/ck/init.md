@@ -165,7 +165,7 @@ Show a file tree of everything that will be written:
     skills/     <selected skill directories>
     hooks/      session_init.py  session_end.py  session_state.py  pre_compact.py
                 suggest_compact.py  subagent_init.py  dev_rules_reminder.py
-                caveman_watch.py  privacy_block.py  artifact_fold.py  <optional hooks>
+                caveman_watch.py  privacy_block.py  tool_counter.py  artifact_fold.py  <optional hooks>
                 lib/  <shared hook utilities>
     contexts/   dev.md  research.md  review.md
     coding-levels/  <all files from source>
@@ -199,7 +199,7 @@ mkdir -p <target>/.claude/contexts
 From `$CLAUDE_PROJECT_DIR/.claude/` → `<target>/.claude/`:
 
 - `hooks/session_init.py`, `hooks/session_end.py`, `hooks/session_state.py`, `hooks/pre_compact.py`, `hooks/suggest_compact.py`
-- `hooks/subagent_init.py`, `hooks/dev_rules_reminder.py`, `hooks/caveman_watch.py`, `hooks/privacy_block.py`, `hooks/artifact_fold.py`
+- `hooks/subagent_init.py`, `hooks/dev_rules_reminder.py`, `hooks/caveman_watch.py`, `hooks/privacy_block.py`, `hooks/tool_counter.py`, `hooks/artifact_fold.py`
 - `hooks/lib/` (copy entire directory recursively)
 - `contexts/dev.md`, `contexts/research.md`, `contexts/review.md`
 - All files in `coding-levels/` (enumerate with Glob — do not hardcode names)
@@ -229,9 +229,10 @@ Build the hooks object using only selected features:
 | SessionStart                          | `subagent_init.py`                   | always        |
 | UserPromptSubmit                      | `dev_rules_reminder.py` (timeout 5)  | always        |
 | UserPromptSubmit                      | `caveman_watch.py` (timeout 5)       | always        |
-| PreToolUse `Read\|Write\|Edit\|Bash`  | `privacy_block.py` (timeout 5)       | always        |
+| UserPromptSubmit                      | `suggest_compact.py` (timeout 5)     | always        |
+| PreToolUse `Read\|Write\|Edit\|Grep\|Bash` | `privacy_block.py` (timeout 5)       | always        |
+| PreToolUse `Write\|Edit\|Bash\|Agent` | `tool_counter.py` (timeout 5)        | always        |
 | PreCompact                            | `pre_compact.py` (timeout 5)         | always        |
-| PreToolUse `Write\|Edit\|Bash\|Agent` | `suggest_compact.py` (timeout 5)     | always        |
 | PostToolUse `Write\|Edit`             | `build_check.py` (timeout 30)        | build-check   |
 | PostToolUse `Write\|Edit`             | `simplify_gate.py` (timeout 5)       | simplify-gate |
 | PostToolUse `Read\|Grep\|Bash`        | `artifact_fold.py` (timeout 5)       | always        |

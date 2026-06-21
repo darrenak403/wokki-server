@@ -31,11 +31,12 @@ Strategic compaction at logical boundaries:
 
 ## How It Works
 
-The `suggest-compact.js` script runs on PreToolUse (Edit/Write) and:
+Two hooks work together:
 
-1. **Tracks tool calls** — Counts tool invocations in session
-2. **Threshold detection** — Suggests at configurable threshold (default: 50 calls)
-3. **Periodic reminders** — Reminds every 25 calls after threshold
+1. **`tool_counter.py`** runs on PreToolUse (Write/Edit/Bash/Agent) — counts tool invocations in real time
+2. **`suggest_compact.py`** runs on UserPromptSubmit — checks accumulated count and suggests compaction at threshold
+
+At configurable threshold (default: 50 calls), suggests `/compact`. Periodic reminders every 25 calls after threshold.
 
 ## Configuration
 
