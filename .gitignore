@@ -34,4 +34,4 @@ docs/fe/*
 !docs/fe/
 !docs/fe/*.md
 
-.claude/session-data/
+.claude/
