@@ -32,7 +32,7 @@ Optional GitHub repo **Variable**: `API_HEALTH_URL` (default `https://api.wokki.
 > **Không dùng "Webhook URL"** ở tab Deployments — URL đó được Dokploy thiết kế cho git provider gọi vào (payload push event kèm branch), một `curl` trần sẽ bị từ chối với lỗi `Branch Not Match`. CI/CD phải gọi qua **Dokploy REST API**.
 
 1. **Token**: Dokploy UI → avatar → Profile/Settings → **API/CLI Keys** → Generate New Key (Expiration `Never`, chọn đúng Organization) → copy giá trị
-2. **Compose ID**: mở app compose `BE` trên Dokploy → tab **Deployments** → nhìn Webhook URL hiển thị sẵn (`https://<domain>/api/deploy/compose/<id>`) → đoạn `<id>` cuối chính là `DOKPLOY_COMPOSE_ID`
+2. **Compose ID**: mở app compose `BE` trên Dokploy (trang chính của app, không phải tab Deployments) → nhìn URL trên thanh địa chỉ browser, dạng `.../services/compose/<composeId>` → copy đoạn `<composeId>`. **Lưu ý:** đoạn id cuối trong Webhook URL ở tab Deployments (`/api/deploy/compose/<token>`) **không phải** composeId thật — nó là token webhook riêng, dùng nhầm sẽ bị lỗi `404 Compose not found`
 3. **Domain**: phần `https://<domain>` ở trên
 4. Add cả 3 vào GitHub repo → Settings → Secrets and variables → Actions: `DOKPLOY_URL`, `DOKPLOY_API_TOKEN`, `DOKPLOY_COMPOSE_ID`
 
