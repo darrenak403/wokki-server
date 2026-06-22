@@ -19,30 +19,33 @@ cp docker/.env.example docker/.env         # prod
 | ------ | -------- |
 | `DOCKER_USERNAME` | Login + push Docker Hub |
 | `DOCKER_PASSWORD` | Token Docker Hub |
-| `DOKPLOY_WEBHOOK_URL` | Bắt buộc — trigger Dokploy redeploy sau khi push image (xem cách lấy bên dưới) |
-| `DOKPLOY_API_TOKEN` | Optional, **thường không cần** — Webhook URL của Dokploy (dạng `/api/deploy/compose/<id>`) đã tự chứa token trong path, không cần thêm header. Chỉ set biến này nếu Dokploy báo lỗi 401/403 khi gọi webhook |
+| `DOKPLOY_URL` | Bắt buộc — domain gốc Dokploy, vd `https://dokploy.darrenak.id.vn` (không kèm path) |
+| `DOKPLOY_API_TOKEN` | Bắt buộc — API/CLI key tạo trong Dokploy Profile, dùng header `x-api-key` |
+| `DOKPLOY_COMPOSE_ID` | Bắt buộc — id của compose service `BE` trên Dokploy |
 
 Optional GitHub repo **Variable**: `API_HEALTH_URL` (default `https://api.wokki.io.vn/health/`) nếu domain prod đổi.
 
 **Mọi biến khác** → env trên **Dokploy** (hoặc `docker/.env` khi chạy local).
 
-### Lấy Dokploy webhook URL
+### Lấy DOKPLOY_URL / DOKPLOY_API_TOKEN / DOKPLOY_COMPOSE_ID
 
-1. Vào Dokploy UI → Application (compose `BE`) → tab **Deployments**
-2. Copy **Webhook URL** hiển thị sẵn (dạng `https://<dokploy-domain>/api/deploy/compose/<id>`) — URL này đã chứa token riêng trong path, giữ kín như secret
-3. Add vào GitHub repo → Settings → Secrets and variables → Actions → `DOKPLOY_WEBHOOK_URL`
-4. Không cần `DOKPLOY_API_TOKEN` với loại webhook này — bỏ qua secret này
+> **Không dùng "Webhook URL"** ở tab Deployments — URL đó được Dokploy thiết kế cho git provider gọi vào (payload push event kèm branch), một `curl` trần sẽ bị từ chối với lỗi `Branch Not Match`. CI/CD phải gọi qua **Dokploy REST API**.
+
+1. **Token**: Dokploy UI → avatar → Profile/Settings → **API/CLI Keys** → Generate New Key (Expiration `Never`, chọn đúng Organization) → copy giá trị
+2. **Compose ID**: mở app compose `BE` trên Dokploy → tab **Deployments** → nhìn Webhook URL hiển thị sẵn (`https://<domain>/api/deploy/compose/<id>`) → đoạn `<id>` cuối chính là `DOKPLOY_COMPOSE_ID`
+3. **Domain**: phần `https://<domain>` ở trên
+4. Add cả 3 vào GitHub repo → Settings → Secrets and variables → Actions: `DOKPLOY_URL`, `DOKPLOY_API_TOKEN`, `DOKPLOY_COMPOSE_ID`
 
 ## CI/CD → Dokploy (tự động)
 
 ```
 push main → GitHub Actions build/push image (+ verify non-Alpine)
-         → job "deploy": POST DOKPLOY_WEBHOOK_URL (tự động, không cần bấm tay)
+         → job "deploy": POST {DOKPLOY_URL}/api/compose.deploy (x-api-key + composeId)
          → Dokploy compose pull (pull_policy: always) + up -d (env từ Dokploy UI)
          → job "deploy": poll /health đến khi container healthy, fail loudly nếu timeout
 ```
 
-Không còn bước thủ công — chỉ cần `git push` lên `main`, workflow tự build → push image → trigger Dokploy → verify health. Nếu `DOKPLOY_WEBHOOK_URL` chưa được set, job `deploy` fail rõ ràng (không silent-skip) để nhắc cấu hình secret.
+Không còn bước thủ công — chỉ cần `git push` lên `main`, workflow tự build → push image → trigger Dokploy qua API → verify health. Nếu thiếu secret nào trong 3 secret trên, job `deploy` fail rõ ràng (không silent-skip) để nhắc cấu hình.
 
 `pull_policy: always` trên `wokki_api` (và `wokki_dbgate`) trong `docker-compose.prod.yml` đảm bảo mỗi lần bấm Deploy trên Dokploy, image luôn được kiểm tra/pull lại từ registry — không bị kẹt ở image cũ cache local trên server.
 
