@@ -1,8 +1,8 @@
 # Usage: docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d
 # task docker:prod
 #
-# CI/CD: GitHub Actions → Docker Hub → Dokploy pull
-# GitHub repo secrets (chỉ 2): DOCKER_USERNAME, DOCKER_PASSWORD
+# CI/CD: GitHub Actions → Docker Hub → Dokploy webhook (auto) → pull + health check
+# GitHub repo secrets: DOCKER_USERNAME, DOCKER_PASSWORD, DOKPLOY_WEBHOOK_URL (xem docker/README.md)
 # Còn lại: env trên Dokploy hoặc docker/.env
 
 name: wokki
