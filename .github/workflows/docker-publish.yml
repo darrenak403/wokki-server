@@ -119,10 +119,19 @@ jobs:
             echo "DOKPLOY_WEBHOOK_URL secret is not set — skipping auto-deploy. See docker/README.md."
             exit 1
           fi
+          AUTH_HEADER=()
           if [ -n "${DOKPLOY_API_TOKEN:-}" ]; then
-            curl -fsS -X POST "$DOKPLOY_WEBHOOK_URL" -H "Authorization: Bearer $DOKPLOY_API_TOKEN"
-          else
-            curl -fsS -X POST "$DOKPLOY_WEBHOOK_URL"
+            AUTH_HEADER=(-H "Authorization: Bearer $DOKPLOY_API_TOKEN")
+          fi
+          # Dokploy's deploy webhook expects GET (the URL itself carries the auth token) —
+          # POST returns 400. See docker/README.md for how this URL is generated.
+          HTTP_CODE=$(curl -sS -o /tmp/dokploy_response.txt -w "%{http_code}" "${AUTH_HEADER[@]}" "$DOKPLOY_WEBHOOK_URL")
+          echo "Dokploy webhook response ($HTTP_CODE):"
+          cat /tmp/dokploy_response.txt
+          echo
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "Dokploy webhook call failed with status $HTTP_CODE"
+            exit 1
           fi
 
       - name: Wait for rollout and verify health
