@@ -13,22 +13,36 @@ cp docker/.env.example docker/.env.local   # dev
 cp docker/.env.example docker/.env         # prod
 ```
 
-## GitHub Secrets (chỉ 2 — cả 2 repo BE/FE)
+## GitHub Secrets
 
 | Secret | Mục đích |
 | ------ | -------- |
 | `DOCKER_USERNAME` | Login + push Docker Hub |
 | `DOCKER_PASSWORD` | Token Docker Hub |
+| `DOKPLOY_WEBHOOK_URL` | Bắt buộc — trigger Dokploy redeploy sau khi push image (xem cách lấy bên dưới) |
+| `DOKPLOY_API_TOKEN` | Optional, **thường không cần** — Webhook URL của Dokploy (dạng `/api/deploy/compose/<id>`) đã tự chứa token trong path, không cần thêm header. Chỉ set biến này nếu Dokploy báo lỗi 401/403 khi gọi webhook |
+
+Optional GitHub repo **Variable**: `API_HEALTH_URL` (default `https://api.wokki.io.vn/health/`) nếu domain prod đổi.
 
 **Mọi biến khác** → env trên **Dokploy** (hoặc `docker/.env` khi chạy local).
 
-## CI/CD → Dokploy
+### Lấy Dokploy webhook URL
+
+1. Vào Dokploy UI → Application (compose `BE`) → tab **Deployments**
+2. Copy **Webhook URL** hiển thị sẵn (dạng `https://<dokploy-domain>/api/deploy/compose/<id>`) — URL này đã chứa token riêng trong path, giữ kín như secret
+3. Add vào GitHub repo → Settings → Secrets and variables → Actions → `DOKPLOY_WEBHOOK_URL`
+4. Không cần `DOKPLOY_API_TOKEN` với loại webhook này — bỏ qua secret này
+
+## CI/CD → Dokploy (tự động)
 
 ```
 push main → GitHub Actions build/push image (+ verify non-Alpine)
-         → bấm Deploy trên Dokploy UI (thủ công)
+         → job "deploy": POST DOKPLOY_WEBHOOK_URL (tự động, không cần bấm tay)
          → Dokploy compose pull (pull_policy: always) + up -d (env từ Dokploy UI)
+         → job "deploy": poll /health đến khi container healthy, fail loudly nếu timeout
 ```
+
+Không còn bước thủ công — chỉ cần `git push` lên `main`, workflow tự build → push image → trigger Dokploy → verify health. Nếu `DOKPLOY_WEBHOOK_URL` chưa được set, job `deploy` fail rõ ràng (không silent-skip) để nhắc cấu hình secret.
 
 `pull_policy: always` trên `wokki_api` (và `wokki_dbgate`) trong `docker-compose.prod.yml` đảm bảo mỗi lần bấm Deploy trên Dokploy, image luôn được kiểm tra/pull lại từ registry — không bị kẹt ở image cũ cache local trên server.
 

@@ -1,5 +1,6 @@
-# Build & push wokki-backend to Docker Hub. Deploy on Dokploy is triggered manually.
-# GitHub repo secrets (chỉ 2): DOCKER_USERNAME, DOCKER_PASSWORD
+# Build & push wokki-backend to Docker Hub, then auto-trigger Dokploy redeploy + health check.
+# GitHub repo secrets: DOCKER_USERNAME, DOCKER_PASSWORD (build/push)
+#                      DOKPLOY_WEBHOOK_URL (required), DOKPLOY_API_TOKEN (optional, only if Dokploy webhook needs Authorization header)
 # Mọi config runtime khác → env Dokploy / docker/.env
 
 name: Docker publish
@@ -101,4 +102,43 @@ jobs:
           done
 
           echo "latest tag is still Alpine after retries; failing publish."
+          exit 1
+
+  deploy:
+    name: Deploy to Dokploy
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Dokploy redeploy
+        env:
+          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DOKPLOY_WEBHOOK_URL:-}" ]; then
+            echo "DOKPLOY_WEBHOOK_URL secret is not set — skipping auto-deploy. See docker/README.md."
+            exit 1
+          fi
+          if [ -n "${DOKPLOY_API_TOKEN:-}" ]; then
+            curl -fsS -X POST "$DOKPLOY_WEBHOOK_URL" -H "Authorization: Bearer $DOKPLOY_API_TOKEN"
+          else
+            curl -fsS -X POST "$DOKPLOY_WEBHOOK_URL"
+          fi
+
+      - name: Wait for rollout and verify health
+        env:
+          HEALTH_URL: ${{ vars.API_HEALTH_URL || 'https://api.wokki.io.vn/health/' }}
+        run: |
+          set -euo pipefail
+          echo "Waiting for Dokploy to pull image and restart container..."
+          sleep 15
+          for attempt in $(seq 1 20); do
+            echo "Health check attempt $attempt/20: $HEALTH_URL"
+            if curl -fsS "$HEALTH_URL" >/dev/null; then
+              echo "Deploy verified healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Deploy did not become healthy in time — check Dokploy logs and roll back if needed."
           exit 1
