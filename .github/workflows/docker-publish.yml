@@ -1,6 +1,6 @@
 # Build & push wokki-backend to Docker Hub, then auto-trigger Dokploy redeploy + health check.
 # GitHub repo secrets: DOCKER_USERNAME, DOCKER_PASSWORD (build/push)
-#                      DOKPLOY_WEBHOOK_URL (required), DOKPLOY_API_TOKEN (optional, only if Dokploy webhook needs Authorization header)
+#                      DOKPLOY_URL, DOKPLOY_API_TOKEN, DOKPLOY_COMPOSE_ID (Dokploy compose.deploy API)
 # Mọi config runtime khác → env Dokploy / docker/.env
 
 name: Docker publish
@@ -111,26 +111,29 @@ jobs:
     steps:
       - name: Trigger Dokploy redeploy
         env:
-          DOKPLOY_WEBHOOK_URL: ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
           DOKPLOY_API_TOKEN: ${{ secrets.DOKPLOY_API_TOKEN }}
+          DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
         run: |
           set -euo pipefail
-          if [ -z "${DOKPLOY_WEBHOOK_URL:-}" ]; then
-            echo "DOKPLOY_WEBHOOK_URL secret is not set — skipping auto-deploy. See docker/README.md."
+          if [ -z "${DOKPLOY_URL:-}" ] || [ -z "${DOKPLOY_API_TOKEN:-}" ] || [ -z "${DOKPLOY_COMPOSE_ID:-}" ]; then
+            echo "DOKPLOY_URL / DOKPLOY_API_TOKEN / DOKPLOY_COMPOSE_ID secret is not set — skipping auto-deploy. See docker/README.md."
             exit 1
           fi
-          AUTH_HEADER=()
-          if [ -n "${DOKPLOY_API_TOKEN:-}" ]; then
-            AUTH_HEADER=(-H "Authorization: Bearer $DOKPLOY_API_TOKEN")
-          fi
-          # Dokploy's deploy webhook expects GET (the URL itself carries the auth token) —
-          # POST returns 400. See docker/README.md for how this URL is generated.
-          HTTP_CODE=$(curl -sS -o /tmp/dokploy_response.txt -w "%{http_code}" "${AUTH_HEADER[@]}" "$DOKPLOY_WEBHOOK_URL")
-          echo "Dokploy webhook response ($HTTP_CODE):"
+          # Dokploy's "Webhook URL" (Deployments tab) is meant for git-provider push events
+          # (it checks the pushed branch from the payload) — a bare curl call returns
+          # "Branch Not Match". Use the Dokploy REST API instead, authenticated with an
+          # API token (Profile → API/CLI Keys) and the compose service's id.
+          HTTP_CODE=$(curl -sS -o /tmp/dokploy_response.txt -w "%{http_code}" \
+            -X POST "$DOKPLOY_URL/api/compose.deploy" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $DOKPLOY_API_TOKEN" \
+            -d "{\"composeId\":\"$DOKPLOY_COMPOSE_ID\"}")
+          echo "Dokploy API response ($HTTP_CODE):"
           cat /tmp/dokploy_response.txt
           echo
           if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "Dokploy webhook call failed with status $HTTP_CODE"
+            echo "Dokploy compose.deploy call failed with status $HTTP_CODE"
             exit 1
           fi
 
