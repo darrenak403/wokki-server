@@ -1,52 +1,75 @@
 # Wokki Server
 
-Clean Architecture backend (.NET 10, Minimal API, EF Core, PostgreSQL).
+Workforce management backend API built with Clean Architecture, providing scheduling, attendance tracking, employee management, chat, and payroll features for multi-tenant organizations.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Framework | .NET 10 |
+| API | Minimal API with Scalar (OpenAPI) |
+| Database | PostgreSQL 16 |
+| ORM | Entity Framework Core |
+| Caching | Redis 7 |
+| Auth | JWT Bearer tokens |
+| Real-time | SignalR |
+| AI | AWS Bedrock (Google Gemma) |
+| Email | Brevo SMTP |
+| Image Storage | Cloudinary |
 
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Docker](https://www.docker.com/) (for PostgreSQL)
+- [Docker](https://www.docker.com/) (for PostgreSQL and Redis)
+- [Task](https://taskfile.dev) — task runner
 
-## Quick start (Docker — khuyến nghị)
-
-Requires [Task](https://taskfile.dev). From repo root:
+## Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd wokki-server
+
+# Copy environment configuration
 cp docker/.env.example docker/.env.local
+```
+
+## Local Development
+
+### Option A: Full Docker Stack (Recommended)
+
+Build and start all services (PostgreSQL, Redis, API, pgweb):
+
+```bash
 task docker:build
 ```
 
-- API: http://localhost:8386
-- Scalar: http://localhost:8386/scalar
+### Option B: Local .NET + Docker Services
 
-Chi tiết: [docker/README.md](docker/README.md) (Postgres, Bedrock env, pgweb)
-
-**Bedrock:** `task run` → User Secrets; Docker dev → `docker/.env.local`; prod → `docker/.env`. Xem [docker/README.md](docker/README.md).
-
-## Quick start (local .NET)
+Start only database services, then run the API locally:
 
 ```bash
-task docker:postgres   # chỉ Postgres; Bedrock qua User Secrets
-task run
+task docker:postgres   # PostgreSQL + Redis only
+task run              # Run API at http://localhost:8386
 ```
 
-- API: http://localhost:8386
+### Access Points
 
-## Default seed
+| Service | URL |
+|---------|-----|
+| API | http://localhost:8386 |
+| API Docs (Scalar) | http://localhost:8386/scalar |
+| Database UI (pgweb) | http://localhost:8888 |
 
-Seeded on first run when the database has no users ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs)).
+### Default Seed Account
 
-**Password:** `12345@Abc`
+The database is seeded on first run when no users exist ([`SeedData.cs`](src/Wokki.Infrastructure/Persistence/SeedData.cs)).
 
-| Email | Role |
-|-------|------|
-| admin@gmail.com | PlatformOperator (Wokki admin) |
+| Email | Password | Role |
+|-------|----------|------|
+| admin@gmail.com | 12345@Abc | PlatformOperator (Wokki admin) |
 
-Org customers register via `/api/v1/auth/register`, then Wokki admin activates/renews the org package from `/api/v1/platform/organizations/{id}/subscription` before org users can use the system.
-
-**Reset local data:** `task docker:clear` then `task docker:build`.
-
-## Auth flow
+### Authentication
 
 ```bash
 # Login
@@ -58,28 +81,62 @@ curl -s -X POST http://localhost:8386/api/v1/auth/login \
 curl -s http://localhost:8386/api/v1/auth/me -H "Authorization: Bearer <accessToken>"
 ```
 
-## Migrations
+## Available Commands
 
 ```bash
-task migration:add -- <MigrationName>
-task migration:update          # local DB when using task docker:postgres + task run
+task ls                # List all available tasks
+task build             # Build the solution
+task run               # Run the API locally
+task clean             # Clean build artifacts
+task docker:build      # Build and start full Docker stack
+task docker:up         # Start Docker containers (existing images)
+task docker:down       # Stop containers (preserve volumes)
+task docker:clear      # Stop and remove all volumes (full reset)
+task migration:add -- <Name>   # Add a new migration
+task migration:update          # Apply pending migrations
+task migration:remove          # Remove last migration
+task migration:list            # List migrations status
 ```
 
-With `task docker:build`, the API applies pending migrations on startup (`Database:AutoMigrate`).
+## Database Migrations
 
-`Database:AutoMigrate` defaults to `true` in Development, `false` in Production.
+With `task docker:build`, migrations are applied automatically on startup (`Database:AutoMigrate: true`).
 
-All tasks: `task ls`
+For local development with `task run`:
 
-## Solution structure
+```bash
+task migration:update
+```
+
+## Environment Variables
+
+Key environment variables (see `docker/.env.example` for full list):
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | PostgreSQL username | wokki |
+| `POSTGRES_PASSWORD` | PostgreSQL password | - |
+| `POSTGRES_DB` | Database name | wokki |
+| `POSTGRES_PORT` | PostgreSQL port | 5432 |
+| `REDIS_PORT` | Redis port | 6379 |
+| `API_PORT` | API exposed port | 8386 |
+| `JWT_SECRET` | JWT signing key (min 32 chars) | - |
+| `JWT_ACCESS_TOKEN_MINUTES` | Token expiry | 60 |
+| `AWS_REGION` | AWS region for Bedrock | us-west-2 |
+| `BEDROCK_MODEL_ID` | Bedrock model ID | google.gemma-3-27b-it |
+| `SMTP_HOST` | SMTP server | smtp-relay.brevo.com |
+| `SMTP_PORT` | SMTP port | 587 |
+| `DATABASE_AUTOMIGRATE` | Auto-apply migrations | true |
+
+## Solution Structure
 
 ```
 src/
-  Wokki.Common/         ApiResponse, AppMessages, ToHttpResult
-  Wokki.Domain/         Entities, IUnitOfWork, repositories
-  Wokki.Application/    Services, DTOs, validators
-  Wokki.Infrastructure/ EF Core, JWT, caching
-  Wokki.Api/            Minimal API (Bootstrapping + Apis/*)
+├── Wokki.Api/           Minimal API layer (HTTP handlers only)
+├── Wokki.Application/   Business logic, DTOs, validators
+├── Wokki.Infrastructure/ EF Core, JWT, Redis, external services
+├── Wokki.Domain/        Entities, repository interfaces
+└── Wokki.Common/       Shared utilities (ApiResponse, errors)
 ```
 
-See [docs/architecture.md](docs/architecture.md) and [docs/minimal-api.md](docs/minimal-api.md). Agents: read [AGENTS.md](AGENTS.md).
+For detailed architecture documentation, see [docs/architecture.md](docs/architecture.md) and [docs/minimal-api.md](docs/minimal-api.md).
