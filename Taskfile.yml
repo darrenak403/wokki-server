@@ -29,8 +29,15 @@ tasks:
 
   run:
     desc: Run the API locally (.NET)
+    dotenv: ['docker/.env.local']
     cmds:
-      - dotnet run --project {{.API_PROJECT}}
+      - |
+        export AWS__Region="$AWS_REGION"
+        export AWS__AccessKeyId="$AWS_ACCESS_KEY_ID"
+        export AWS__SecretAccessKey="$AWS_SECRET_ACCESS_KEY"
+        export AWS__Bedrock__Region="$AWS_REGION"
+        export AWS__Bedrock__ModelId="$BEDROCK_MODEL_ID"
+        dotnet run --project {{.API_PROJECT}}
 
   clean:
     desc: Clean all build artifacts
