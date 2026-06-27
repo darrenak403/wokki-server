@@ -8,7 +8,7 @@ public sealed class BedrockSettings
     public string Region { get; set; } = string.Empty;
 
     /// <summary>Foundation model for schedule suggest.</summary>
-    public string ModelId { get; set; } = "google.gemma-3-4b-it";
+    public string ModelId { get; set; } = "global.amazon.nova-2-lite-v1:0";
 
     /// <summary>Health ping model (falls back to <see cref="ModelId"/>). Use a smaller model to save quota.</summary>
     public string? HealthCheckModelId { get; set; }
