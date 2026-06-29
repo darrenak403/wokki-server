@@ -48,6 +48,21 @@ builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    var forwardedHeaders = app.Configuration.GetSection(ForwardedHeadersSettings.SectionName)
+        .Get<ForwardedHeadersSettings>() ?? new ForwardedHeadersSettings();
+
+    if (!forwardedHeaders.IsConfigured)
+    {
+        Log.Warning(
+            "ForwardedHeaders:KnownProxies/KnownNetworks is empty in {Environment}. " +
+            "X-Forwarded-For will not be trusted, so attendance IP-mismatch checks will be unreliable " +
+            "(resolved IP will be the proxy's, not the real client's).",
+            app.Environment.EnvironmentName);
+    }
+}
+
 var enableDocs = app.Configuration.GetValue<bool?>("ApiDocs:Enabled")
                  ?? app.Environment.IsDevelopment();
 

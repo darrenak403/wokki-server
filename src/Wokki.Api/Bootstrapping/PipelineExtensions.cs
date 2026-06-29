@@ -31,6 +31,7 @@ public static class PipelineExtensions
 {
     public static WebApplication UseApplicationPipeline(this WebApplication app)
     {
+        app.UseForwardedHeaders();
         app.UseSerilogRequestLogging(options =>
         {
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>

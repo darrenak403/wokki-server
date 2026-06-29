@@ -10,6 +10,9 @@ public sealed class AttendanceRecordConfiguration : IEntityTypeConfiguration<Att
     {
         builder.ToTable("attendance_records");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.ClockInIpAddress).HasMaxLength(64);
+        builder.Property(x => x.ClockInPhotoUrl).HasMaxLength(500);
+        builder.Property(x => x.ClockInPhotoPublicId).HasMaxLength(300);
         builder.HasIndex(x => new { x.EmployeeId, x.ClockIn });
 
         builder.HasIndex(x => x.EmployeeId)

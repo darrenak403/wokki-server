@@ -52,6 +52,10 @@ services:
       - AWS__SecretAccessKey=${AWS_SECRET_ACCESS_KEY}
       - AWS__Bedrock__Region=${AWS_REGION}
       - AWS__Bedrock__ModelId=${BEDROCK_MODEL_ID}
+      # Trusted proxy for UseForwardedHeaders (attendance IP-mismatch check needs a real client IP).
+      # Inspect `docker network inspect wokki-network` on the VPS for the actual subnet Dokploy/Traefik
+      # uses to reach this container — do not guess. Empty is safe (logs a warning, does not fail boot).
+      - ForwardedHeaders__KnownNetworks__0=${FORWARDED_HEADERS_KNOWN_NETWORK:-}
     depends_on:
       wokki_postgres:
         condition: service_healthy

@@ -1,5 +1,7 @@
+using System.Net;
 using System.Text.Json;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Wokki.Api.Services;
 using Wokki.Application.Common.Interfaces;
@@ -12,6 +14,26 @@ public static class ServiceCollectionExtensions
     {
         var cors = configuration.GetSection(CorsSettings.SectionName).Get<CorsSettings>()
                    ?? new CorsSettings();
+
+        var forwardedHeaders = configuration.GetSection(ForwardedHeadersSettings.SectionName).Get<ForwardedHeadersSettings>()
+                                ?? new ForwardedHeadersSettings();
+
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+            foreach (var proxy in forwardedHeaders.KnownProxies)
+            {
+                if (IPAddress.TryParse(proxy, out var address))
+                    options.KnownProxies.Add(address);
+            }
+
+            foreach (var network in forwardedHeaders.KnownNetworks)
+            {
+                if (System.Net.IPNetwork.TryParse(network, out var parsed))
+                    options.KnownIPNetworks.Add(parsed);
+            }
+        });
 
         services.AddCors(options =>
         {
