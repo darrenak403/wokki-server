@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Wokki.Application.Dtos.Bedrock;
 using Wokki.Application.Dtos.Schedule;
 using Wokki.Application.Dtos.Scheduling;
@@ -20,7 +21,8 @@ namespace Wokki.Application.Services.Schedule.Implementations;
 
 public sealed class ScheduleInsightService(
     IUnitOfWork unitOfWork,
-    IBedrockService bedrockService) : IScheduleInsightService
+    IBedrockService bedrockService,
+    ILogger<ScheduleInsightService> logger) : IScheduleInsightService
 {
     private const string SchemaVersion = "1.0";
 
@@ -183,10 +185,13 @@ public sealed class ScheduleInsightService(
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.LogWarning("Bedrock chat timed out for schedule {ScheduleId}", scheduleId);
             return ApiResponse<ScheduleInsightChatResponse>.FailureResponse(AppMessages.ScheduleInsight.ChatUnavailable);
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "Bedrock chat failed for schedule {ScheduleId}: {ExType} — {Message}",
+                scheduleId, ex.GetType().Name, ex.Message);
             return ApiResponse<ScheduleInsightChatResponse>.FailureResponse(AppMessages.ScheduleInsight.ChatUnavailable);
         }
 
