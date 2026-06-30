@@ -550,11 +550,17 @@ public sealed class ScheduleInsightService(
     private static string BuildPrompt(string contextJson, string question)
     {
         var prompt = new StringBuilder();
-        prompt.AppendLine("Bạn là trợ lý hỗ trợ Manager đọc hiểu lịch làm việc tuần của Wokki.");
+        prompt.AppendLine("Bạn là trợ lý giúp Manager hiểu lịch làm việc tuần trên Wokki.");
         prompt.AppendLine("Chỉ dùng dữ liệu trong schedule context JSON bên dưới. Không bịa nhân viên, ca, luật hoặc phân công không có trong context.");
         prompt.AppendLine("Không được nói rằng bạn đã cập nhật, áp dụng, ghi hoặc thay đổi lịch. Bạn chỉ giải thích, tóm tắt và đưa gợi ý để Manager cân nhắc.");
         prompt.AppendLine("Nếu context thiếu dữ liệu để trả lời, hãy nói rõ là chưa đủ dữ liệu.");
-        prompt.AppendLine("Trả lời bằng tiếng Việt, ngắn gọn, có thể dùng bullet khi hữu ích.");
+        prompt.AppendLine();
+        prompt.AppendLine("QUAN TRỌNG — định dạng trả lời:");
+        prompt.AppendLine("- Trả lời bằng tiếng Việt, ngắn gọn, tự nhiên như đồng nghiệp nói chuyện.");
+        prompt.AppendLine("- TUYỆT ĐỐI KHÔNG dùng markdown heading (#, ##, ###).");
+        prompt.AppendLine("- KHÔNG bọc mọi thứ trong **bold** hay *italic*. Chỉ dùng bold khi nhấn mạnh điểm thực sự quan trọng.");
+        prompt.AppendLine("- Chỉ dùng dấu gạch đầu dòng (- hoặc •) khi cần liệt kê từ 3 mục trở lên. Ưu tiên câu văn xuôi liên tục.");
+        prompt.AppendLine("- Không viết tiêu đề phần, không chia section. Trả lời thẳng vào câu hỏi.");
         prompt.AppendLine();
         prompt.AppendLine("Schedule context JSON:");
         prompt.AppendLine(contextJson);
