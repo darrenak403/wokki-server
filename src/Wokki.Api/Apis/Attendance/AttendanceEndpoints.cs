@@ -87,11 +87,15 @@ public static class AttendanceEndpoints
     private static async Task<IResult> ClockInAsync(
         [FromBody] ClockInRequest? request,
         [FromServices] IAttendanceService service,
+        [FromServices] IValidator<ClockInRequest> validator,
         [FromServices] ICurrentUserService currentUser,
         CancellationToken cancellationToken = default)
     {
         if (currentUser.UserId is null)
             return Results.Json(ApiResponse<AttendanceResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        if (request is not null && !request.ValidateRequest(validator, out var validationResult))
+            return validationResult!;
 
         var response = await service.ClockInAsync(currentUser.UserId.Value, request, cancellationToken);
         return response.ToHttpResult();

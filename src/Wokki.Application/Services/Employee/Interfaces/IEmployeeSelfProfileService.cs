@@ -7,6 +7,9 @@ public interface IEmployeeSelfProfileService
 {
     Task<ApiResponse<EmployeeResponse>> GetMineAsync(Guid userId, CancellationToken cancellationToken = default);
 
+    /// <summary>Raw stored face descriptor for client-side comparison on subsequent check-ins; null if not yet enrolled.</summary>
+    Task<ApiResponse<FaceDescriptorResponse>> GetMyFaceDescriptorAsync(Guid userId, CancellationToken cancellationToken = default);
+
     Task<ApiResponse<EmployeeResponse>> UpdateMineAsync(
         Guid userId,
         UpdateMyProfileRequest request,

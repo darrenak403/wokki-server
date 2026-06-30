@@ -6,4 +6,7 @@ public sealed record LocationResponse(
     string Address,
     string TimeZone,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    double? Latitude = null,
+    double? Longitude = null,
+    string? NetworkIpOrCidr = null);
