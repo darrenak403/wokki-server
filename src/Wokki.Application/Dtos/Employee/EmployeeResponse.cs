@@ -20,4 +20,5 @@ public sealed record EmployeeResponse(
     string? PaymentQrImageUrl,
     DateTime EmployedAt,
     DateTime? TerminatedAt,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    bool HasFaceEnrollment = false);

@@ -26,4 +26,9 @@ public sealed record AttendanceResponse(
     Guid? DepartmentId = null,
     string? DepartmentName = null,
     Guid? LocationId = null,
-    string? LocationName = null);
+    string? LocationName = null,
+    string? ClockInPhotoUrl = null,
+    bool? IpMismatch = null,
+    bool? GpsOutOfRange = null,
+    bool? FaceMismatch = null,
+    bool IsFlagged = false);

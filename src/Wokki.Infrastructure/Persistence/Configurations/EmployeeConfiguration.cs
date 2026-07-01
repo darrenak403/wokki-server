@@ -19,6 +19,8 @@ public sealed class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(x => x.BankName).HasMaxLength(200);
         builder.Property(x => x.PaymentQrImageUrl).HasMaxLength(500);
         builder.Property(x => x.PaymentQrPublicId).HasMaxLength(300);
+        builder.Property(x => x.FaceEnrollmentPhotoUrl).HasMaxLength(500);
+        builder.Property(x => x.FaceEnrollmentPhotoPublicId).HasMaxLength(300);
         builder.Property(x => x.HourlyRate).HasPrecision(18, 2);
         builder.HasIndex(x => x.UserId).IsUnique();
 

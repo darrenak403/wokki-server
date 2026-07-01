@@ -37,5 +37,10 @@ public static class AttendanceMapper
             department?.Id,
             department?.Name,
             location?.Id,
-            location?.Name);
+            location?.Name,
+            record.ClockInPhotoUrl,
+            record.IpMismatch,
+            record.GpsOutOfRange,
+            record.FaceMismatch,
+            record.IpMismatch == true || record.GpsOutOfRange == true || record.FaceMismatch == true);
 }

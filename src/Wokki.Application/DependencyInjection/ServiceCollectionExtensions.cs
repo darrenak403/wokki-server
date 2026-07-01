@@ -80,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SwapPostPolicyValidator>();
         services.AddScoped<IAutoCloseAttendanceService, AutoCloseAttendanceService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<IAttendancePhotoCleanupService, AttendancePhotoCleanupService>();
         services.AddScoped<IOvertimeRequestService, OvertimeRequestService>();
         services.AddScoped<IPayrollCalculationService, PayrollCalculationService>();
         services.AddScoped<IPayrollService, PayrollService>();

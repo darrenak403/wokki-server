@@ -8,4 +8,7 @@ public interface ICurrentUserService
     Guid? OrganizationId { get; }
     bool IsPlatformOperator { get; }
     bool IsAuthenticated { get; }
+
+    /// <summary>Caller's resolved IP, trustworthy only when UseForwardedHeaders is correctly configured.</summary>
+    string? IpAddress { get; }
 }

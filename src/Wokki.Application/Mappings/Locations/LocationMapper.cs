@@ -6,7 +6,16 @@ namespace Wokki.Application.Mappings.Locations;
 public static class LocationMapper
 {
     public static LocationResponse ToResponse(this Location location) =>
-        new(location.Id, location.Name, location.Address, location.TimeZone, location.IsActive, location.CreatedAt);
+        new(
+            location.Id,
+            location.Name,
+            location.Address,
+            location.TimeZone,
+            location.IsActive,
+            location.CreatedAt,
+            location.Latitude,
+            location.Longitude,
+            location.NetworkIpOrCidr);
 
     public static Location ToEntity(this CreateLocationRequest request, Guid organizationId) =>
         new()
@@ -17,7 +26,10 @@ public static class LocationMapper
             Address = request.Address.Trim(),
             TimeZone = request.TimeZone.Trim(),
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            Latitude = request.Latitude,
+            Longitude = request.Longitude,
+            NetworkIpOrCidr = string.IsNullOrWhiteSpace(request.NetworkIpOrCidr) ? null : request.NetworkIpOrCidr.Trim()
         };
 
     public static void ApplyUpdate(this Location location, UpdateLocationRequest request)
@@ -26,5 +38,8 @@ public static class LocationMapper
         location.Address = request.Address.Trim();
         location.TimeZone = request.TimeZone.Trim();
         location.IsActive = request.IsActive;
+        location.Latitude = request.Latitude;
+        location.Longitude = request.Longitude;
+        location.NetworkIpOrCidr = string.IsNullOrWhiteSpace(request.NetworkIpOrCidr) ? null : request.NetworkIpOrCidr.Trim();
     }
 }

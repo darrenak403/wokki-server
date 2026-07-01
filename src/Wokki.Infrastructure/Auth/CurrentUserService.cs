@@ -39,4 +39,6 @@ public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor)
 
     public bool IsPlatformOperator =>
         string.Equals(Role, RoleConstants.PlatformOperator, StringComparison.OrdinalIgnoreCase);
+
+    public string? IpAddress => httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
 }

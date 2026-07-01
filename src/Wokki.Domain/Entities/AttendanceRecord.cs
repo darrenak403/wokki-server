@@ -19,5 +19,15 @@ public class AttendanceRecord
     public int ApprovedOvertimeMinutes { get; set; } = 0;
     public Guid? AdjustedBy { get; set; }
     public string? AdjustmentNote { get; set; }
+    public double? ClockInLatitude { get; set; }
+    public double? ClockInLongitude { get; set; }
+    public string? ClockInIpAddress { get; set; }
+    public string? ClockInPhotoUrl { get; set; }
+    /// <summary>Cloudinary public_id — needed for retention cleanup deletion.</summary>
+    public string? ClockInPhotoPublicId { get; set; }
+    /// <summary>Null = check not attempted/applicable; true/false = checked.</summary>
+    public bool? IpMismatch { get; set; }
+    public bool? GpsOutOfRange { get; set; }
+    public bool? FaceMismatch { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

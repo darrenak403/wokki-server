@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using Wokki.Application.Common.Interfaces;
@@ -11,6 +12,7 @@ using Wokki.Application.Services.Auth.Interfaces;
 using Wokki.Application.Services.Platform.Interfaces;
 using Wokki.Domain.Constants;
 using Wokki.Domain.Repositories;
+using Wokki.Infrastructure.Attendance;
 using Wokki.Infrastructure.Auth;
 using Wokki.Infrastructure.Caching;
 using Wokki.Infrastructure.Notifications;
@@ -32,6 +34,10 @@ public static class ServiceCollectionExtensions
         IHostEnvironment environment)
     {
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<AttendanceVerificationSettings>(
+            configuration.GetSection(AttendanceVerificationSettings.SectionName));
+        services.AddSingleton<IAttendanceVerificationSettings>(sp =>
+            sp.GetRequiredService<IOptions<AttendanceVerificationSettings>>().Value);
 
         if (!environment.IsEnvironment("Testing"))
         {
@@ -41,6 +47,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddHostedService<AutoCloseAttendanceWorker>();
+        services.AddHostedService<AttendancePhotoCleanupWorker>();
         services.AddBedrock(configuration);
         services.AddScheduleSuggestions(configuration);
         services.AddScoped<IUserRepository, UserRepository>();

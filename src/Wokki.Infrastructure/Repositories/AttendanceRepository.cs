@@ -216,6 +216,16 @@ public sealed class AttendanceRepository(AppDbContext context) : IAttendanceRepo
         return new LocationAttendanceSummary(assignmentIds.Count, clockedIn, clockedOut, notClockedIn);
     }
 
+    public async Task<IReadOnlyList<AttendanceRecord>> ListWithStalePhotosAsync(
+        DateTime olderThan,
+        int batchSize,
+        CancellationToken cancellationToken = default) =>
+        await context.AttendanceRecords
+            .Where(a => a.ClockInPhotoPublicId != null && a.CreatedAt < olderThan)
+            .OrderBy(a => a.CreatedAt)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(AttendanceRecord record, CancellationToken cancellationToken = default) =>
         await context.AttendanceRecords.AddAsync(record, cancellationToken);
 

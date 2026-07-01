@@ -32,6 +32,19 @@ public sealed class EmployeeSelfProfileService(
         return ApiResponse<EmployeeResponse>.SuccessResponse(response, AppMessages.Self.ProfileFound);
     }
 
+    public async Task<ApiResponse<FaceDescriptorResponse>> GetMyFaceDescriptorAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await unitOfWork.Employees.GetByUserIdAsync(userId, cancellationToken);
+        if (employee is null)
+            return ApiResponse<FaceDescriptorResponse>.FailureResponse(AppMessages.Self.NoEmployeeProfile);
+
+        return ApiResponse<FaceDescriptorResponse>.SuccessResponse(
+            new FaceDescriptorResponse(employee.FaceEmbedding),
+            AppMessages.Self.ProfileFound);
+    }
+
     public async Task<ApiResponse<EmployeeResponse>> UpdateMineAsync(
         Guid userId,
         UpdateMyProfileRequest request,

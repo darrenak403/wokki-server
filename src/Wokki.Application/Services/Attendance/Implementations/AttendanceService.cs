@@ -1,4 +1,5 @@
 using Wokki.Application.Common;
+using Wokki.Application.Common.Interfaces;
 using Wokki.Application.Dtos.Attendance;
 using Wokki.Application.Mappings.Attendance;
 using Wokki.Application.Services.Attendance.Interfaces;
@@ -21,7 +22,10 @@ public sealed class AttendanceService(
     IUnitOfWork unitOfWork,
     IAutoCloseAttendanceService autoCloseService,
     IOrganizationScopeService organizationScope,
-    IPlatformActivityRecorder platformActivityRecorder) : IAttendanceService
+    IPlatformActivityRecorder platformActivityRecorder,
+    ICurrentUserService currentUser,
+    IImageStorageService imageStorage,
+    IAttendanceVerificationSettings verificationSettings) : IAttendanceService
 {
     public async Task<ApiResponse<AttendanceResponse>> ClockInAsync(
         Guid userId,
@@ -92,6 +96,8 @@ public sealed class AttendanceService(
             ClockIn = DateTimeOffset.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
+
+        await ApplyVerificationAsync(employee, record, clockContext.Location, request, cancellationToken);
 
         await unitOfWork.Attendance.AddAsync(record, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -384,7 +390,85 @@ public sealed class AttendanceService(
         var location = await unitOfWork.Locations.GetByIdAsync(department.LocationId, cancellationToken: cancellationToken);
         var timeZone = SwapCutoffRules.ResolveTimeZone(location?.TimeZone ?? "UTC");
 
-        return new ClockContext(assignment, shift, timeZone);
+        return new ClockContext(assignment, shift, timeZone, location);
+    }
+
+    /// <summary>
+    /// Advisory-only: GPS/IP/face signals are flags for Manager/Admin audit, never a clock-in blocker.
+    /// Any failure (bad base64, Cloudinary unconfigured/unreachable) is swallowed so the punch always succeeds.
+    /// </summary>
+    private async Task ApplyVerificationAsync(
+        EmployeeEntity employee,
+        AttendanceEntity record,
+        LocationEntity? location,
+        ClockInRequest? request,
+        CancellationToken cancellationToken)
+    {
+        if (request?.Latitude is double lat && request.Longitude is double lng)
+        {
+            record.ClockInLatitude = lat;
+            record.ClockInLongitude = lng;
+
+            if (location?.Latitude is double locLat && location.Longitude is double locLng)
+            {
+                var distanceMeters = GeoDistance.HaversineMeters(lat, lng, locLat, locLng);
+                record.GpsOutOfRange = distanceMeters > verificationSettings.DefaultGeofenceRadiusMeters;
+            }
+        }
+
+        var callerIp = currentUser.IpAddress;
+        if (!string.IsNullOrWhiteSpace(callerIp))
+        {
+            record.ClockInIpAddress = callerIp;
+            if (!string.IsNullOrWhiteSpace(location?.NetworkIpOrCidr))
+                record.IpMismatch = !IpNetworkMatcher.IsInRange(callerIp, location.NetworkIpOrCidr);
+        }
+
+        var isFirstEnrollment = false;
+        if (request?.PhotoBase64 is { Length: > 0 } photoBase64 && !string.IsNullOrWhiteSpace(request.PhotoContentType))
+        {
+            try
+            {
+                var photoBytes = Convert.FromBase64String(photoBase64);
+
+                using var checkInStream = new MemoryStream(photoBytes);
+                var checkInPhoto = await imageStorage.UploadCheckInPhotoAsync(
+                    checkInStream,
+                    $"checkin-{record.Id}.jpg",
+                    request.PhotoContentType,
+                    employee.OrganizationId,
+                    employee.Id,
+                    record.Id,
+                    cancellationToken);
+                record.ClockInPhotoUrl = checkInPhoto.Url;
+                record.ClockInPhotoPublicId = checkInPhoto.PublicId;
+
+                if (employee.FaceEnrollmentPhotoUrl is null)
+                {
+                    using var enrollmentStream = new MemoryStream(photoBytes);
+                    var enrollmentPhoto = await imageStorage.UploadFaceEnrollmentPhotoAsync(
+                        enrollmentStream,
+                        $"face-enrollment-{employee.Id}.jpg",
+                        request.PhotoContentType,
+                        employee.OrganizationId,
+                        employee.Id,
+                        cancellationToken);
+
+                    employee.FaceEnrollmentPhotoUrl = enrollmentPhoto.Url;
+                    employee.FaceEnrollmentPhotoPublicId = enrollmentPhoto.PublicId;
+                    employee.FaceEmbedding = request.FaceEmbeddingJson;
+                    unitOfWork.Employees.Update(employee);
+                    isFirstEnrollment = true;
+                }
+            }
+            catch
+            {
+                // Advisory input — bad base64 or Cloudinary failure must never block the punch.
+            }
+        }
+
+        if (!isFirstEnrollment && request?.FaceMatch is bool faceMatch)
+            record.FaceMismatch = !faceMatch;
     }
 
     private static bool IsAfterShiftEnd(DateOnly date, TimeOnly endTime, TimeZoneInfo timeZone)
@@ -420,7 +504,8 @@ public sealed class AttendanceService(
     private sealed record ClockContext(
         ShiftAssignmentEntity Assignment,
         ShiftDefinitionEntity Shift,
-        TimeZoneInfo TimeZone);
+        TimeZoneInfo TimeZone,
+        LocationEntity? Location);
 
     private async Task<bool> IsPayPeriodLockedForRecordAsync(
         AttendanceEntity record,

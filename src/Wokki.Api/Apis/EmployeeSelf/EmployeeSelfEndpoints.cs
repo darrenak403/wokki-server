@@ -135,6 +135,14 @@ public static class EmployeeSelfEndpoints
             .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
             .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
 
+        group.MapGet("/face-descriptor", GetMyFaceDescriptorAsync)
+            .WithName("GetMyFaceDescriptor")
+            .WithDescription("Mô tả khuôn mặt đã lưu (client-side so khớp); null nếu chưa đăng ký.")
+            .RequireAuthorization()
+            .Produces<ApiResponse<FaceDescriptorResponse>>(StatusCodes.Status200OK)
+            .Produces<ApiResponse<object>>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiResponse<object>>(StatusCodes.Status404NotFound);
+
         group.MapPut("/profile", UpdateMyProfileAsync)
             .WithName("UpdateMyProfile")
             .WithDescription("Cập nhật hồ sơ cá nhân: họ tên, SĐT, thông tin ngân hàng.")
@@ -362,6 +370,18 @@ public static class EmployeeSelfEndpoints
             return Results.Json(ApiResponse<EmployeeResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
 
         var response = await service.GetMineAsync(currentUser.UserId.Value, cancellationToken);
+        return response.ToHttpResult();
+    }
+
+    private static async Task<IResult> GetMyFaceDescriptorAsync(
+        [FromServices] IEmployeeSelfProfileService service,
+        [FromServices] ICurrentUserService currentUser,
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUser.UserId is null)
+            return Results.Json(ApiResponse<FaceDescriptorResponse>.FailureResponse(AppMessages.Auth.Unauthorized), statusCode: 401);
+
+        var response = await service.GetMyFaceDescriptorAsync(currentUser.UserId.Value, cancellationToken);
         return response.ToHttpResult();
     }
 

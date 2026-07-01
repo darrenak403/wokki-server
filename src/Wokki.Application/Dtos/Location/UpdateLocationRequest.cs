@@ -4,4 +4,7 @@ public sealed record UpdateLocationRequest(
     string Name,
     string Address,
     string TimeZone,
-    bool IsActive);
+    bool IsActive,
+    double? Latitude = null,
+    double? Longitude = null,
+    string? NetworkIpOrCidr = null);

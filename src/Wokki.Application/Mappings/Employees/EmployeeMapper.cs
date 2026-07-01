@@ -30,7 +30,8 @@ public static class EmployeeMapper
             employee.PaymentQrImageUrl,
             employee.EmployedAt,
             employee.TerminatedAt,
-            employee.CreatedAt);
+            employee.CreatedAt,
+            employee.FaceEnrollmentPhotoUrl != null);
 
     public static Employee ToEntity(this CreateEmployeeRequest request, Guid userId, Guid organizationId) =>
         new()

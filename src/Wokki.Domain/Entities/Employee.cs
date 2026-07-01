@@ -19,6 +19,12 @@ public class Employee
     public string? PaymentQrImageUrl { get; set; }
     /// <summary>Cloudinary public_id — xóa/thay ảnh.</summary>
     public string? PaymentQrPublicId { get; set; }
+    /// <summary>URL ảnh enrollment khuôn mặt (Cloudinary) — chụp lần check-in đầu tiên.</summary>
+    public string? FaceEnrollmentPhotoUrl { get; set; }
+    /// <summary>Cloudinary public_id của ảnh enrollment — xóa/thay ảnh.</summary>
+    public string? FaceEnrollmentPhotoPublicId { get; set; }
+    /// <summary>face-api.js descriptor (JSON array string) dùng so khớp client-side ở các lần check-in sau.</summary>
+    public string? FaceEmbedding { get; set; }
     public decimal HourlyRate { get; set; }
     public Guid? DepartmentId { get; set; }
     public DateTime EmployedAt { get; set; } = DateTime.UtcNow;
